@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { extractNoteContent, hasNoteContent } from "@/lib/note-utils";
 import {
@@ -38,9 +38,16 @@ import {
   Image,
   Paperclip,
 } from "lucide-react";
-import ClientVideoSubmissionModal from "./ClientVideoSubmissionModal";
-import ClientProgramDayModal from "./ClientProgramDayModal";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+
+// Lazy load heavy modals for better performance
+const ClientVideoSubmissionModal = dynamic(() => import("./ClientVideoSubmissionModal"), {
+  loading: () => null,
+});
+const ClientProgramDayModal = dynamic(() => import("./ClientProgramDayModal"), {
+  loading: () => null,
+});
 import { Badge } from "@/components/ui/badge";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 // import {
@@ -253,7 +260,12 @@ function ClientProgramPage() {
   );
 
   // Get client's assigned program
-  const { data: programInfo } = trpc.clientRouter.getAssignedProgram.useQuery();
+  const { data: programInfo } = trpc.clientRouter.getAssignedProgram.useQuery(undefined, {
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   // Use lightweight calendar query for initial load
   const {
@@ -265,6 +277,11 @@ function ClientProgramPage() {
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
     viewMode,
+  }, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Detailed day data - only loaded when a day is selected
@@ -280,6 +297,9 @@ function ClientProgramPage() {
     {
       enabled: !!selectedDateForDetails,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     }
   );
 
@@ -290,38 +310,62 @@ function ClientProgramPage() {
     }
   }, [selectedDateForDetails, selectedDayDetails, dayDetailsLoading]);
 
-  // Get current week's calendar data (for "This Week's Schedule" section)
-  const currentWeekStart = startOfWeek(new Date());
-  const currentWeekEnd = endOfWeek(new Date());
-  const startDateString = `${currentWeekStart.getFullYear()}-${(
-    currentWeekStart.getMonth() + 1
-  )
-    .toString()
-    .padStart(2, "0")}-${currentWeekStart
-    .getDate()
-    .toString()
-    .padStart(2, "0")}`;
-  const endDateString = `${currentWeekEnd.getFullYear()}-${(
-    currentWeekEnd.getMonth() + 1
-  )
-    .toString()
-    .padStart(2, "0")}-${currentWeekEnd.getDate().toString().padStart(2, "0")}`;
+  // Get current week's calendar data (for "This Week's Schedule" section) - memoized
+  const { startDateString, endDateString } = useMemo(() => {
+    const currentWeekStart = startOfWeek(new Date());
+    const currentWeekEnd = endOfWeek(new Date());
+    return {
+      startDateString: `${currentWeekStart.getFullYear()}-${(
+        currentWeekStart.getMonth() + 1
+      )
+        .toString()
+        .padStart(2, "0")}-${currentWeekStart
+        .getDate()
+        .toString()
+        .padStart(2, "0")}`,
+      endDateString: `${currentWeekEnd.getFullYear()}-${(
+        currentWeekEnd.getMonth() + 1
+      )
+        .toString()
+        .padStart(2, "0")}-${currentWeekEnd.getDate().toString().padStart(2, "0")}`,
+    };
+  }, []); // Only recalculate once per day
 
   const { data: weekCalendarData } =
     trpc.clientRouter.getProgramWeekCalendar.useQuery({
       startDate: startDateString,
       endDate: endDateString,
+    }, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Get pitching data
-  const { data: pitchingData } = trpc.clientRouter.getPitchingData.useQuery();
+  const { data: pitchingData } = trpc.clientRouter.getPitchingData.useQuery(undefined, {
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   // Get video assignments
   const { data: videoAssignments = [] } =
-    trpc.clientRouter.getVideoAssignments.useQuery();
+    trpc.clientRouter.getVideoAssignments.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    });
 
   // Get next lesson
-  const { data: nextLesson } = trpc.clientRouter.getNextLesson.useQuery();
+  const { data: nextLesson } = trpc.clientRouter.getNextLesson.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: true, // Keep this one fresh
+    refetchOnMount: true,
+  });
 
   // Get upcoming lessons/events for client
   const {
@@ -336,23 +380,41 @@ function ClientProgramPage() {
   });
 
   // Get coach notes
-  const { data: coachNotes } = trpc.notes.getMyNotes.useQuery();
+  const { data: coachNotes } = trpc.notes.getMyNotes.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   // Get routine assignments
   const { data: routineAssignments = [] } =
-    trpc.clientRouter.getRoutineAssignments.useQuery();
-
-  // Debug logging for routine assignments
+    trpc.clientRouter.getRoutineAssignments.useQuery(undefined, {
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 15 * 60 * 1000, // 15 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    });
 
   // Get client's lessons
   const { data: clientLessons = [] } =
     trpc.clientRouter.getClientLessons.useQuery({
       month: currentDate.getMonth(),
       year: currentDate.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Get library items for video lookup
-  const { data: libraryItems = [] } = (trpc.library.list as any).useQuery({});
+  const { data: libraryItems = [] } = (trpc.library.list as any).useQuery({}, {
+    staleTime: 30 * 60 * 1000, // 30 minutes - library doesn't change often
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   const utils = trpc.useUtils();
 
@@ -399,15 +461,17 @@ function ClientProgramPage() {
   // 	setCurrentDate(new Date())
   // }
 
-  // Generate calendar days for the current month view
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-  const calendarDays = eachDayOfInterval({
-    start: calendarStart,
-    end: calendarEnd,
-  });
+  // Generate calendar days for the current month view - memoized
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+    return eachDayOfInterval({
+      start: calendarStart,
+      end: calendarEnd,
+    });
+  }, [currentDate]);
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate(
@@ -960,8 +1024,12 @@ function ClientProgramPage() {
   return (
     <ClientTopNav>
       <div
-        className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
-        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+        className="w-full px-4 sm:px-6 lg:px-8 py-6"
+        style={{ 
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          paddingBottom: "max(2rem, calc(2rem + env(safe-area-inset-bottom)))",
+          overscrollBehavior: "contain", // Prevent overscroll bounce
+        }}
       >
         <PushNotificationPrompt />
         {/* Header Section with Gradient Background */}
@@ -2730,6 +2798,9 @@ function ClientProgramPage() {
             </div>
           )}
         </div>
+        
+        {/* Bottom spacing to prevent cutoff */}
+        <div style={{ height: "max(3rem, calc(3rem + env(safe-area-inset-bottom)))" }} aria-hidden="true" />
       </div>
 
       {/* Quick Message Modal */}

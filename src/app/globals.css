@@ -234,6 +234,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overscroll-behavior: none; /* Prevent overscroll bounce */
+    touch-action: pan-y; /* Allow vertical scrolling only */
   }
   body {
     @apply text-foreground;
@@ -245,10 +247,13 @@
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none; /* Prevent overscroll bounce */
+    touch-action: pan-y; /* Allow vertical scrolling only */
   }
   #__next {
     height: 100%;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none; /* Prevent overscroll bounce */
   }
 }
 

@@ -50,8 +50,6 @@ function ClientSchedulePageClient() {
   const [showSwapRequests, setShowSwapRequests] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSwitchLesson, setSelectedSwitchLesson] = useState<any>(null);
-  const [selectedLesson, setSelectedLesson] = useState<any>(null);
-  const [showLessonDetailModal, setShowLessonDetailModal] = useState(false);
   const [showSwapWithClientModal, setShowSwapWithClientModal] = useState(false);
   const [showRequestTimeChangeModal, setShowRequestTimeChangeModal] =
     useState(false);
@@ -71,13 +69,23 @@ function ClientSchedulePageClient() {
   });
 
   // Fetch coach's profile first
-  const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery();
+  const { data: coachProfile } = trpc.clientRouter.getCoachProfile.useQuery(undefined, {
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   // Fetch organization coaches and their schedules (if in an organization)
   const { data: orgScheduleData } =
     trpc.clientRouter.getOrganizationCoachesSchedules.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
 
@@ -257,6 +265,11 @@ function ClientSchedulePageClient() {
     trpc.clientRouter.getCoachScheduleForClient.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Fetch blocked times for the current month
@@ -265,6 +278,12 @@ function ClientSchedulePageClient() {
       startDate: startOfMonth(currentMonth).toISOString(),
       endDate: endOfMonth(currentMonth).toISOString(),
       coachId: coachProfile?.id || "",
+    }, {
+      enabled: !!coachProfile?.id,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Fetch ALL coach's lessons for conflict checking
@@ -272,6 +291,11 @@ function ClientSchedulePageClient() {
     trpc.clientRouter.getAllCoachLessons.useQuery({
       startDate: startOfMonth(currentMonth).toISOString(),
       endDate: endOfMonth(currentMonth).toISOString(),
+    }, {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Fetch coach's schedule for previous month (for cross-month days)
@@ -282,6 +306,11 @@ function ClientSchedulePageClient() {
         currentMonth.getMonth() === 0
           ? currentMonth.getFullYear() - 1
           : currentMonth.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Fetch coach's schedule for next month (for cross-month days)
@@ -292,6 +321,11 @@ function ClientSchedulePageClient() {
         currentMonth.getMonth() === 11
           ? currentMonth.getFullYear() + 1
           : currentMonth.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Combine all schedule data
@@ -341,6 +375,11 @@ function ClientSchedulePageClient() {
     trpc.clientRouter.getClientLessons.useQuery({
       month: currentMonth.getMonth(),
       year: currentMonth.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Fetch client's lessons for previous month (for cross-month days)
@@ -351,6 +390,11 @@ function ClientSchedulePageClient() {
         currentMonth.getMonth() === 0
           ? currentMonth.getFullYear() - 1
           : currentMonth.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Fetch client's lessons for next month (for cross-month days)
@@ -361,6 +405,11 @@ function ClientSchedulePageClient() {
         currentMonth.getMonth() === 11
           ? currentMonth.getFullYear() + 1
           : currentMonth.getFullYear(),
+    }, {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
     });
 
   // Combine all client lessons data
@@ -770,13 +819,23 @@ function ClientSchedulePageClient() {
       }
     }
 
+    // Convert time from "HH:mm" format to "h:mm AM/PM" format
+    const [hours, minutes] = requestForm.time.split(":").map(Number);
+    if (isNaN(hours) || isNaN(minutes)) {
+      alert("Invalid time format. Please select a valid time slot.");
+      return;
+    }
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    const timeString = format(date, "h:mm a");
+
     // Capture user's timezone
     const timeZone =
       Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
 
     requestScheduleChangeMutation.mutate({
       requestedDate: requestForm.date,
-      requestedTime: requestForm.time,
+      requestedTime: timeString,
       reason: requestForm.reason,
       timeZone: timeZone,
       coachId: requestForm.coachId || undefined, // Include selected coach if in organization
@@ -786,11 +845,11 @@ function ClientSchedulePageClient() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return <CheckCircle className="h-4 w-4 text-blue-400" />;
+        return <CheckCircle className="h-4 w-4" style={{ color: COLORS.BLUE_PRIMARY }} />;
       case "DECLINED":
-        return <XCircle className="h-4 w-4 text-red-400" />;
+        return <XCircle className="h-4 w-4" style={{ color: COLORS.RED_ALERT }} />;
       case "PENDING":
-        return <AlertCircle className="h-4 w-4 text-yellow-400" />;
+        return <AlertCircle className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />;
       default:
         return null;
     }
@@ -799,13 +858,13 @@ function ClientSchedulePageClient() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return "bg-blue-500/40 text-blue-100 border-blue-400"; // Blue for confirmed lessons
+        return ""; // Will use inline styles
       case "DECLINED":
-        return "bg-red-500/40 text-red-100 border-red-400";
+        return "";
       case "PENDING":
-        return "bg-yellow-500/40 text-yellow-100 border-yellow-400";
+        return "";
       default:
-        return "bg-blue-500/40 text-blue-100 border-blue-400";
+        return "";
     }
   };
 
@@ -959,8 +1018,12 @@ function ClientSchedulePageClient() {
   return (
     <ClientTopNav>
       <div
-        className="min-h-screen px-4 sm:px-6 lg:px-8 pt-6"
-        style={{ backgroundColor: "#2a3133" }}
+        className="w-full px-4 sm:px-6 lg:px-8 py-6"
+        style={{ 
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          paddingBottom: "max(2rem, calc(2rem + env(safe-area-inset-bottom)))",
+          overscrollBehavior: "contain",
+        }}
       >
         <div className="max-w-6xl mx-auto">
           {/* Header */}
@@ -968,15 +1031,24 @@ function ClientSchedulePageClient() {
             <div className="flex items-center gap-3 md:gap-4">
               <div
                 className="p-2 md:p-3 rounded-lg"
-                style={{ backgroundColor: "#4A5A70" }}
+                style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
               >
-                <Calendar className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                <Calendar 
+                  className="w-5 h-5 md:w-6 md:h-6" 
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white">
+                <h1 
+                  className="text-2xl md:text-3xl font-bold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   My Schedule
                 </h1>
-                <p className="text-sm md:text-base text-gray-400">
+                <p 
+                  className="text-sm md:text-base"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
                   View your coach&apos;s availability and request schedule
                   changes
                 </p>
@@ -986,22 +1058,29 @@ function ClientSchedulePageClient() {
               <div
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium border"
                 style={{
-                  backgroundColor: "rgba(16, 185, 129, 0.08)",
-                  borderColor: "rgba(16, 185, 129, 0.35)",
-                  color: "#4AE3B5",
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.GREEN_PRIMARY,
+                  color: COLORS.GREEN_PRIMARY,
                 }}
+                title="Click any available day to request a new lesson"
               >
                 <Calendar className="h-4 w-4" />
                 <span className="whitespace-nowrap">
-                  Pick a day and time to request
+                  Click a day to request a lesson
                 </span>
               </div>
               <button
                 onClick={() => setShowSwapRequests(true)}
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation"
                 style={{
-                  backgroundColor: "#F59E0B",
-                  color: "#FFFFFF",
+                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                  color: COLORS.BACKGROUND_DARK,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                 }}
               >
                 <Users className="h-4 w-4" />
@@ -1014,11 +1093,17 @@ function ClientSchedulePageClient() {
           {isInOrganization && orgScheduleData ? (
             <div
               className="mb-6 p-4 rounded-lg border-2"
-              style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_CARD, 
+                borderColor: COLORS.BORDER_SUBTLE 
+              }}
             >
               <div className="flex items-center gap-3 mb-4">
-                <Clock className="h-5 w-5 text-sky-400" />
-                <h2 className="text-lg font-semibold text-white">
+                <Clock className="h-5 w-5" style={{ color: COLORS.BLUE_PRIMARY }} />
+                <h2 
+                  className="text-lg font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   Organization Coaches&apos; Hours
                 </h2>
               </div>
@@ -1028,8 +1113,8 @@ function ClientSchedulePageClient() {
                     key={coach.id}
                     className="p-3 rounded-lg border"
                     style={{
-                      backgroundColor: "#2A3133",
-                      borderColor: "#4A5A70",
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -1038,13 +1123,24 @@ function ClientSchedulePageClient() {
                           coach.id
                         )}`}
                       />
-                      <h4 className="font-semibold text-white">{coach.name}</h4>
+                      <h4 
+                        className="font-semibold"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
+                        {coach.name}
+                      </h4>
                     </div>
-                    <p className="text-gray-300 text-sm">
+                    <p 
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       {coach.workingHoursStart || "9:00 AM"} -{" "}
                       {coach.workingHoursEnd || "8:00 PM"}
                     </p>
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p 
+                      className="text-xs mt-1"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    >
                       {coach.workingDays && coach.workingDays.length > 0
                         ? coach.workingDays.join(", ")
                         : "Monday - Sunday"}
@@ -1056,22 +1152,34 @@ function ClientSchedulePageClient() {
           ) : (
             <div
               className="mb-6 p-4 rounded-lg border-2"
-              style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+              style={{ 
+                backgroundColor: COLORS.BACKGROUND_CARD, 
+                borderColor: COLORS.BORDER_SUBTLE 
+              }}
             >
               <div className="flex items-center gap-3 mb-2">
-                <Clock className="h-5 w-5 text-sky-400" />
-                <h2 className="text-lg font-semibold text-white">
+                <Clock className="h-5 w-5" style={{ color: COLORS.BLUE_PRIMARY }} />
+                <h2 
+                  className="text-lg font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   Coach&apos;s Working Hours
                 </h2>
               </div>
-              <p className="text-gray-300">
+              <p style={{ color: COLORS.TEXT_SECONDARY }}>
                 {activeCoachProfile.startTime} - {activeCoachProfile.endTime}
               </p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p 
+                className="text-sm mt-1"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
                 Working Days: {activeCoachProfile.workingDays.join(", ")}
               </p>
               {activeCoachProfile.customWorkingHours && (
-                <p className="text-xs text-emerald-300 mt-1">
+                <p 
+                  className="text-xs mt-1"
+                  style={{ color: COLORS.GREEN_PRIMARY }}
+                >
                   Custom daily hours enabled
                 </p>
               )}
@@ -1082,18 +1190,35 @@ function ClientSchedulePageClient() {
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => navigateMonth("prev")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
-              <ChevronLeft className="h-5 w-5 text-white" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-xl font-semibold text-white">
+            <h3 
+              className="text-xl font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
               {format(currentMonth, "MMMM yyyy")}
             </h3>
             <button
               onClick={() => navigateMonth("next")}
-              className="p-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
             >
-              <ChevronRight className="h-5 w-5 text-white" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
 
@@ -1101,13 +1226,23 @@ function ClientSchedulePageClient() {
           <div className="flex items-center gap-6 mb-4 text-sm flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-400" />
-              <span className="text-white font-medium">My Lessons</span>
+              <span 
+                className="font-medium"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                My Lessons
+              </span>
             </div>
             {!isInOrganization && (
               <>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded bg-sky-500 border-2 border-sky-400" />
-                  <span className="text-white font-medium">Other Clients</span>
+                  <span 
+                    className="font-medium"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Other Clients
+                  </span>
                 </div>
               </>
             )}
@@ -1121,14 +1256,24 @@ function ClientSchedulePageClient() {
                       )} border-2`}
                       style={{ opacity: 0.8 }}
                     />
-                    <span className="text-white font-medium">{coach.name}</span>
+                    <span 
+                      className="font-medium"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {coach.name}
+                    </span>
                   </div>
                 ))}
               </>
             )}
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-400" />
-              <span className="text-white font-medium">Today</span>
+              <span 
+                className="font-medium"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Today
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-orange-500/20 border-2 border-orange-500/50" />
@@ -1138,11 +1283,21 @@ function ClientSchedulePageClient() {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-600 border-2 border-gray-500" />
-              <span className="text-gray-300 font-medium">Past Date</span>
+              <span 
+                className="font-medium"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
+                Past Date
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded bg-gray-700 border-2 border-gray-600" />
-              <span className="text-gray-400 font-medium">Other Month</span>
+              <span 
+                className="font-medium"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
+                Other Month
+              </span>
             </div>
           </div>
 
@@ -1169,8 +1324,11 @@ function ClientSchedulePageClient() {
 
           {/* Calendar */}
           <div
-            className="p-6 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            className="p-6 rounded-lg border-2 mb-8"
+            style={{ 
+              backgroundColor: "#1F2426", 
+              borderColor: "#4A5A70",
+            }}
           >
             <div className="grid grid-cols-7 gap-1 md:gap-2">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
@@ -1230,25 +1388,56 @@ function ClientSchedulePageClient() {
                       group p-2 md:p-3 text-xs md:text-sm rounded-lg transition-all duration-200 relative min-h-[120px] md:min-h-[140px] border-2 touch-manipulation overflow-hidden
                       ${
                         isPast || !isWorkingDay || isBeyondLimit
-                          ? "cursor-not-allowed opacity-50"
+                          ? "cursor-not-allowed"
                           : "cursor-pointer"
                       }
-                      ${
-                        isBlocked
-                          ? "bg-red-500/20 text-red-300 border-red-400 shadow-lg"
-                          : isToday
-                          ? "bg-blue-500/20 text-blue-300 border-blue-400 shadow-lg"
-                          : isPast
-                          ? "text-gray-500 bg-gray-700/30 border-gray-600"
-                          : !isWorkingDay
-                          ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
-                          : isBeyondLimit
-                          ? "text-gray-500 bg-gray-700/30 border-gray-600"
-                          : isCurrentMonth
-                          ? "text-white bg-gray-800/50 border-gray-600 hover:bg-blue-500/10 hover:border-blue-400"
-                          : "text-gray-600 bg-gray-900/30 border-gray-700"
-                      }
                     `}
+                    style={{
+                      backgroundColor: isBlocked
+                        ? COLORS.RED_DARK
+                        : isToday
+                        ? COLORS.BLUE_PRIMARY
+                        : isPast
+                        ? COLORS.BACKGROUND_CARD
+                        : !isWorkingDay
+                        ? COLORS.BACKGROUND_CARD
+                        : isBeyondLimit
+                        ? COLORS.BACKGROUND_CARD
+                        : isCurrentMonth
+                        ? COLORS.BACKGROUND_CARD
+                        : COLORS.BACKGROUND_DARK,
+                      color: isBlocked
+                        ? COLORS.TEXT_PRIMARY
+                        : isToday
+                        ? COLORS.TEXT_PRIMARY
+                        : isPast
+                        ? COLORS.TEXT_MUTED
+                        : !isWorkingDay
+                        ? COLORS.TEXT_MUTED
+                        : isBeyondLimit
+                        ? COLORS.TEXT_MUTED
+                        : isCurrentMonth
+                        ? COLORS.TEXT_PRIMARY
+                        : COLORS.TEXT_MUTED,
+                      borderColor: isBlocked
+                        ? COLORS.RED_ALERT
+                        : isToday
+                        ? COLORS.BLUE_PRIMARY
+                        : COLORS.BORDER_SUBTLE,
+                      opacity: (isPast || !isWorkingDay || isBeyondLimit) ? 0.5 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isPast && isWorkingDay && !isBeyondLimit && isCurrentMonth) {
+                        e.currentTarget.style.borderColor = COLORS.BLUE_PRIMARY;
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isPast && isWorkingDay && !isBeyondLimit && isCurrentMonth) {
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      }
+                    }}
                     title={
                       isBlocked
                         ? `Coach unavailable: ${dayBlockedTimes
@@ -1274,8 +1463,17 @@ function ClientSchedulePageClient() {
                         {coachLessonsForDay.filter(
                           (lesson: any) => lesson.clientId !== currentClient?.id
                         ).length > 0 && (
-                          <div className="w-5 h-5 rounded-full bg-sky-500/20 border border-sky-400/30 flex items-center justify-center">
-                            <span className="text-xs font-bold text-sky-400">
+                          <div 
+                            className="w-5 h-5 rounded-full border flex items-center justify-center"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              borderColor: COLORS.BLUE_PRIMARY,
+                            }}
+                          >
+                            <span 
+                              className="text-xs font-bold"
+                              style={{ color: COLORS.BLUE_PRIMARY }}
+                            >
                               {
                                 coachLessonsForDay.filter(
                                   (lesson: any) =>
@@ -1338,21 +1536,36 @@ function ClientSchedulePageClient() {
                                 key={`my-${index}`}
                                 onClick={e => {
                                   e.stopPropagation();
-                                  setSelectedLesson(lesson);
-                                  setShowLessonDetailModal(true);
+                                  // Directly open swap modal when clicking a lesson
+                                  setLessonToReschedule(lesson);
+                                  setShowSwapWithClientModal(true);
                                 }}
-                                className={`text-xs p-1.5 md:p-2 rounded border-2 shadow-md relative group overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ${
-                                  isScheduleRequest
-                                    ? getStatusColor(lesson.status)
-                                    : "bg-green-600/40 text-green-100 border-green-400"
-                                }`}
+                                className="text-xs p-1.5 md:p-2 rounded border-2 shadow-md relative group overflow-hidden cursor-pointer transition-all"
+                                title="Click to swap this lesson with another client"
+                                style={isScheduleRequest ? {
+                                  backgroundColor: lesson.status === "CONFIRMED" 
+                                    ? COLORS.BLUE_PRIMARY 
+                                    : lesson.status === "DECLINED"
+                                    ? COLORS.RED_DARK
+                                    : COLORS.GOLDEN_DARK,
+                                  color: COLORS.TEXT_PRIMARY,
+                                  borderColor: lesson.status === "CONFIRMED"
+                                    ? COLORS.BLUE_PRIMARY
+                                    : lesson.status === "DECLINED"
+                                    ? COLORS.RED_ALERT
+                                    : COLORS.GOLDEN_ACCENT,
+                                } : {
+                                  backgroundColor: COLORS.GREEN_PRIMARY,
+                                  color: COLORS.BACKGROUND_DARK,
+                                  borderColor: COLORS.GREEN_PRIMARY,
+                                }}
                               >
                                 <div className="flex items-start justify-between gap-1">
                                   <div className="flex-1 min-w-0">
                                     <div className="font-bold text-xs leading-tight">
                                       {formatTimeInUserTimezone(lesson.date)}
                                     </div>
-                                    <div className="truncate opacity-80 font-medium text-xs leading-tight">
+                                    <div className="truncate font-medium text-xs leading-tight" style={{ opacity: 0.9 }}>
                                       {anonymizeLessonTitle(
                                         lesson.title,
                                         (lesson as any).clientId
@@ -1394,8 +1607,11 @@ function ClientSchedulePageClient() {
                             return (
                               <div
                                 key={`coach-${index}`}
-                                className={`w-full text-xs p-1.5 md:p-2 rounded border-2 shadow-md overflow-hidden ${coachColorClass}/40 text-white border-current`}
-                                style={{ borderColor: "rgba(255,255,255,0.4)" }}
+                                className="w-full text-xs p-1.5 md:p-2 rounded border-2 shadow-md overflow-hidden text-white"
+                                style={{ 
+                                  backgroundColor: COLORS.BLUE_PRIMARY,
+                                  borderColor: COLORS.BLUE_PRIMARY,
+                                }}
                               >
                                 <div className="flex items-start justify-between gap-1">
                                   <div className="flex-1 min-w-0">
@@ -1403,9 +1619,9 @@ function ClientSchedulePageClient() {
                                       {formatTimeInUserTimezone(lesson.date)}
                                     </div>
                                     <div className="truncate font-medium text-xs leading-tight flex items-center justify-between gap-1">
-                                      <span className="opacity-90">Client</span>
+                                      <span style={{ opacity: 0.9 }}>Client</span>
                                       {lesson.coach && isInOrganization && (
-                                        <span className="text-[10px] opacity-80 truncate">
+                                        <span className="text-[10px] truncate" style={{ opacity: 0.8 }}>
                                           {lesson.coach.name}
                                         </span>
                                       )}
@@ -1438,8 +1654,14 @@ function ClientSchedulePageClient() {
                       !isPast &&
                       isWorkingDay && (
                         <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-                            <Plus className="h-2.5 w-2.5 text-blue-400" />
+                          <div 
+                            className="w-4 h-4 rounded-full border flex items-center justify-center"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              borderColor: COLORS.BLUE_PRIMARY,
+                            }}
+                          >
+                            <Plus className="h-2.5 w-2.5" style={{ color: COLORS.BLUE_PRIMARY }} />
                           </div>
                         </div>
                       )}
@@ -1448,19 +1670,49 @@ function ClientSchedulePageClient() {
               })}
             </div>
           </div>
+          
+          {/* Bottom spacing to ensure calendar isn't cut off - increased significantly */}
+          <div 
+            style={{ 
+              height: "max(8rem, calc(8rem + env(safe-area-inset-bottom)))", 
+              minHeight: "max(8rem, calc(8rem + env(safe-area-inset-bottom)))" 
+            }} 
+            aria-hidden="true" 
+          />
 
           {/* Day Overview Modal */}
           {showDayOverviewModal && selectedDate && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-4">
-              <div className="relative w-full max-w-2xl bg-[#2A3133] border border-[#404545] rounded-xl shadow-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0">
+            <div 
+              className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4"
+              style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+            >
+              <div 
+                className="relative w-full max-w-2xl rounded-xl shadow-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0 border"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 {/* Header */}
-                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#404545] bg-[#404449]">
+                <div 
+                  className="px-4 sm:px-6 py-3 sm:py-4 border-b"
+                  style={{
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0 pr-2">
-                      <h2 className="text-lg sm:text-xl font-semibold text-white truncate">
+                      <h2 
+                        className="text-lg sm:text-xl font-semibold truncate"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         {format(selectedDate, "EEEE, MMMM d, yyyy")}
                       </h2>
-                      <p className="text-gray-400 text-xs sm:text-sm mt-0.5">
+                      <p 
+                        className="text-xs sm:text-sm mt-0.5"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         Working Hours:{" "}
                         {(() => {
                           const hours = getWorkingHoursForDate(
@@ -1480,7 +1732,18 @@ function ClientSchedulePageClient() {
                         setSelectedTimeSlot("");
                         setSelectedSwitchLesson(null);
                       }}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#2A3133] transition-colors"
+                      className="p-1.5 rounded-lg transition-colors"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                     >
                       <X className="h-5 w-5" />
                     </button>
@@ -1509,7 +1772,11 @@ function ClientSchedulePageClient() {
                             return (
                               <div
                                 key={index}
-                                className="p-4 rounded-lg bg-[#2A3133] border border-[#3A4143]"
+                                className="p-4 rounded-lg border"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                }}
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3 flex-1">
@@ -1596,7 +1863,17 @@ function ClientSchedulePageClient() {
                               return (
                                 <div
                                   key={index}
-                                  className="group p-4 rounded-lg bg-[#2A3133] border border-[#3A4143] hover:border-[#4A5153] transition-colors"
+                                  className="group p-4 rounded-lg border transition-colors"
+                                  style={{
+                                    backgroundColor: COLORS.BACKGROUND_CARD,
+                                    borderColor: COLORS.BORDER_SUBTLE,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                  }}
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3 flex-1">
@@ -1643,7 +1920,22 @@ function ClientSchedulePageClient() {
                                             disabled={
                                               createSwapRequestMutation.isPending
                                             }
-                                            className="flex items-center gap-2 bg-[#3A4143] text-gray-200 px-4 py-2 rounded-lg hover:bg-[#4A5153] hover:text-white text-sm font-medium transition-colors border border-[#4A5153] disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed"
+                                            style={{
+                                              backgroundColor: COLORS.BACKGROUND_CARD,
+                                              color: COLORS.TEXT_PRIMARY,
+                                              borderColor: COLORS.BORDER_SUBTLE,
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              if (!e.currentTarget.disabled) {
+                                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                              }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              if (!e.currentTarget.disabled) {
+                                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                              }
+                                            }}
                                           >
                                             {createSwapRequestMutation.isPending ? (
                                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1662,7 +1954,14 @@ function ClientSchedulePageClient() {
                                       {!isPast &&
                                         upcomingLessons.length > 0 &&
                                         hasPendingRequestWithTarget(lesson) && (
-                                          <span className="text-xs text-gray-400 bg-[#2A3133] px-3 py-1.5 rounded-lg border border-[#3A4143]">
+                                          <span 
+                                            className="text-xs px-3 py-1.5 rounded-lg border"
+                                            style={{
+                                              color: COLORS.TEXT_SECONDARY,
+                                              backgroundColor: COLORS.BACKGROUND_CARD,
+                                              borderColor: COLORS.BORDER_SUBTLE,
+                                            }}
+                                          >
                                             Request Pending
                                           </span>
                                         )}
@@ -1767,11 +2066,31 @@ function ClientSchedulePageClient() {
                                       time: slot,
                                     });
                                   }}
-                                  className={`p-3 rounded-lg border text-center transition-colors font-medium ${
-                                    selectedTimeSlot === slot
-                                      ? "bg-[#3A4143] border-[#4A5153] text-white"
-                                      : "bg-[#1F2937] border-[#3A4143] text-gray-300 hover:bg-[#2A3133] hover:border-[#4A5153] hover:text-white"
-                                  }`}
+                                  className="p-3 rounded-lg border text-center transition-colors font-medium"
+                                  style={{
+                                    backgroundColor: selectedTimeSlot === slot
+                                      ? COLORS.GOLDEN_ACCENT
+                                      : COLORS.BACKGROUND_CARD,
+                                    borderColor: selectedTimeSlot === slot
+                                      ? COLORS.GOLDEN_ACCENT
+                                      : COLORS.BORDER_SUBTLE,
+                                    color: selectedTimeSlot === slot
+                                      ? COLORS.BACKGROUND_DARK
+                                      : COLORS.TEXT_PRIMARY,
+                                    fontWeight: selectedTimeSlot === slot ? "bold" : "medium",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (selectedTimeSlot !== slot) {
+                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                      e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (selectedTimeSlot !== slot) {
+                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                    }
+                                  }}
                                 >
                                   {timeString}
                                 </button>
@@ -1779,26 +2098,70 @@ function ClientSchedulePageClient() {
                             })}
                           </div>
 
-                          <div className="p-5 rounded-lg bg-[#2A3133] border border-[#3A4143]">
-                            <div className="space-y-4">
-                              <div>
-                                <p className="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
-                                  Selected time
-                                </p>
-                                <p className="text-xl font-semibold text-white">
-                                  {selectedTimeSlot
-                                    ? (() => {
-                                        const [hours, minutes] =
-                                          selectedTimeSlot
-                                            .split(":")
-                                            .map(Number);
-                                        const date = new Date();
-                                        date.setHours(hours, minutes, 0, 0);
-                                        return format(date, "h:mm a");
-                                      })()
-                                    : "Choose a time above"}
+                          {selectedTimeSlot && (
+                            <div 
+                              className="p-4 rounded-lg border mb-4"
+                              style={{
+                                backgroundColor: getGoldenAccent(0.1),
+                                borderColor: COLORS.GOLDEN_BORDER,
+                              }}
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                                <p 
+                                  className="text-sm font-semibold"
+                                  style={{ color: COLORS.TEXT_PRIMARY }}
+                                >
+                                  Selected: {(() => {
+                                    const [hours, minutes] = selectedTimeSlot.split(":").map(Number);
+                                    const date = new Date();
+                                    date.setHours(hours, minutes, 0, 0);
+                                    return format(date, "h:mm a");
+                                  })()}
                                 </p>
                               </div>
+                              <p 
+                                className="text-xs"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              >
+                                {(() => {
+                                  const myLessonsForDay = selectedDate ? getClientLessonsForDate(selectedDate) : [];
+                                  const hasUpcomingLessons = myLessonsForDay.some((l: any) => {
+                                    const lessonDate = new Date(l.date);
+                                    return lessonDate >= new Date();
+                                  });
+                                  return hasUpcomingLessons
+                                    ? "You can request a new lesson or exchange one of your existing lessons"
+                                    : "Click 'Request New Lesson' below to request this time slot";
+                                })()}
+                              </p>
+                            </div>
+                          )}
+
+                          <div 
+                            className="p-5 rounded-lg border"
+                            style={{
+                              backgroundColor: COLORS.BACKGROUND_CARD,
+                              borderColor: COLORS.BORDER_SUBTLE,
+                            }}
+                          >
+                            <div className="space-y-4">
+                              {!selectedTimeSlot && (
+                                <div>
+                                  <p 
+                                    className="text-xs font-medium mb-2 uppercase tracking-wide"
+                                    style={{ color: COLORS.TEXT_SECONDARY }}
+                                  >
+                                    Step 1: Select a time
+                                  </p>
+                                  <p 
+                                    className="text-sm"
+                                    style={{ color: COLORS.TEXT_MUTED }}
+                                  >
+                                    Click on an available time slot above to continue
+                                  </p>
+                                </div>
+                              )}
 
                               {isInOrganization && orgScheduleData ? (
                                 <div>
@@ -1842,7 +2205,21 @@ function ClientSchedulePageClient() {
                                         });
                                       }
                                     }}
-                                    className="w-full px-4 py-3 rounded-xl bg-[#1F2937] border border-[#404545] text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/30 focus:border-yellow-500/50 transition-all"
+                                    className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all"
+                                    style={{
+                                      backgroundColor: COLORS.BACKGROUND_DARK,
+                                      borderColor: COLORS.BORDER_SUBTLE,
+                                      color: COLORS.TEXT_PRIMARY,
+                                    }}
+                                    onFocus={(e) => {
+                                      e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
+                                      const shadowColor = getGoldenAccent(0.3);
+                                      e.currentTarget.style.boxShadow = "0 0 0 2px " + shadowColor;
+                                    }}
+                                    onBlur={(e) => {
+                                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                      e.currentTarget.style.boxShadow = "none";
+                                    }}
                                   >
                                     {orgScheduleData.coaches.map(coach => (
                                       <option key={coach.id} value={coach.id}>
@@ -1874,58 +2251,72 @@ function ClientSchedulePageClient() {
                                   <div className="space-y-3 pt-2">
                                     {!showExchangeOptionsInDayModal ? (
                                       <>
-                                        <button
-                                          onClick={handleRequestScheduleChange}
-                                          disabled={
-                                            !selectedTimeSlot ||
-                                            requestScheduleChangeMutation.isPending
-                                          }
-                                          className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                                          style={{
-                                            backgroundColor: COLORS.BACKGROUND_CARD,
-                                            borderColor: COLORS.BORDER_SUBTLE,
-                                            color: COLORS.TEXT_PRIMARY,
-                                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            if (!e.currentTarget.disabled) {
-                                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                                            }
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            if (!e.currentTarget.disabled) {
-                                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
-                                            }
-                                          }}
-                                        >
-                                          {requestScheduleChangeMutation.isPending ? (
-                                            <>
-                                              <Loader2 className="h-5 w-5 animate-spin" />
-                                              Sending...
-                                            </>
-                                          ) : (
-                                            "Request"
-                                          )}
-                                        </button>
-                                        {hasFutureLessons && (
+                                        <div className="space-y-2">
                                           <button
-                                            onClick={() => setShowExchangeOptionsInDayModal(true)}
-                                            className="w-full px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-                                            style={{ 
-                                              backgroundColor: COLORS.GOLDEN_ACCENT,
-                                              color: "#000",
+                                            onClick={handleRequestScheduleChange}
+                                            disabled={
+                                              !selectedTimeSlot ||
+                                              requestScheduleChangeMutation.isPending
+                                            }
+                                            className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex flex-col items-center gap-1"
+                                            style={{
+                                              backgroundColor: COLORS.GREEN_PRIMARY,
+                                              color: COLORS.BACKGROUND_DARK,
                                             }}
                                             onMouseEnter={(e) => {
-                                              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                                              if (!e.currentTarget.disabled) {
+                                                e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                                              }
                                             }}
                                             onMouseLeave={(e) => {
-                                              e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                                              if (!e.currentTarget.disabled) {
+                                                e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                                              }
                                             }}
                                           >
-                                            <ArrowRightLeft className="h-5 w-5" />
-                                            Exchange
+                                            {requestScheduleChangeMutation.isPending ? (
+                                              <>
+                                                <Loader2 className="h-5 w-5 animate-spin" />
+                                                <span>Sending...</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <div className="flex items-center gap-2">
+                                                  <Plus className="h-5 w-5" />
+                                                  <span>Request New Lesson</span>
+                                                </div>
+                                                <span className="text-xs font-normal opacity-90">
+                                                  Add this time to your schedule
+                                                </span>
+                                              </>
+                                            )}
                                           </button>
-                                        )}
+                                          
+                                          {hasFutureLessons && (
+                                            <button
+                                              onClick={() => setShowExchangeOptionsInDayModal(true)}
+                                              className="w-full px-4 py-3 rounded-lg font-semibold transition-colors flex flex-col items-center gap-1"
+                                              style={{ 
+                                                backgroundColor: COLORS.GOLDEN_ACCENT,
+                                                color: COLORS.BACKGROUND_DARK,
+                                              }}
+                                              onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                                              }}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <ArrowRightLeft className="h-5 w-5" />
+                                                <span>Exchange My Lesson</span>
+                                              </div>
+                                              <span className="text-xs font-normal opacity-90">
+                                                Swap one of your existing lessons for this time
+                                              </span>
+                                            </button>
+                                          )}
+                                        </div>
                                       </>
                                     ) : (
                                       <>
@@ -1938,31 +2329,55 @@ function ClientSchedulePageClient() {
                                                 <button
                                                   key={lesson.id}
                                                   onClick={() => setSelectedLessonToExchangeInDayModal(lesson)}
-                                                  className="w-full p-3 rounded-lg border text-left transition-colors"
+                                                  className="w-full p-4 rounded-lg border-2 text-left transition-all cursor-pointer hover:shadow-lg"
                                                   style={{
                                                     backgroundColor: selectedLessonToExchangeInDayModal?.id === lesson.id
-                                                      ? getGoldenAccent(0.1)
+                                                      ? getGoldenAccent(0.15)
                                                       : COLORS.BACKGROUND_CARD,
                                                     borderColor: selectedLessonToExchangeInDayModal?.id === lesson.id
-                                                      ? COLORS.GOLDEN_BORDER
+                                                      ? COLORS.GOLDEN_ACCENT
                                                       : COLORS.BORDER_SUBTLE,
+                                                    borderWidth: selectedLessonToExchangeInDayModal?.id === lesson.id ? "2px" : "1px",
                                                     color: COLORS.TEXT_PRIMARY,
+                                                    cursor: "pointer",
+                                                  }}
+                                                  onMouseEnter={(e) => {
+                                                    if (selectedLessonToExchangeInDayModal?.id !== lesson.id) {
+                                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                                      e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                                      e.currentTarget.style.transform = "translateY(-1px)";
+                                                    }
+                                                  }}
+                                                  onMouseLeave={(e) => {
+                                                    if (selectedLessonToExchangeInDayModal?.id !== lesson.id) {
+                                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                                      e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                                      e.currentTarget.style.transform = "translateY(0)";
+                                                    }
                                                   }}
                                                 >
                                                   <div className="flex items-center justify-between">
-                                                    <div>
-                                                      <p className="font-medium">{lesson.title}</p>
+                                                    <div className="flex-1">
+                                                      <p className="font-semibold">{lesson.title}</p>
                                                       <p 
-                                                        className="text-sm"
+                                                        className="text-sm mt-1"
                                                         style={{ color: COLORS.TEXT_SECONDARY }}
                                                       >
                                                         {format(lessonDate, "EEEE, MMMM d")} at {format(lessonDate, "h:mm a")}
                                                       </p>
                                                     </div>
-                                                    {selectedLessonToExchangeInDayModal?.id === lesson.id && (
+                                                    {selectedLessonToExchangeInDayModal?.id === lesson.id ? (
                                                       <CheckCircle2 
-                                                        className="h-5 w-5" 
+                                                        className="h-6 w-6 flex-shrink-0 ml-3" 
                                                         style={{ color: COLORS.GOLDEN_ACCENT }}
+                                                      />
+                                                    ) : (
+                                                      <div 
+                                                        className="h-6 w-6 rounded-full border-2 flex-shrink-0 ml-3"
+                                                        style={{ 
+                                                          borderColor: COLORS.BORDER_SUBTLE,
+                                                          backgroundColor: "transparent"
+                                                        }}
                                                       />
                                                     )}
                                                   </div>
@@ -2069,43 +2484,24 @@ function ClientSchedulePageClient() {
             </div>
           )}
 
-          {/* Lesson Detail Modal */}
-          {showLessonDetailModal && selectedLesson && (
-            <LessonDetailModal
-              lesson={selectedLesson}
-              onClose={() => {
-                setShowLessonDetailModal(false);
-                setSelectedLesson(null);
-              }}
-              onSwapWithClient={() => {
-                setShowLessonDetailModal(false);
-                setShowSwapWithClientModal(true);
-              }}
-              onRequestTimeChange={() => {
-                setShowLessonDetailModal(false);
-                setShowRequestTimeChangeModal(true);
-              }}
-            />
-          )}
-
           {/* Swap With Client Modal */}
-          {showSwapWithClientModal && selectedLesson && (
+          {showSwapWithClientModal && lessonToReschedule && (
             <SwapWithClientModal
-              requesterLesson={selectedLesson}
+              requesterLesson={lessonToReschedule}
               onClose={() => {
                 setShowSwapWithClientModal(false);
-                setSelectedLesson(null);
+                setLessonToReschedule(null);
               }}
             />
           )}
 
           {/* Request Time Change Modal */}
-          {showRequestTimeChangeModal && selectedLesson && (
+          {showRequestTimeChangeModal && lessonToReschedule && (
             <RequestTimeChangeModal
-              lesson={selectedLesson}
+              lesson={lessonToReschedule}
               onClose={() => {
                 setShowRequestTimeChangeModal(false);
-                setSelectedLesson(null);
+                setLessonToReschedule(null);
               }}
             />
           )}
@@ -2129,7 +2525,10 @@ function ClientSchedulePageClient() {
 
           {/* Swap Requests Modal */}
           {showSwapRequests && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div 
+              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+            >
               <div
                 className="rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
                 style={{ backgroundColor: "#2A3133" }}
@@ -2166,10 +2565,20 @@ function ClientSchedulePageClient() {
               }}
             >
               <div
-                className="w-full max-w-md bg-[#2A3133] border border-[#404545] rounded-xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+                className="w-full max-w-md rounded-xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0 border"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
                 onClick={e => e.stopPropagation()}
               >
-                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#404545] bg-[#404449]">
+                <div 
+                  className="px-4 sm:px-6 py-3 sm:py-4 border-b"
+                  style={{
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0 pr-2">
                       <h2 className="text-lg sm:text-xl font-semibold text-white">
@@ -2188,7 +2597,18 @@ function ClientSchedulePageClient() {
                       onClick={() => {
                         setSelectedSwitchLesson(null);
                       }}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#2A3133] transition-colors flex-shrink-0"
+                      className="p-1.5 rounded-lg transition-colors flex-shrink-0"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                     >
                       <X className="h-5 w-5" />
                     </button>
@@ -2197,7 +2617,13 @@ function ClientSchedulePageClient() {
 
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                   <div className="mb-4 sm:mb-6">
-                    <div className="bg-[#1F2937] border border-[#3A4143] rounded-lg p-4 mb-4">
+                    <div 
+                      className="border rounded-lg p-4 mb-4"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                      }}
+                    >
                       <div className="flex items-center gap-3">
                         <div>
                           <p className="font-medium text-white">
@@ -2256,11 +2682,27 @@ function ClientSchedulePageClient() {
                                 }
                               }}
                               disabled={isDisabled}
-                              className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                                isDisabled
-                                  ? "opacity-50 cursor-not-allowed bg-[#1F2937] border-[#3A4143]"
-                                  : "bg-[#2A3133] border-[#3A4143] hover:bg-[#3A4143] hover:border-[#4A5153]"
-                              }`}
+                              className="w-full p-3 rounded-lg border text-left transition-colors"
+                              style={{
+                                backgroundColor: isDisabled
+                                  ? COLORS.BACKGROUND_DARK
+                                  : COLORS.BACKGROUND_CARD,
+                                borderColor: COLORS.BORDER_SUBTLE,
+                                opacity: isDisabled ? 0.5 : 1,
+                                cursor: isDisabled ? "not-allowed" : "pointer",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isDisabled) {
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isDisabled) {
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                }
+                              }}
                             >
                               <div className="flex items-center justify-between">
                                 <div>
@@ -2309,7 +2751,13 @@ function ClientSchedulePageClient() {
                     )}
                   </div>
 
-                  <div className="flex gap-3 pt-4 border-t border-[#404545] px-4 sm:px-6 pb-4 sm:pb-6 bg-[#2A3133]">
+                  <div 
+                    className="flex gap-3 pt-4 border-t px-4 sm:px-6 pb-4 sm:pb-6"
+                    style={{
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                    }}
+                  >
                     <button
                       onClick={() => {
                         setSelectedSwitchLesson(null);
@@ -2326,133 +2774,6 @@ function ClientSchedulePageClient() {
         </div>
       </div>
     </ClientTopNav>
-  );
-}
-
-// Lesson Detail Modal Component
-function LessonDetailModal({
-  lesson,
-  onClose,
-  onSwapWithClient,
-  onRequestTimeChange,
-}: {
-  lesson: any;
-  onClose: () => void;
-  onSwapWithClient: () => void;
-  onRequestTimeChange: () => void;
-}) {
-  const lessonDate = lesson.date ? new Date(lesson.date) : new Date();
-  const isValidDate = lessonDate && !isNaN(lessonDate.getTime());
-  const statusColors: Record<string, string> = {
-    CONFIRMED: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    PENDING: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    CANCELLED: "bg-red-500/20 text-red-300 border-red-500/30",
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div
-        className="relative w-full max-w-md bg-gradient-to-br from-[#1F2937] via-[#2A3133] to-[#1F2937] border-2 border-yellow-500/30 rounded-xl sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="relative bg-gradient-to-r from-yellow-500/20 via-yellow-600/15 to-yellow-500/20 border-b border-yellow-500/30 px-4 sm:px-6 py-3 sm:py-5 rounded-t-xl sm:rounded-t-2xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 rounded-t-xl sm:rounded-t-2xl"></div>
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-lg ring-2 ring-yellow-400/20">
-                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold text-white">
-                Lesson Details
-              </h3>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5">
-          <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-[#1F2937] border border-[#404545]">
-            <p className="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
-              Title
-            </p>
-            <p className="text-white font-semibold text-base sm:text-lg">
-              {lesson.title}
-            </p>
-          </div>
-
-          <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-[#1F2937] border border-[#404545]">
-            <p className="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
-              Date & Time
-            </p>
-            <div className="flex items-center gap-3 text-white">
-              <div className="p-2 rounded-lg bg-yellow-500/10 flex-shrink-0">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-sm sm:text-base">
-                  {isValidDate
-                    ? format(lessonDate, "EEEE, MMMM d, yyyy")
-                    : "Invalid date"}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-400">
-                  {isValidDate ? format(lessonDate, "h:mm a") : "Invalid time"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-[#1F2937] border border-[#404545]">
-            <p className="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
-              Status
-            </p>
-            <span
-              className={`inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold border ${
-                statusColors[lesson.status] || "bg-gray-500/20 text-gray-300"
-              }`}
-            >
-              {lesson.status}
-            </span>
-          </div>
-
-          {lesson.description && (
-            <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-[#1F2937] border border-[#404545]">
-              <p className="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
-                Description
-              </p>
-              <p className="text-white text-xs sm:text-sm leading-relaxed">
-                {lesson.description}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2 sm:space-y-3 border-t border-yellow-500/30 bg-[#1F2937]">
-          <button
-            onClick={onSwapWithClient}
-            className="w-full px-4 py-3.5 rounded-xl bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/30"
-          >
-            <ArrowRightLeft className="h-5 w-5" />
-            Swap with Another Client
-          </button>
-
-          <button
-            onClick={onRequestTimeChange}
-            className="w-full px-4 py-3.5 rounded-xl bg-[#2A3133] border border-[#404545] text-white font-semibold hover:bg-[#353A3A] hover:border-yellow-500/40 transition-all flex items-center justify-center gap-2"
-          >
-            <Clock className="h-5 w-5" />
-            Request Different Time
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -2502,7 +2823,8 @@ function SwapWithClientModal({
         const period = match[3].toUpperCase();
         if (period === "PM" && hours !== 12) hours += 12;
         if (period === "AM" && hours === 12) hours = 0;
-        return `${hours.toString().padStart(2, "0")}:${minutes}`;
+        const hoursStr = hours.toString().padStart(2, "0");
+        return hoursStr + ":" + minutes;
       }
       return defaultTime;
     };
@@ -2948,16 +3270,39 @@ function SwapWithClientModal({
                       key={slot}
                       onClick={() => setSelectedTime(slot)}
                       disabled={!hasLessonAtTime}
-                      className={`
-                        px-3 py-2 rounded-lg text-sm font-medium transition-all
-                        ${
-                          isSelected
-                            ? "bg-green-500 text-white border-2 border-green-400"
-                            : hasLessonAtTime
-                            ? "bg-[#353A3A] text-white border border-[#606364] hover:bg-green-500/20 hover:border-green-500/50"
-                            : "bg-[#2A2F2F] text-gray-500 border border-[#404545] cursor-not-allowed opacity-50"
+                      className="px-3 py-2 rounded-lg text-sm font-medium transition-all border"
+                      style={{
+                        backgroundColor: isSelected
+                          ? COLORS.GOLDEN_ACCENT
+                          : hasLessonAtTime
+                          ? COLORS.BACKGROUND_CARD
+                          : COLORS.BACKGROUND_DARK,
+                        borderColor: isSelected
+                          ? COLORS.GOLDEN_ACCENT
+                          : hasLessonAtTime
+                          ? COLORS.BORDER_SUBTLE
+                          : COLORS.BORDER_SUBTLE,
+                        color: isSelected
+                          ? COLORS.BACKGROUND_DARK
+                          : hasLessonAtTime
+                          ? COLORS.TEXT_PRIMARY
+                          : COLORS.TEXT_MUTED,
+                        cursor: hasLessonAtTime ? "pointer" : "not-allowed",
+                        opacity: hasLessonAtTime ? 1 : 0.5,
+                        fontWeight: isSelected ? "bold" : "medium",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (hasLessonAtTime && !isSelected) {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
                         }
-                      `}
+                      }}
+                      onMouseLeave={(e) => {
+                        if (hasLessonAtTime && !isSelected) {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        }
+                      }}
                     >
                       {timeString}
                     </button>
@@ -3609,35 +3954,55 @@ function RequestExchangeModal({
                     <button
                       key={lesson.id}
                       onClick={() => setSelectedLessonToExchange(lesson)}
-                      className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                        selectedLessonToExchange?.id === lesson.id
-                          ? ""
-                          : ""
-                      }`}
+                      className="w-full p-4 rounded-lg border-2 text-left transition-all cursor-pointer hover:shadow-lg"
                       style={{
                         backgroundColor: selectedLessonToExchange?.id === lesson.id
-                          ? getGoldenAccent(0.1)
+                          ? getGoldenAccent(0.15)
                           : COLORS.BACKGROUND_CARD,
                         borderColor: selectedLessonToExchange?.id === lesson.id
-                          ? COLORS.GOLDEN_BORDER
+                          ? COLORS.GOLDEN_ACCENT
                           : COLORS.BORDER_SUBTLE,
+                        borderWidth: selectedLessonToExchange?.id === lesson.id ? "2px" : "1px",
                         color: COLORS.TEXT_PRIMARY,
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedLessonToExchange?.id !== lesson.id) {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedLessonToExchange?.id !== lesson.id) {
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }
                       }}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{lesson.title}</p>
+                        <div className="flex-1">
+                          <p className="font-semibold">{lesson.title}</p>
                           <p 
-                            className="text-sm"
+                            className="text-sm mt-1"
                             style={{ color: COLORS.TEXT_SECONDARY }}
                           >
                             {format(lessonDate, "EEEE, MMMM d")} at {format(lessonDate, "h:mm a")}
                           </p>
                         </div>
-                        {selectedLessonToExchange?.id === lesson.id && (
+                        {selectedLessonToExchange?.id === lesson.id ? (
                           <CheckCircle2 
-                            className="h-5 w-5" 
+                            className="h-6 w-6 flex-shrink-0 ml-3" 
                             style={{ color: COLORS.GOLDEN_ACCENT }}
+                          />
+                        ) : (
+                          <div 
+                            className="h-6 w-6 rounded-full border-2 flex-shrink-0 ml-3"
+                            style={{ 
+                              borderColor: COLORS.BORDER_SUBTLE,
+                              backgroundColor: "transparent"
+                            }}
                           />
                         )}
                       </div>
@@ -3900,7 +4265,10 @@ function DaySwapModal({ date, onClose }: { date: Date; onClose: () => void }) {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div 
+              className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4"
+              style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+            >
       <div
         className="relative w-full max-w-2xl bg-gradient-to-br from-[#1F2937] via-[#2A3133] to-[#1F2937] border-2 border-yellow-500/30 rounded-xl sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
         onClick={e => e.stopPropagation()}

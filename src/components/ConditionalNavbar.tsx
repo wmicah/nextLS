@@ -10,6 +10,16 @@ export default function ConditionalNavbar() {
 
   // Pages that should have no navbar at all
   const noNavbarPages = ["/auth-callback", "/role-selection"];
+  
+  // Client pages that have their own navigation (ClientTopNav or MobileClientNavigation)
+  const clientPages = [
+    "/client-dashboard",
+    "/client-program",
+    "/client-schedule",
+    "/client-messages",
+    "/client-settings",
+    "/client-notifications",
+  ];
 
   // Don't show anything while loading auth state
   if (isLoading) {
@@ -18,6 +28,11 @@ export default function ConditionalNavbar() {
 
   // No navbar on specific pages
   if (noNavbarPages.some(route => pathname.startsWith(route))) {
+    return null;
+  }
+
+  // No navbar on client pages - they have their own navigation
+  if (clientPages.some(route => pathname.startsWith(route))) {
     return null;
   }
 

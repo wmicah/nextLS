@@ -142,6 +142,7 @@ const ROUTE_COMPONENTS: Record<string, { desktop: React.ComponentType; mobile: R
   "/notifications": { desktop: NotificationsPage, mobile: MobileNotificationsPage },
   "/messages": { desktop: MessagesPage, mobile: MobileMessagesPage },
   "/client-dashboard": { desktop: ClientProgramPage, mobile: MobileClientProgramPage },
+  "/client-program": { desktop: ClientProgramPage, mobile: MobileClientProgramPage },
   "/client-schedule": { desktop: ClientSchedulePageClient, mobile: MobileClientSchedulePage },
   "/client-messages": { desktop: ClientMessagesPage, mobile: MobileClientMessagesPage },
   "/client-settings": { desktop: ClientSettingsPage, mobile: MobileClientSettingsPage },
