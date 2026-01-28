@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+/* Performance optimizations to prevent layout shifts */
+* {
+  /* Prevent layout shifts from font loading */
+  font-display: swap;
+}
+
+/* Reserve space for images to prevent CLS */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent layout shifts from dynamic content */
+[data-skeleton] {
+  min-height: 1px; /* Reserve minimum space */
+}
+
+/* Optimize font loading - prevent invisible text during font swap */
+body {
+  font-display: swap;
+  text-rendering: optimizeSpeed;
+}
+
 /* Smooth fade-in animation for paginated content */
 @keyframes fadeIn {
   from {
@@ -98,7 +121,9 @@
 .week-glance-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(96, 99, 100, 0.2);
   border-radius: 3px;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .week-glance-scrollbar:hover::-webkit-scrollbar-thumb {
@@ -402,7 +427,8 @@
 }
 
 @keyframes waveHi {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(0deg);
   }
   15% {
@@ -558,12 +584,14 @@
 
 /* Match zinc-400 color (inactive links) */
 .text-zinc-400 .lottie-icon-wrapper svg {
-  filter: brightness(0) saturate(100%) invert(58%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1.2);
+  filter: brightness(0) saturate(100%) invert(58%) sepia(0%) saturate(0%)
+    hue-rotate(0deg) brightness(1.2);
 }
 
 /* Match zinc-300 color (hover state) */
 .text-zinc-300 .lottie-icon-wrapper svg {
-  filter: brightness(0) saturate(100%) invert(70%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1.3);
+  filter: brightness(0) saturate(100%) invert(70%) sepia(0%) saturate(0%)
+    hue-rotate(0deg) brightness(1.3);
 }
 
 /* Match white color (active links) */
@@ -580,27 +608,27 @@ input::placeholder {
 /* Native select dropdown styling for dark theme */
 select {
   background-color: #15191a !important;
-  color: #F5F5F5 !important;
+  color: #f5f5f5 !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 select option {
   background-color: #15191a !important;
-  color: #F5F5F5 !important;
+  color: #f5f5f5 !important;
 }
 
 select:focus option:checked {
   background-color: rgba(229, 178, 50, 0.2) !important;
-  color: #E5B232 !important;
+  color: #e5b232 !important;
 }
 
 select option:hover,
 select option:focus {
   background-color: rgba(255, 255, 255, 0.04) !important;
-  color: #E5B232 !important;
+  color: #e5b232 !important;
 }
 
 /* Checkbox styling with golden accent */
 input[type="checkbox"] {
-  accent-color: #E5B232;
+  accent-color: #e5b232;
 }

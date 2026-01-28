@@ -9,12 +9,20 @@ import dynamic from "next/dynamic";
 // Icons removed for cleaner UI
 import Sidebar from "./Sidebar";
 import { SkeletonStats } from "@/components/SkeletonLoader";
-import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/colors";
+import {
+  COLORS,
+  getGoldenAccent,
+  getRedAlert,
+  getGreenPrimary,
+} from "@/lib/colors";
 
 // Lazy load non-critical components
-const PushNotificationPrompt = dynamic(() => import("./PushNotificationPrompt"), {
-  ssr: false, // Not needed for SSR
-});
+const PushNotificationPrompt = dynamic(
+  () => import("./PushNotificationPrompt"),
+  {
+    ssr: false, // Not needed for SSR
+  }
+);
 
 // Lazy load heavy components to improve initial load time
 const WeekAtAGlance = dynamic(() => import("@/components/WeekAtAGlance"), {
@@ -58,8 +66,13 @@ export default function Dashboard() {
   if (profileLoading) {
     return (
       <Sidebar>
-        <div className="min-h-screen bg-[#15191a] p-6">
-          <SkeletonStats />
+        <div
+          className="min-h-screen bg-[#15191a] p-6"
+          style={{ minHeight: "600px" }}
+        >
+          <div style={{ minHeight: "400px" }}>
+            <SkeletonStats />
+          </div>
         </div>
       </Sidebar>
     );
@@ -78,114 +91,131 @@ export default function Dashboard() {
   return (
     <Sidebar>
       <div className="min-h-screen bg-[#15191a] p-6">
-      {/* Defer push notification prompt - not critical for initial render */}
-      <Suspense fallback={null}>
-        <PushNotificationPrompt />
-      </Suspense>
-      
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold mb-2 text-white">
-          Welcome back{userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
-        </h1>
-        <p className="text-sm text-zinc-400">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
-      </div>
+        {/* Defer push notification prompt - not critical for initial render */}
+        <Suspense fallback={null}>
+          <PushNotificationPrompt />
+        </Suspense>
 
-      {/* TOP ROW: Week at a Glance + Today's Schedule */}
-      <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
-        <Suspense
-          fallback={
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5">
-              <div className="animate-pulse">
-                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
-                <div className="grid grid-cols-7 gap-2">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <div key={i} className="h-24 bg-white/10 rounded"></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          }
-        >
-          <WeekAtAGlanceCompact />
-        </Suspense>
-        <Suspense
-          fallback={
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
-              <div className="animate-pulse">
-                <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
-                <div className="space-y-2">
-                  <div className="h-3 w-full bg-white/10 rounded"></div>
-                  <div className="h-3 w-3/4 bg-white/10 rounded"></div>
-                </div>
-              </div>
-            </div>
-          }
-        >
-          <TodaysSchedulePanel />
-        </Suspense>
-      </div>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold mb-2 text-white">
+            Welcome back
+            {userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
+          </h1>
+          <p className="text-sm text-zinc-400">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+        </div>
 
-      {/* MIDDLE ROW: Needs Attention + Recent Activity */}
-      <div className="grid grid-cols-[60%_40%] gap-4 mb-6">
-        <Suspense
-          fallback={
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-              <div className="animate-pulse">
-                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
-                <div className="space-y-3">
-                  <div className="h-16 w-full bg-white/10 rounded"></div>
-                  <div className="h-16 w-full bg-white/10 rounded"></div>
+        {/* TOP ROW: Week at a Glance + Today's Schedule */}
+        <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
+          <Suspense
+            fallback={
+              <div
+                className="rounded-lg border border-white/10 bg-white/[0.02] p-5"
+                style={{ minHeight: "280px" }}
+              >
+                <div className="animate-pulse">
+                  <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-24 bg-white/10 rounded"
+                        style={{ minHeight: "96px" }}
+                      ></div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          }
-        >
-          <NeedsAttentionPanel />
-        </Suspense>
-        <Suspense
-          fallback={
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-              <div className="animate-pulse">
-                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
-                <div className="space-y-3">
-                  <div className="h-12 w-full bg-white/10 rounded"></div>
-                  <div className="h-12 w-full bg-white/10 rounded"></div>
+            }
+          >
+            <WeekAtAGlanceCompact />
+          </Suspense>
+          <Suspense
+            fallback={
+              <div
+                className="rounded-lg border border-white/10 bg-white/[0.02] p-4"
+                style={{ minHeight: "200px" }}
+              >
+                <div className="animate-pulse">
+                  <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
+                  <div className="space-y-2">
+                    <div
+                      className="h-3 w-full bg-white/10 rounded"
+                      style={{ minHeight: "12px" }}
+                    ></div>
+                    <div
+                      className="h-3 w-3/4 bg-white/10 rounded"
+                      style={{ minHeight: "12px" }}
+                    ></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          }
-        >
-          <ClientActivityFeed />
-        </Suspense>
-      </div>
+            }
+          >
+            <TodaysSchedulePanel />
+          </Suspense>
+        </div>
 
-      {/* BOTTOM ROW: Quick Stats */}
-      <div className="mb-6">
-        <Suspense
-          fallback={
-            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-              <div className="animate-pulse">
-                <div className="h-5 w-32 bg-white/10 rounded mb-4"></div>
-                <div className="grid grid-cols-4 gap-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-20 bg-white/10 rounded"></div>
-                  ))}
+        {/* MIDDLE ROW: Needs Attention + Recent Activity */}
+        <div className="grid grid-cols-[60%_40%] gap-4 mb-6">
+          <Suspense
+            fallback={
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+                <div className="animate-pulse">
+                  <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-16 w-full bg-white/10 rounded"></div>
+                    <div className="h-16 w-full bg-white/10 rounded"></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          }
-        >
-          <QuickStatsPanel />
-        </Suspense>
+            }
+          >
+            <NeedsAttentionPanel />
+          </Suspense>
+          <Suspense
+            fallback={
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+                <div className="animate-pulse">
+                  <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-12 w-full bg-white/10 rounded"></div>
+                    <div className="h-12 w-full bg-white/10 rounded"></div>
+                  </div>
+                </div>
+              </div>
+            }
+          >
+            <ClientActivityFeed />
+          </Suspense>
+        </div>
+
+        {/* BOTTOM ROW: Quick Stats */}
+        <div className="mb-6">
+          <Suspense
+            fallback={
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+                <div className="animate-pulse">
+                  <div className="h-5 w-32 bg-white/10 rounded mb-4"></div>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className="h-20 bg-white/10 rounded"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            }
+          >
+            <QuickStatsPanel />
+          </Suspense>
+        </div>
       </div>
-    </div>
     </Sidebar>
   );
 }
@@ -193,20 +223,25 @@ export default function Dashboard() {
 // Week at a Glance (Compact) - Now at top
 function WeekAtAGlanceCompact() {
   // Use batched dashboard data for this month's lessons if available
-  const { data: batchedData } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  const { data: batchedData } = trpc.sidebar.getDashboardDataBatched.useQuery(
+    undefined,
+    {
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  );
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">
-          Week at a Glance
-        </h2>
+        <h2 className="text-lg font-semibold text-white">Week at a Glance</h2>
         <span className="text-xs text-zinc-400 font-medium">
-          Week of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          Week of{" "}
+          {new Date().toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })}
         </span>
       </div>
       <WeekAtAGlance className="compact" />
@@ -219,11 +254,12 @@ function TodaysSchedulePanel() {
   const router = useRouter();
 
   // Use batched dashboard data if available, fallback to individual queries
-  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  const { data: batchedData, isLoading: batchedLoading } =
+    trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    });
 
   // Fallback queries (only used if batched query fails)
   const today = new Date();
@@ -307,7 +343,7 @@ function TodaysSchedulePanel() {
   if (batchedLoading || (!batchedData && (lessonsLoading || eventsLoading))) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
-          <div className="animate-pulse">
+        <div className="animate-pulse">
           <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
           <div className="space-y-2">
             <div className="h-3 w-full bg-white/10 rounded"></div>
@@ -321,9 +357,7 @@ function TodaysSchedulePanel() {
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">
-          Today's schedule
-        </h2>
+        <h2 className="text-lg font-semibold text-white">Today's schedule</h2>
       </div>
 
       {todaysSchedule.length > 0 ? (
@@ -345,12 +379,14 @@ function TodaysSchedulePanel() {
                   borderColor: COLORS.GOLDEN_BORDER,
                   backgroundColor: COLORS.BACKGROUND_CARD,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                   e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                   e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
                 }}
               >
@@ -401,10 +437,10 @@ function TodaysSchedulePanel() {
               backgroundColor: COLORS.GOLDEN_DARK,
               color: "#FFFFFF",
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
             }}
           >
@@ -419,11 +455,12 @@ function TodaysSchedulePanel() {
 // Needs Your Attention Panel - Real data
 function NeedsAttentionPanel() {
   // Use batched dashboard data if available
-  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
-    staleTime: 1 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  const { data: batchedData, isLoading: batchedLoading } =
+    trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+      staleTime: 1 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    });
 
   // Fallback queries (only used if batched query fails)
   const { data: attentionItemsData = [], isLoading: attentionLoading } =
@@ -450,7 +487,9 @@ function NeedsAttentionPanel() {
     }
 
     // Otherwise, combine from individual queries
-    const conversations = Array.isArray(conversationsData) ? conversationsData : [];
+    const conversations = Array.isArray(conversationsData)
+      ? conversationsData
+      : [];
     const items: any[] = [...attentionItemsData];
 
     // Add conversations with unread messages (priority 2)
@@ -491,7 +530,10 @@ function NeedsAttentionPanel() {
     return items;
   }, [batchedData?.attentionItems, attentionItemsData, conversationsData]);
 
-  if (batchedLoading || (!batchedData && (attentionLoading || conversationsLoading))) {
+  if (
+    batchedLoading ||
+    (!batchedData && (attentionLoading || conversationsLoading))
+  ) {
     return (
       <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
         <div className="animate-pulse">
@@ -515,7 +557,8 @@ function NeedsAttentionPanel() {
 
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
     return date.toLocaleDateString();
   };
@@ -523,7 +566,7 @@ function NeedsAttentionPanel() {
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6 shadow-sm">
       <div className="flex items-center justify-between mb-5">
-        <h2 
+        <h2
           className="text-lg font-semibold text-white pl-3"
           style={{ borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}` }}
         >
@@ -542,8 +585,12 @@ function NeedsAttentionPanel() {
 
       {attentionItems.length > 0 ? (
         <div className="space-y-3">
-          {attentionItems.map((item) => (
-            <AttentionItem key={item.id} item={item} formatTimestamp={formatTimestamp} />
+          {attentionItems.map(item => (
+            <AttentionItem
+              key={item.id}
+              item={item}
+              formatTimestamp={formatTimestamp}
+            />
           ))}
         </div>
       ) : (
@@ -564,7 +611,9 @@ function NeedsAttentionPanel() {
             </svg>
           </div>
           <p className="text-sm text-zinc-400 font-medium">All caught up!</p>
-          <p className="text-xs text-zinc-500 mt-1">No items need your attention.</p>
+          <p className="text-xs text-zinc-500 mt-1">
+            No items need your attention.
+          </p>
         </div>
       )}
     </div>
@@ -572,7 +621,13 @@ function NeedsAttentionPanel() {
 }
 
 // Attention Item Component - Memoized to prevent unnecessary re-renders
-const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp }: { item: any; formatTimestamp: (ts: string) => string }) {
+const AttentionItem = React.memo(function AttentionItem({
+  item,
+  formatTimestamp,
+}: {
+  item: any;
+  formatTimestamp: (ts: string) => string;
+}) {
   const router = useRouter();
 
   const getTypeLabel = () => {
@@ -604,13 +659,13 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
     if (item.actionButton) {
       return;
     }
-    
+
     // Priority: if clientId exists, navigate to client detail page
     if (item.clientId) {
       router.push(`/clients/${item.clientId}/detail`);
       return;
     }
-    
+
     // Fallback to href if no clientId
     if (item.href) {
       router.push(item.href);
@@ -624,18 +679,20 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
         borderColor: COLORS.BORDER_SUBTLE,
         backgroundColor: COLORS.BACKGROUND_CARD,
       }}
-      onMouseEnter={(e) => {
+      onMouseEnter={e => {
         e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
         e.currentTarget.style.transform = "translateX(2px)";
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={e => {
         e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
         e.currentTarget.style.transform = "translateX(0)";
       }}
       className={`flex items-start gap-3 p-3 rounded-lg border transition-all duration-200 ${
-        (item.clientId || item.href) && !item.actionButton ? "cursor-pointer" : ""
+        (item.clientId || item.href) && !item.actionButton
+          ? "cursor-pointer"
+          : ""
       }`}
     >
       <div className="flex-1 min-w-0">
@@ -648,10 +705,10 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
           {item.type !== "missed_drill" && (
             <span
               className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
-        style={{
-              backgroundColor: getGoldenAccent(0.12),
-              color: COLORS.GOLDEN_HOVER,
-        }}
+              style={{
+                backgroundColor: getGoldenAccent(0.12),
+                color: COLORS.GOLDEN_HOVER,
+              }}
             >
               {getTypeLabel()}
             </span>
@@ -659,18 +716,16 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
           {item.badge && (
             <span
               className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
-            style={{
-              backgroundColor: getRedAlert(0.4),
-              color: COLORS.RED_ALERT,
-            }}
+              style={{
+                backgroundColor: getRedAlert(0.4),
+                color: COLORS.RED_ALERT,
+              }}
             >
               {item.badge}
             </span>
           )}
         </div>
-        <p className="text-xs font-medium mb-0.5 text-zinc-200">
-          {item.title}
-        </p>
+        <p className="text-xs font-medium mb-0.5 text-zinc-200">{item.title}</p>
         {item.description && (
           <p className="text-[10px] text-zinc-400 line-clamp-1">
             {item.description}
@@ -688,28 +743,29 @@ const AttentionItem = React.memo(function AttentionItem({ item, formatTimestamp 
             backgroundColor: COLORS.GOLDEN_ACCENT,
             color: "#FFFFFF",
           }}
-          onMouseEnter={(e) => {
+          onMouseEnter={e => {
             e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
           }}
-          onMouseLeave={(e) => {
+          onMouseLeave={e => {
             e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
           }}
         >
           {item.actionButton}
         </button>
       )}
-                  </div>
+    </div>
   );
 });
 
 // Client Activity Feed - Real data from completions
 function ClientActivityFeed() {
   // Use batched dashboard data if available
-  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  const { data: batchedData, isLoading: batchedLoading } =
+    trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    });
 
   // Fallback query (only used if batched query fails)
   const { data: recentCompletions = [], isLoading } =
@@ -733,7 +789,8 @@ function ClientActivityFeed() {
 
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
     return date.toLocaleDateString();
   };
@@ -746,15 +803,15 @@ function ClientActivityFeed() {
           <div className="space-y-3">
             <div className="h-12 w-full bg-white/10 rounded"></div>
             <div className="h-12 w-full bg-white/10 rounded"></div>
-                  </div>
-                </div>
-              </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6 shadow-sm">
-      <h2 
+      <h2
         className="text-lg font-semibold mb-5 text-white pl-3"
         style={{ borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}` }}
       >
@@ -788,8 +845,12 @@ function ClientActivityFeed() {
               />
             </svg>
           </div>
-          <p className="text-sm text-zinc-400 font-medium">No recent activity</p>
-          <p className="text-xs text-zinc-500 mt-1">Client completions will appear here</p>
+          <p className="text-sm text-zinc-400 font-medium">
+            No recent activity
+          </p>
+          <p className="text-xs text-zinc-500 mt-1">
+            Client completions will appear here
+          </p>
         </div>
       )}
     </div>
@@ -808,16 +869,14 @@ const ActivityItem = React.memo(function ActivityItem({
     const count = completion.count || 1;
     const latest = completion.latestCompletion;
     const completionType = completion.completionType || latest?.type;
-    
+
     if (completionType === "program") {
       if (latest?.title) {
-        return count > 1 
+        return count > 1
           ? `completed ${count} drills including "${latest.title}"`
           : `completed drill "${latest.title}"`;
       }
-      return count > 1 
-        ? `completed ${count} drills`
-        : `completed a drill`;
+      return count > 1 ? `completed ${count} drills` : `completed a drill`;
     } else if (completionType === "routine") {
       return count > 1
         ? `completed ${count} routine exercises`
@@ -847,7 +906,9 @@ const ActivityItem = React.memo(function ActivityItem({
       <div className="w-1.5 h-1.5 rounded-full bg-green-400 mt-2 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-zinc-300 leading-relaxed">
-          <span className="font-semibold text-white">{completion.clientName}</span>{" "}
+          <span className="font-semibold text-white">
+            {completion.clientName}
+          </span>{" "}
           {getActivityText()}
           {getWorkoutName() && (
             <>
@@ -870,11 +931,12 @@ const ActivityItem = React.memo(function ActivityItem({
 // Quick Stats Panel
 function QuickStatsPanel() {
   // Use batched dashboard data (preferred) or fallback to original query
-  const { data: batchedData, isLoading: batchedLoading } = trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  const { data: batchedData, isLoading: batchedLoading } =
+    trpc.sidebar.getDashboardDataBatched.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    });
 
   const { data: dashboardData, isLoading } =
     trpc.sidebar.getDashboardData.useQuery(undefined, {
@@ -887,13 +949,13 @@ function QuickStatsPanel() {
     });
 
   // Use batched data if available, otherwise use fallback
-  const stats = batchedData?.stats || dashboardData?.stats || {
-    totalClients: 0,
-    totalPrograms: 0,
-    totalLessons: 0,
-    completionRate: 0,
-  };
-
+  const stats = batchedData?.stats ||
+    dashboardData?.stats || {
+      totalClients: 0,
+      totalPrograms: 0,
+      totalLessons: 0,
+      completionRate: 0,
+    };
 
   const statsArray = [
     {
@@ -921,7 +983,7 @@ function QuickStatsPanel() {
         <div className="animate-pulse">
           <div className="h-5 w-32 bg-white/10 rounded mb-4"></div>
           <div className="grid grid-cols-4 gap-3">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-20 bg-white/10 rounded"></div>
             ))}
           </div>
@@ -932,9 +994,7 @@ function QuickStatsPanel() {
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6 shadow-sm">
-      <h2 className="text-lg font-semibold mb-5 text-white">
-        Quick stats
-      </h2>
+      <h2 className="text-lg font-semibold mb-5 text-white">Quick stats</h2>
 
       <div className="grid grid-cols-4 gap-4">
         {statsArray.map((stat, index) => (
@@ -951,10 +1011,10 @@ const StatCard = React.memo(function StatCard({ stat }: { stat: any }) {
     <div
       className="p-5 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-200 group"
       style={{ borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}` }}
-      onMouseEnter={(e) => {
+      onMouseEnter={e => {
         e.currentTarget.style.borderLeftColor = COLORS.GOLDEN_ACCENT;
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={e => {
         e.currentTarget.style.borderLeftColor = COLORS.GOLDEN_HOVER;
       }}
     >

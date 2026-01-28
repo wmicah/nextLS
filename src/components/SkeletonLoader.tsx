@@ -85,7 +85,7 @@ export function SkeletonText({
   );
 }
 
-// Dashboard stats skeleton
+// Dashboard stats skeleton - with fixed dimensions to prevent CLS
 export function SkeletonStats({ className }: { className?: string }) {
   return (
     <div
@@ -93,11 +93,13 @@ export function SkeletonStats({ className }: { className?: string }) {
         "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4",
         className
       )}
+      style={{ minHeight: "120px" }} // Fixed height to prevent CLS
     >
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
           className="rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+          style={{ minHeight: "100px" }} // Fixed height per card
         >
           <Skeleton className="h-4 w-20 mb-2" />
           <Skeleton className="h-8 w-16 mb-2" />
@@ -152,7 +154,7 @@ export function SkeletonTable({
   );
 }
 
-// Message list skeleton
+// Message list skeleton - with fixed dimensions to prevent CLS
 export function SkeletonMessageList({
   items = 5,
   className,
@@ -161,9 +163,16 @@ export function SkeletonMessageList({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-4", className)}>
+    <div
+      className={cn("space-y-4", className)}
+      style={{ minHeight: `${items * 80}px` }}
+    >
       {Array.from({ length: items }).map((_, i) => (
-        <div key={i} className="flex space-x-3 p-3">
+        <div
+          key={i}
+          className="flex space-x-3 p-3"
+          style={{ minHeight: "80px" }}
+        >
           <SkeletonAvatar size="md" />
           <div className="flex-1 space-y-2">
             <div className="flex items-center space-x-2">

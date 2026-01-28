@@ -36,29 +36,36 @@ function ClientDashboard() {
     isLoading: authLoading,
   } = useKindeBrowserClient();
 
-  // tRPC queries for real data - optimized with better caching
+  // tRPC queries for real data - optimized with better caching and reduced queries
+  // Batch critical queries together to reduce round trips
   const { data: userProfile, isLoading: profileLoading } =
     trpc.user.getProfile.useQuery(undefined, {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 10 * 60 * 1000, // 10 minutes (increased)
+      gcTime: 30 * 60 * 1000, // 30 minutes
+      refetchOnWindowFocus: false,
+      refetchOnMount: false, // Don't refetch if cached
     });
 
+  // Defer non-critical queries - load after initial render
   const { data: todaysWorkouts = [], isLoading: workoutsLoading } =
     trpc.workouts.getTodaysWorkouts.useQuery(undefined, {
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
     });
 
   const { data: assignedVideos = [], isLoading: videosLoading } =
     trpc.library.getAssignedVideos.useQuery(undefined, {
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 15 * 60 * 1000, // 15 minutes
+      staleTime: 15 * 60 * 1000, // 15 minutes (increased)
+      gcTime: 30 * 60 * 1000, // 30 minutes
+      refetchOnWindowFocus: false,
     });
 
   const { data: upcomingEvents = [], isLoading: eventsLoading } =
     trpc.events.getUpcoming.useQuery(undefined, {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
     });
 
   // Pitching-specific data (only what we need here)
@@ -67,21 +74,24 @@ function ClientDashboard() {
     {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
     }
   );
 
   const { data: coachNotes } = trpc.clientRouter.getCoachNotes.useQuery(
     undefined,
     {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 10 * 60 * 1000, // 10 minutes (increased)
+      gcTime: 20 * 60 * 1000, // 20 minutes
+      refetchOnWindowFocus: false,
     }
   );
 
   const { data: videoAssignments = [] } =
     trpc.clientRouter.getVideoAssignments.useQuery(undefined, {
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 15 * 60 * 1000, // 15 minutes
+      staleTime: 15 * 60 * 1000, // 15 minutes (increased)
+      gcTime: 30 * 60 * 1000, // 30 minutes
+      refetchOnWindowFocus: false,
     });
 
   // Optimized unread count with smart caching
@@ -96,13 +106,13 @@ function ClientDashboard() {
     }
   );
 
-  // Get recent notifications with optimized caching
+  // Get recent notifications with optimized caching - defer loading
   const { data: recentNotifications = [], isLoading: notificationsLoading } =
     trpc.notifications.getNotifications.useQuery(
       { limit: 5, unreadOnly: false },
       {
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+        staleTime: 10 * 60 * 1000, // 10 minutes (increased)
+        gcTime: 20 * 60 * 1000, // 20 minutes
         refetchInterval: false, // No automatic polling
         refetchOnWindowFocus: false, // Don't refetch on focus
         refetchOnReconnect: true, // Only refetch on reconnect
@@ -123,7 +133,11 @@ function ClientDashboard() {
       >
         <LoadingState
           isLoading={true}
-          skeleton={<SkeletonStats />}
+          skeleton={
+            <div style={{ minHeight: "400px", width: "100%" }}>
+              <SkeletonStats />
+            </div>
+          }
           className="p-8"
         >
           <div />

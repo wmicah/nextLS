@@ -185,7 +185,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
-  
+
   const markAsReadMutation = trpc.messaging.markAsRead.useMutation({
     onSuccess: () => {
       // Invalidate all queries that depend on unread counts
@@ -193,7 +193,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
       utils.messaging.getConversations.invalidate();
       utils.messaging.getUnreadCount.invalidate();
       utils.messaging.getConversationUnreadCounts.invalidate();
-      
+
       // Force immediate refetch
       utils.messaging.getConversationUnreadCounts.refetch();
       utils.messaging.getUnreadCount.refetch();
@@ -830,7 +830,11 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                                   : null
                               }
                               isOwnMessage={isCurrentUser}
-                              messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
+                              messageData={
+                                message.data as
+                                  | { type?: string; swapRequestId?: string }
+                                  | undefined
+                              }
                             />
                           )}
 
@@ -838,12 +842,27 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                           {message.attachmentUrl && (
                             <div className="mb-2">
                               {message.attachmentType?.startsWith("image/") ? (
-                                <div className="relative group">
+                                <div
+                                  className="relative group"
+                                  style={{
+                                    minHeight: "200px",
+                                    maxHeight: "300px",
+                                  }}
+                                >
                                   <img
                                     src={message.attachmentUrl}
                                     alt={message.attachmentName || "Image"}
                                     className="max-w-full rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02]"
-                                    style={{ maxHeight: "300px" }}
+                                    style={{
+                                      maxHeight: "300px",
+                                      width: "auto",
+                                      height: "auto",
+                                      objectFit: "contain",
+                                    }}
+                                    width={800}
+                                    height={600}
+                                    loading="lazy"
+                                    decoding="async"
                                     onClick={() =>
                                       message.attachmentUrl &&
                                       window.open(
