@@ -1029,15 +1029,6 @@ function ClientSchedulePageClient() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
             <div className="flex items-center gap-3 md:gap-4">
-              <div
-                className="p-2 md:p-3 rounded-lg"
-                style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
-              >
-                <Calendar 
-                  className="w-5 h-5 md:w-6 md:h-6" 
-                  style={{ color: COLORS.GOLDEN_ACCENT }}
-                />
-              </div>
               <div>
                 <h1 
                   className="text-2xl md:text-3xl font-bold"
@@ -1056,7 +1047,7 @@ function ClientSchedulePageClient() {
             </div>
             <div className="flex gap-3 w-full md:w-auto">
               <div
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium border"
+                className="flex-1 md:flex-none flex items-center justify-center px-3 md:px-4 py-2 rounded-lg text-sm font-medium border"
                 style={{
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   borderColor: COLORS.GREEN_PRIMARY,
@@ -1064,14 +1055,13 @@ function ClientSchedulePageClient() {
                 }}
                 title="Click any available day to request a new lesson"
               >
-                <Calendar className="h-4 w-4" />
                 <span className="whitespace-nowrap">
                   Click a day to request a lesson
                 </span>
               </div>
               <button
                 onClick={() => setShowSwapRequests(true)}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation"
+                className="flex-1 md:flex-none flex items-center justify-center px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation"
                 style={{
                   backgroundColor: COLORS.GOLDEN_ACCENT,
                   color: COLORS.BACKGROUND_DARK,
@@ -1083,7 +1073,6 @@ function ClientSchedulePageClient() {
                   e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                 }}
               >
-                <Users className="h-4 w-4" />
                 <span className="whitespace-nowrap">Switch Requests</span>
               </button>
             </div>
@@ -1098,8 +1087,7 @@ function ClientSchedulePageClient() {
                 borderColor: COLORS.BORDER_SUBTLE 
               }}
             >
-              <div className="flex items-center gap-3 mb-4">
-                <Clock className="h-5 w-5" style={{ color: COLORS.BLUE_PRIMARY }} />
+              <div className="mb-4">
                 <h2 
                   className="text-lg font-semibold"
                   style={{ color: COLORS.TEXT_PRIMARY }}
@@ -1646,25 +1634,6 @@ function ClientSchedulePageClient() {
                       </div>
                     )}
 
-                    {/* Minimalist approach: Only show essential info */}
-                    {!hasMyPendingLessons &&
-                      !hasMyConfirmedLessons &&
-                      !hasCoachLessons &&
-                      isCurrentMonth &&
-                      !isPast &&
-                      isWorkingDay && (
-                        <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div 
-                            className="w-4 h-4 rounded-full border flex items-center justify-center"
-                            style={{
-                              backgroundColor: COLORS.BACKGROUND_CARD,
-                              borderColor: COLORS.BLUE_PRIMARY,
-                            }}
-                          >
-                            <Plus className="h-2.5 w-2.5" style={{ color: COLORS.BLUE_PRIMARY }} />
-                          </div>
-                        </div>
-                      )}
                   </div>
                 );
               })}
@@ -1754,7 +1723,10 @@ function ClientSchedulePageClient() {
                 <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
                   {/* My Lessons */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">
+                    <h3 
+                      className="text-lg font-semibold mb-4"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       My Lessons
                     </h3>
 
@@ -1781,24 +1753,36 @@ function ClientSchedulePageClient() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3 flex-1">
                                     <div className="flex-1">
-                                      <div className="font-medium text-white">
+                                      <div 
+                                        className="font-medium"
+                                        style={{ color: COLORS.TEXT_PRIMARY }}
+                                      >
                                         {isValidDate
                                           ? format(lessonDate, "h:mm a")
                                           : "Invalid date"}
                                       </div>
-                                      <div className="text-sm text-gray-300 mt-1">
+                                      <div 
+                                        className="text-sm mt-1"
+                                        style={{ color: COLORS.TEXT_SECONDARY }}
+                                      >
                                         {anonymizeLessonTitle(
                                           lesson.title,
                                           lesson.clientId
                                         )}
                                       </div>
                                       {lesson.description && (
-                                        <div className="text-xs text-gray-400 mt-1">
+                                        <div 
+                                          className="text-xs mt-1"
+                                          style={{ color: COLORS.TEXT_MUTED }}
+                                        >
                                           {lesson.description}
                                         </div>
                                       )}
                                       {lesson.coach && (
-                                        <div className="text-xs text-gray-400 mt-1">
+                                        <div 
+                                          className="text-xs mt-1"
+                                          style={{ color: COLORS.TEXT_MUTED }}
+                                        >
                                           Coach: {lesson.coach.name}
                                         </div>
                                       )}
@@ -1806,7 +1790,10 @@ function ClientSchedulePageClient() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     {getStatusIcon(lesson.status)}
-                                    <span className="text-xs font-medium text-gray-300">
+                                    <span 
+                                      className="text-xs font-medium"
+                                      style={{ color: COLORS.TEXT_SECONDARY }}
+                                    >
                                       {lesson.status}
                                     </span>
                                   </div>
@@ -1817,10 +1804,7 @@ function ClientSchedulePageClient() {
                         </div>
                       ) : (
                         <div className="text-center py-12">
-                          <div className="p-4 rounded-full bg-gray-700/30 w-fit mx-auto mb-4">
-                            <Calendar className="h-8 w-8 text-gray-500" />
-                          </div>
-                          <p className="text-gray-400">
+                          <p style={{ color: COLORS.TEXT_SECONDARY }}>
                             No lessons scheduled for this day
                           </p>
                         </div>
@@ -1830,7 +1814,10 @@ function ClientSchedulePageClient() {
 
                   {/* Coach's Lessons */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">
+                    <h3 
+                      className="text-lg font-semibold mb-4"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Coach&apos;s Scheduled Lessons
                     </h3>
 
@@ -1878,15 +1865,24 @@ function ClientSchedulePageClient() {
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3 flex-1">
                                       <div className="flex-1">
-                                        <div className="font-medium text-white">
+                                        <div 
+                                          className="font-medium"
+                                          style={{ color: COLORS.TEXT_PRIMARY }}
+                                        >
                                           {isValidDate
                                             ? format(lessonDate, "h:mm a")
                                             : "Invalid date"}
                                         </div>
-                                        <div className="text-sm text-gray-400 mt-0.5">
+                                        <div 
+                                          className="text-sm mt-0.5"
+                                          style={{ color: COLORS.TEXT_SECONDARY }}
+                                        >
                                           Client
                                         </div>
-                                        <div className="text-xs text-gray-500 mt-0.5">
+                                        <div 
+                                          className="text-xs mt-0.5"
+                                          style={{ color: COLORS.TEXT_MUTED }}
+                                        >
                                           {anonymizeLessonTitle(
                                             lesson.title,
                                             lesson.clientId
@@ -1920,34 +1916,35 @@ function ClientSchedulePageClient() {
                                             disabled={
                                               createSwapRequestMutation.isPending
                                             }
-                                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed"
                                             style={{
-                                              backgroundColor: COLORS.BACKGROUND_CARD,
-                                              color: COLORS.TEXT_PRIMARY,
-                                              borderColor: COLORS.BORDER_SUBTLE,
+                                              backgroundColor: COLORS.GOLDEN_ACCENT,
+                                              color: COLORS.BACKGROUND_DARK,
+                                              borderColor: COLORS.GOLDEN_ACCENT,
                                             }}
                                             onMouseEnter={(e) => {
                                               if (!e.currentTarget.disabled) {
-                                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
                                               }
                                             }}
                                             onMouseLeave={(e) => {
                                               if (!e.currentTarget.disabled) {
-                                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                                               }
                                             }}
                                           >
                                             {createSwapRequestMutation.isPending ? (
                                               <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                              <ArrowRightLeft className="h-4 w-4" />
-                                            )}
-                                            Request Switch
+                                            ) : null}
+                                            Switch
                                           </button>
                                         )}
                                       {!isPast &&
                                         upcomingLessons.length === 0 && (
-                                          <span className="text-xs text-gray-400">
+                                          <span 
+                                            className="text-xs"
+                                            style={{ color: COLORS.TEXT_SECONDARY }}
+                                          >
                                             No lessons to switch
                                           </span>
                                         )}
@@ -1974,10 +1971,7 @@ function ClientSchedulePageClient() {
                         </div>
                       ) : (
                         <div className="text-center py-12">
-                          <div className="p-4 rounded-full bg-gray-700/30 w-fit mx-auto mb-4">
-                            <Users className="h-8 w-8 text-gray-500" />
-                          </div>
-                          <p className="text-gray-400">No lessons scheduled</p>
+                            <p style={{ color: COLORS.TEXT_SECONDARY }}>No lessons scheduled</p>
                         </div>
                       );
                     })()}
@@ -1985,7 +1979,10 @@ function ClientSchedulePageClient() {
 
                   {/* Available Time Slots */}
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">
+                    <h3 
+                      className="text-lg font-semibold mb-4"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Available Time Slots
                     </h3>
                     {(() => {
@@ -1999,25 +1996,28 @@ function ClientSchedulePageClient() {
                       if (availableSlots.length === 0) {
                         return (
                           <div className="text-center py-12">
-                            <div className="p-4 rounded-full bg-gray-700/30 w-fit mx-auto mb-4">
-                              <Clock className="h-8 w-8 text-gray-500" />
-                            </div>
                             {beyondLimit ? (
                               <>
-                                <p className="text-gray-400">
+                                <p style={{ color: COLORS.TEXT_SECONDARY }}>
                                   This date is outside your coach&apos;s
                                   scheduling window.
                                 </p>
-                                <p className="text-gray-500 text-sm mt-1">
+                                <p 
+                                  className="text-sm mt-1"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
                                   Please choose a date closer to today.
                                 </p>
                               </>
                             ) : (
                               <>
-                                <p className="text-gray-400">
+                                <p style={{ color: COLORS.TEXT_SECONDARY }}>
                                   No available time slots
                                 </p>
-                                <p className="text-gray-500 text-sm mt-1">
+                                <p 
+                                  className="text-sm mt-1"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
                                   All working hours are booked
                                 </p>
                               </>
@@ -2282,7 +2282,6 @@ function ClientSchedulePageClient() {
                                             ) : (
                                               <>
                                                 <div className="flex items-center gap-2">
-                                                  <Plus className="h-5 w-5" />
                                                   <span>Request New Lesson</span>
                                                 </div>
                                                 <span className="text-xs font-normal opacity-90">
@@ -2308,7 +2307,6 @@ function ClientSchedulePageClient() {
                                               }}
                                             >
                                               <div className="flex items-center gap-2">
-                                                <ArrowRightLeft className="h-5 w-5" />
                                                 <span>Exchange My Lesson</span>
                                               </div>
                                               <span className="text-xs font-normal opacity-90">
@@ -2733,9 +2731,7 @@ function ClientSchedulePageClient() {
                                   <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                                 ) : isDisabled ? (
                                   <CheckCircle className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <ArrowRightLeft className="h-4 w-4 text-gray-400" />
-                                )}
+                                ) : null}
                               </div>
                             </button>
                           );
@@ -2743,7 +2739,6 @@ function ClientSchedulePageClient() {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <Calendar className="h-12 w-12 text-gray-500 mx-auto mb-3" />
                         <p className="text-gray-400">
                           No lessons available to switch
                         </p>
@@ -3105,9 +3100,6 @@ function SwapWithClientModal({
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
-              <ArrowRightLeft className="h-5 w-5 text-white" />
-            </div>
             <h3 className="text-lg font-bold text-white">
               Switch Lessons with Another Client
             </h3>
@@ -3343,7 +3335,6 @@ function SwapWithClientModal({
               </>
             ) : (
               <>
-                <ArrowRightLeft className="h-5 w-5" />
                 Request Swap
               </>
             )}
@@ -4093,7 +4084,6 @@ function RequestExchangeModal({
                       e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                     }}
                   >
-                    <ArrowRightLeft className="h-5 w-5" />
                     Exchange
                   </button>
                 )}
@@ -4139,7 +4129,6 @@ function RequestExchangeModal({
                       </>
                     ) : (
                       <>
-                        <ArrowRightLeft className="h-5 w-5" />
                         Request Exchange
                       </>
                     )}
@@ -4278,9 +4267,6 @@ function DaySwapModal({ date, onClose }: { date: Date; onClose: () => void }) {
           <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5"></div>
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 pr-2">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 shadow-lg ring-2 ring-yellow-400/20 flex-shrink-0">
-                <ArrowRightLeft className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
               <div className="min-w-0">
                 <h3 className="text-lg sm:text-xl font-bold text-white truncate">
                   Request Time Swap
@@ -4392,9 +4378,6 @@ function DaySwapModal({ date, onClose }: { date: Date; onClose: () => void }) {
 
             {!selectedMyLesson ? (
               <div className="text-center py-12">
-                <div className="p-4 rounded-full bg-gray-700/30 w-fit mx-auto mb-4">
-                  <AlertCircle className="h-8 w-8 text-gray-500" />
-                </div>
                 <p className="text-gray-400">
                   {myLessonsOnDay.length > 1
                     ? "Please select your lesson above"
@@ -4403,9 +4386,6 @@ function DaySwapModal({ date, onClose }: { date: Date; onClose: () => void }) {
               </div>
             ) : availableSwapLessons.length === 0 ? (
               <div className="text-center py-12">
-                <div className="p-4 rounded-full bg-gray-700/30 w-fit mx-auto mb-4">
-                  <Users className="h-8 w-8 text-gray-500" />
-                </div>
                 <p className="text-gray-400">
                   No available lessons to swap with on this day
                 </p>
@@ -4419,9 +4399,6 @@ function DaySwapModal({ date, onClose }: { date: Date; onClose: () => void }) {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                          <Clock className="h-5 w-5 text-blue-400" />
-                        </div>
                         <div>
                           <p className="text-white font-semibold">
                             Lesson with client
@@ -4452,7 +4429,6 @@ function DaySwapModal({ date, onClose }: { date: Date; onClose: () => void }) {
                           </>
                         ) : (
                           <>
-                            <ArrowRightLeft className="h-4 w-4" />
                             Request Switch
                           </>
                         )}

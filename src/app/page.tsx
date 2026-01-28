@@ -2,12 +2,7 @@
 
 import MaxWidthWrapper from "@/components/MaxWidthWrapper";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Check,
-  CheckCircle2,
-  PlayCircle,
-} from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, PlayCircle } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -20,7 +15,7 @@ function HomeContent() {
   // Scroll reveal animation
   useEffect(() => {
     const els = document.querySelectorAll<HTMLElement>("[data-reveal]");
-    els.forEach((el) => {
+    els.forEach(el => {
       el.classList.add(
         "opacity-0",
         "translate-y-8",
@@ -29,8 +24,8 @@ function HomeContent() {
       );
     });
     const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           const el = entry.target as HTMLElement;
           if (entry.isIntersecting) {
             el.classList.add("opacity-100", "translate-y-0");
@@ -40,9 +35,9 @@ function HomeContent() {
       },
       { threshold: 0.1 }
     );
-    els.forEach((el) => io.observe(el));
+    els.forEach(el => io.observe(el));
     return () => {
-      els.forEach((el) => io.unobserve(el));
+      els.forEach(el => io.unobserve(el));
       io.disconnect();
     };
   }, []);
@@ -160,7 +155,7 @@ function HomeContent() {
                 <span className="text-white">Deserve </span>
                 <span className="text-[#E5B232]">Better</span>
               </motion.h1>
-              
+
               <motion.p
                 className="text-lg sm:text-xl text-zinc-400 mb-8 leading-relaxed max-w-xl"
                 initial={{ opacity: 0, y: 20 }}
@@ -168,11 +163,11 @@ function HomeContent() {
                 transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
               >
                 The platform that lets you focus on what you do best—
-                <span className="text-white font-medium">coaching</span>. 
-                Build programs, manage athletes, analyze video, and schedule lessons. 
+                <span className="text-white font-medium">coaching</span>. Build
+                programs, manage athletes, analyze video, and schedule lessons.
                 All in one place.
               </motion.p>
-              
+
               <motion.div
                 className="flex flex-col sm:flex-row gap-4 mb-8"
                 initial={{ opacity: 0, y: 20 }}
@@ -184,7 +179,7 @@ function HomeContent() {
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </RegisterLink>
               </motion.div>
-              
+
               <motion.div
                 className="flex flex-wrap items-center gap-6 text-sm text-zinc-500"
                 initial={{ opacity: 0, y: 20 }}
@@ -221,7 +216,10 @@ function HomeContent() {
       <ReviewsMarquee />
 
       {/* HOW IT WORKS - Interactive Demo Section */}
-      <section id="how-it-works" className="py-16 sm:py-20 md:py-24 bg-white/[.02]">
+      <section
+        id="how-it-works"
+        className="py-16 sm:py-20 md:py-24 bg-white/[.02]"
+      >
         <MaxWidthWrapper className="px-4 sm:px-6">
           <div className="text-center mb-12 md:mb-16" data-reveal>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
@@ -344,7 +342,8 @@ function HomeContent() {
               Ready to Focus on Coaching?
             </h2>
             <p className="text-lg text-zinc-400 mb-8 max-w-xl mx-auto">
-              Join coaches who've simplified their business and improved their athletes' results.
+              Join coaches who've simplified their business and improved their
+              athletes' results.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <RegisterLink className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#E5B232] px-8 py-4 text-lg font-semibold text-[#1a1f20] transition-all hover:bg-[#F5C242] hover:shadow-lg hover:shadow-[#E5B232]/20">
@@ -371,11 +370,10 @@ function HomeContent() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
             {/* Brand */}
             <div className="col-span-2 md:col-span-1">
-              <h3 className="text-xl font-bold text-white mb-4">
-                NextLevel
-              </h3>
+              <h3 className="text-xl font-bold text-white mb-4">NextLevel</h3>
               <p className="text-sm text-zinc-500 mb-4 max-w-xs">
-                The coaching platform built for coaches who want to spend more time coaching.
+                The coaching platform built for coaches who want to spend more
+                time coaching.
               </p>
             </div>
 
@@ -386,12 +384,18 @@ function HomeContent() {
               </h4>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/features" className="text-zinc-500 hover:text-white transition-colors text-sm">
+                  <Link
+                    href="/features"
+                    className="text-zinc-500 hover:text-white transition-colors text-sm"
+                  >
                     Features
                   </Link>
                 </li>
                 <li>
-                  <Link href="/pricing" className="text-zinc-500 hover:text-white transition-colors text-sm">
+                  <Link
+                    href="/pricing"
+                    className="text-zinc-500 hover:text-white transition-colors text-sm"
+                  >
                     Pricing
                   </Link>
                 </li>
@@ -410,12 +414,18 @@ function HomeContent() {
               </h4>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/about" className="text-zinc-500 hover:text-white transition-colors text-sm">
+                  <Link
+                    href="/about"
+                    className="text-zinc-500 hover:text-white transition-colors text-sm"
+                  >
                     About
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact" className="text-zinc-500 hover:text-white transition-colors text-sm">
+                  <Link
+                    href="/contact"
+                    className="text-zinc-500 hover:text-white transition-colors text-sm"
+                  >
                     Contact
                   </Link>
                 </li>
@@ -429,12 +439,18 @@ function HomeContent() {
               </h4>
               <ul className="space-y-3">
                 <li>
-                  <Link href="/privacy" className="text-zinc-500 hover:text-white transition-colors text-sm">
+                  <Link
+                    href="/privacy"
+                    className="text-zinc-500 hover:text-white transition-colors text-sm"
+                  >
                     Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link href="/terms" className="text-zinc-500 hover:text-white transition-colors text-sm">
+                  <Link
+                    href="/terms"
+                    className="text-zinc-500 hover:text-white transition-colors text-sm"
+                  >
                     Terms of Service
                   </Link>
                 </li>
@@ -444,19 +460,20 @@ function HomeContent() {
 
           <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-zinc-600 text-sm">
-              © {new Date().getFullYear()} NextLevel Coaching. All rights reserved.
+              © {new Date().getFullYear()} NextLevel Coaching. All rights
+              reserved.
             </p>
             <span className="text-zinc-600 text-sm">
-                Powered by{" "}
-                <Link
-                  href="https://nexishq.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+              Powered by{" "}
+              <Link
+                href="https://nexishq.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-zinc-500 hover:text-white transition-colors font-medium"
-                >
-                  Nexis
-                </Link>
-              </span>
+              >
+                Nexis
+              </Link>
+            </span>
           </div>
         </MaxWidthWrapper>
       </footer>
@@ -465,54 +482,49 @@ function HomeContent() {
 }
 
 // ============================================
-// REVIEWS MARQUEE - Infinite Scroll
+// REVIEWS MARQUEE - Placeholder testimonials (no fake reviews)
 // ============================================
 function ReviewsMarquee() {
-  const reviews = [
+  const placeholders = [
     {
-      text: "Finally, everything in one place. No more juggling 5 different apps.",
-      author: "Marcus T.",
-      role: "Pitching Coach",
+      text: "Your review or testimonial could appear here.",
+      author: "Your name",
+      role: "Coach",
     },
     {
-      text: "My athletes love how easy it is to access their programs and submit videos.",
-      author: "Sarah K.",
-      role: "Strength Coach",
+      text: "Share what you like about NextLevel Coaching.",
+      author: "Your name",
+      role: "Coach",
     },
     {
-      text: "The scheduling alone saves me hours every week. Clients book themselves now.",
-      author: "David L.",
-      role: "Performance Coach",
+      text: "We're collecting feedback from coaches like you.",
+      author: "—",
+      role: "Coming soon",
     },
     {
-      text: "I've doubled my client base without hiring an assistant. This platform is incredible.",
-      author: "Rachel M.",
-      role: "Tennis Coach",
+      text: "What would you tell other coaches about this platform?",
+      author: "Your name",
+      role: "Your role",
     },
     {
-      text: "Video analysis tools are game-changing. My feedback is so much more effective now.",
-      author: "James W.",
-      role: "Hitting Instructor",
+      text: "Love the platform? We'd love to hear from you.",
+      author: "—",
+      role: "Get in touch",
     },
     {
-      text: "Clean, professional, and actually built for coaches. Not another generic tool.",
-      author: "Michelle R.",
-      role: "Academy Owner",
+      text: "Real reviews from real coaches — coming soon.",
+      author: "—",
+      role: "Stay tuned",
     },
     {
-      text: "Parents can see the progress. That transparency has improved retention massively.",
-      author: "Chris B.",
-      role: "Youth Baseball Coach",
+      text: "Your experience here could help other coaches decide.",
+      author: "Your name",
+      role: "Coach",
     },
-    {
-      text: "The program builder is intuitive. I created my entire curriculum in one afternoon.",
-      author: "Amanda S.",
-      role: "Softball Coach",
-    },
+    { text: "Placeholder for future testimonials.", author: "—", role: "—" },
   ];
 
-  // Double the reviews for seamless infinite scroll
-  const doubledReviews = [...reviews, ...reviews];
+  const doubled = [...placeholders, ...placeholders];
 
   return (
     <section className="py-12 sm:py-16 bg-[#15191a] overflow-hidden border-y border-white/5">
@@ -520,26 +532,34 @@ function ReviewsMarquee() {
       <div className="relative">
         <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-40 bg-gradient-to-r from-[#15191a] to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-40 bg-gradient-to-l from-[#15191a] to-transparent z-10 pointer-events-none" />
-        
+
         {/* Scrolling Container */}
         <div className="flex gap-4 sm:gap-6 animate-marquee">
-          {doubledReviews.map((review, idx) => (
+          {doubled.map((item, idx) => (
             <div
               key={idx}
               className="flex-shrink-0 w-[300px] sm:w-[350px] bg-white/5 rounded-xl p-5 sm:p-6 border border-white/10 hover:border-[#E5B232]/30 transition-colors"
             >
-              <p className="text-zinc-300 text-sm sm:text-base leading-relaxed mb-4">
-                "{review.text}"
+              <p className="text-zinc-400 text-sm sm:text-base leading-relaxed mb-4 italic">
+                "{item.text}"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#E5B232]/20 flex items-center justify-center">
                   <span className="text-[#E5B232] text-xs font-bold">
-                    {review.author.split(" ").map(n => n[0]).join("")}
+                    {item.author === "—"
+                      ? "…"
+                      : item.author
+                          .split(" ")
+                          .map(n => n[0])
+                          .join("")
+                          .slice(0, 2) || "?"}
                   </span>
                 </div>
                 <div>
-                  <div className="text-white text-sm font-medium">{review.author}</div>
-                  <div className="text-zinc-500 text-xs">{review.role}</div>
+                  <div className="text-zinc-500 text-sm font-medium">
+                    {item.author}
+                  </div>
+                  <div className="text-zinc-600 text-xs">{item.role}</div>
                 </div>
               </div>
             </div>
@@ -602,7 +622,7 @@ function VideoStepPlayer() {
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
-      setCurrentStep((prev) => (prev + 1) % steps.length);
+      setCurrentStep(prev => (prev + 1) % steps.length);
     }, 6000);
 
     return () => clearInterval(interval);
@@ -634,31 +654,31 @@ function VideoStepPlayer() {
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 sm:p-6 md:p-8">
             <div className="max-w-2xl">
               <div className="text-xs sm:text-sm font-medium text-[#E5B232] mb-1 sm:mb-2">
-              Step {currentStepData.number}
-            </div>
+                Step {currentStepData.number}
+              </div>
               <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">
-              {currentStepData.title}
-            </h3>
+                {currentStepData.title}
+              </h3>
               <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">
-              {currentStepData.description}
-            </p>
+                {currentStepData.description}
+              </p>
+            </div>
           </div>
-        </div>
 
           {/* Play/Pause */}
-        <button
-          onClick={() => setIsPlaying(!isPlaying)}
+          <button
+            onClick={() => setIsPlaying(!isPlaying)}
             className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all"
-        >
-          {isPlaying ? (
+          >
+            {isPlaying ? (
               <div className="flex gap-1">
                 <div className="w-0.5 h-3 bg-white rounded-full"></div>
                 <div className="w-0.5 h-3 bg-white rounded-full"></div>
-            </div>
-          ) : (
+              </div>
+            ) : (
               <PlayCircle className="h-5 w-5 text-white" />
-          )}
-        </button>
+            )}
+          </button>
         </div>
       </div>
 
@@ -675,7 +695,9 @@ function VideoStepPlayer() {
               className={`relative transition-all ${
                 index === currentStep ? "w-10" : "w-3 hover:w-5"
               } h-3 rounded-full ${
-                index === currentStep ? "bg-[#E5B232]" : "bg-white/20 hover:bg-white/40"
+                index === currentStep
+                  ? "bg-[#E5B232]"
+                  : "bg-white/20 hover:bg-white/40"
               }`}
             />
           ))}
@@ -684,7 +706,7 @@ function VideoStepPlayer() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              setCurrentStep((prev) => (prev - 1 + steps.length) % steps.length);
+              setCurrentStep(prev => (prev - 1 + steps.length) % steps.length);
               setIsPlaying(false);
             }}
             className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-sm font-medium"
@@ -693,7 +715,7 @@ function VideoStepPlayer() {
           </button>
           <button
             onClick={() => {
-              setCurrentStep((prev) => (prev + 1) % steps.length);
+              setCurrentStep(prev => (prev + 1) % steps.length);
               setIsPlaying(false);
             }}
             className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-sm font-medium"
@@ -714,7 +736,7 @@ function ProgramBuilderDemo() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setAnimationStep((prev) => (prev + 1) % 4);
+      setAnimationStep(prev => (prev + 1) % 4);
     }, 1200);
     return () => clearInterval(interval);
   }, []);
@@ -737,7 +759,9 @@ function ProgramBuilderDemo() {
       {/* Main Content */}
       <div className="ml-12 sm:ml-16 h-full flex flex-col">
         <div className="h-8 sm:h-10 bg-white/5 rounded-lg mb-3 flex items-center px-3 border border-white/10">
-          <div className="text-white font-medium text-xs sm:text-sm">Week 1 - Pitching Program</div>
+          <div className="text-white font-medium text-xs sm:text-sm">
+            Week 1 - Pitching Program
+          </div>
         </div>
 
         <div className="flex-1 grid grid-cols-7 gap-1 sm:gap-2">
@@ -746,10 +770,13 @@ function ProgramBuilderDemo() {
               key={day.label}
               className="bg-white/5 rounded-lg border border-white/10 p-1.5 sm:p-2 relative overflow-hidden"
               style={{
-                animation: animationStep >= idx ? "fadeInUp 0.5s ease-out" : "none",
+                animation:
+                  animationStep >= idx ? "fadeInUp 0.5s ease-out" : "none",
               }}
             >
-              <div className="text-[9px] sm:text-xs text-zinc-500 mb-1 font-medium">{day.label}</div>
+              <div className="text-[9px] sm:text-xs text-zinc-500 mb-1 font-medium">
+                {day.label}
+              </div>
               {animationStep > idx && day.drills[0] !== "Rest Day" ? (
                 <div className="space-y-0.5 sm:space-y-1">
                   {day.drills.slice(0, 2).map((drill, drillIdx) => (
@@ -762,7 +789,9 @@ function ProgramBuilderDemo() {
                   ))}
                 </div>
               ) : animationStep > idx ? (
-                <div className="text-[8px] sm:text-[10px] text-zinc-500 italic">Rest</div>
+                <div className="text-[8px] sm:text-[10px] text-zinc-500 italic">
+                  Rest
+                </div>
               ) : null}
             </div>
           ))}
@@ -785,14 +814,21 @@ function ClientManagementDemo() {
   const clients = [
     { name: "Sarah Mitchell", initials: "SM", progress: 78, status: "Active" },
     { name: "Michael Chen", initials: "MC", progress: 65, status: "Active" },
-    { name: "Jessica Rodriguez", initials: "JR", progress: 92, status: "Active" },
+    {
+      name: "Jessica Rodriguez",
+      initials: "JR",
+      progress: 92,
+      status: "Active",
+    },
     { name: "Alex Thompson", initials: "AT", progress: 45, status: "Active" },
   ];
 
   return (
     <div className="h-full w-full bg-[#2A3133] rounded-xl border border-white/10 p-3 sm:p-4 md:p-6 relative overflow-hidden">
       <div className="h-8 sm:h-10 bg-white/5 rounded-lg mb-3 flex items-center justify-between px-3 border border-white/10">
-        <div className="text-white font-medium text-xs sm:text-sm">Your Athletes</div>
+        <div className="text-white font-medium text-xs sm:text-sm">
+          Your Athletes
+        </div>
         <div className="h-6 w-16 sm:w-20 bg-[#E5B232]/20 rounded flex items-center justify-center text-[10px] sm:text-xs text-[#E5B232] border border-[#E5B232]/30">
           + Add
         </div>
@@ -810,14 +846,20 @@ function ClientManagementDemo() {
                 {client.initials}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-white font-medium text-xs sm:text-sm truncate">{client.name}</div>
-                <div className="text-[10px] text-green-400">{client.status}</div>
+                <div className="text-white font-medium text-xs sm:text-sm truncate">
+                  {client.name}
                 </div>
+                <div className="text-[10px] text-green-400">
+                  {client.status}
                 </div>
+              </div>
+            </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-zinc-500">Progress</span>
-                <span className="text-[#E5B232] font-medium">{client.progress}%</span>
+                <span className="text-[#E5B232] font-medium">
+                  {client.progress}%
+                </span>
               </div>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                 <div
@@ -838,15 +880,30 @@ function SchedulingDemo() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setAnimationStep((prev) => (prev + 1) % 4);
+      setAnimationStep(prev => (prev + 1) % 4);
     }, 1300);
     return () => clearInterval(interval);
   }, []);
 
   const scheduleItems = [
-    { time: "9:00 AM", client: "Sarah M.", type: "Lesson", status: "Confirmed" },
-    { time: "11:00 AM", client: "Michael C.", type: "Review", status: "Confirmed" },
-    { time: "2:00 PM", client: "Jessica R.", type: "Lesson", status: "Pending" },
+    {
+      time: "9:00 AM",
+      client: "Sarah M.",
+      type: "Lesson",
+      status: "Confirmed",
+    },
+    {
+      time: "11:00 AM",
+      client: "Michael C.",
+      type: "Review",
+      status: "Confirmed",
+    },
+    {
+      time: "2:00 PM",
+      client: "Jessica R.",
+      type: "Lesson",
+      status: "Pending",
+    },
     { time: "4:00 PM", client: "Alex T.", type: "Lesson", status: "Confirmed" },
   ];
 
@@ -855,10 +912,16 @@ function SchedulingDemo() {
   return (
     <div className="h-full w-full bg-[#2A3133] rounded-xl border border-white/10 p-3 sm:p-4 md:p-6 relative overflow-hidden">
       <div className="h-8 sm:h-10 bg-white/5 rounded-lg mb-3 flex items-center justify-between px-3 border border-white/10">
-        <div className="text-white font-medium text-xs sm:text-sm">January 2025</div>
+        <div className="text-white font-medium text-xs sm:text-sm">
+          January 2025
+        </div>
         <div className="flex gap-1">
-          <div className="h-6 w-6 bg-white/10 rounded flex items-center justify-center text-white text-xs">←</div>
-          <div className="h-6 w-6 bg-white/10 rounded flex items-center justify-center text-white text-xs">→</div>
+          <div className="h-6 w-6 bg-white/10 rounded flex items-center justify-center text-white text-xs">
+            ←
+          </div>
+          <div className="h-6 w-6 bg-white/10 rounded flex items-center justify-center text-white text-xs">
+            →
+          </div>
         </div>
       </div>
 
@@ -867,7 +930,9 @@ function SchedulingDemo() {
           <div
             key={day}
             className={`text-center text-[9px] sm:text-[10px] py-1 rounded ${
-              idx === 3 ? "bg-[#E5B232]/20 text-[#E5B232] font-medium" : "text-zinc-500"
+              idx === 3
+                ? "bg-[#E5B232]/20 text-[#E5B232] font-medium"
+                : "text-zinc-500"
             }`}
           >
             {day}
@@ -881,7 +946,10 @@ function SchedulingDemo() {
             key={item.time}
             className="bg-white/5 rounded-lg border border-white/10 p-2 flex items-center justify-between"
             style={{
-              animation: animationStep >= idx ? `slideInRight 0.5s ease-out ${idx * 0.15}s both` : "none",
+              animation:
+                animationStep >= idx
+                  ? `slideInRight 0.5s ease-out ${idx * 0.15}s both`
+                  : "none",
             }}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -891,11 +959,18 @@ function SchedulingDemo() {
               {animationStep > idx && (
                 <>
                   <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[8px] sm:text-[10px] font-bold shrink-0">
-                    {item.client.split(" ").map((n) => n[0]).join("")}
+                    {item.client
+                      .split(" ")
+                      .map(n => n[0])
+                      .join("")}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-white text-[10px] sm:text-xs font-medium truncate">{item.client}</div>
-                    <div className="text-[9px] sm:text-[10px] text-zinc-500">{item.type}</div>
+                    <div className="text-white text-[10px] sm:text-xs font-medium truncate">
+                      {item.client}
+                    </div>
+                    <div className="text-[9px] sm:text-[10px] text-zinc-500">
+                      {item.type}
+                    </div>
                   </div>
                 </>
               )}
@@ -945,9 +1020,11 @@ function WhoCard({
         {isTeam && <TeamWorkspaceDemo />}
         {/* Gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#E5B232]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-          </div>
+      </div>
       <div className="p-6 sm:p-8">
-        <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 group-hover:text-[#E5B232] transition-colors duration-300">{title}</h3>
+        <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 group-hover:text-[#E5B232] transition-colors duration-300">
+          {title}
+        </h3>
         <p className="text-zinc-400 mb-6 leading-relaxed">{description}</p>
         <ul className="space-y-2">
           {features.map((feature, idx) => (
@@ -993,10 +1070,10 @@ function FeatureCard({
       {/* Background layers */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#1a1f20] to-[#15191a] rounded-2xl" />
       <div className="absolute inset-0 bg-gradient-to-br from-[#E5B232]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
+
       {/* Animated border */}
       <div className="absolute inset-0 rounded-2xl border border-white/10 group-hover:border-[#E5B232]/40 transition-colors duration-300" />
-      
+
       {/* Glow effect on hover */}
       <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 shadow-[inset_0_0_30px_rgba(229,178,50,0.05)]" />
 
@@ -1011,7 +1088,11 @@ function FeatureCard({
             className="absolute inset-0 bg-gradient-to-b from-transparent via-[#E5B232]/10 to-transparent pointer-events-none"
             initial={{ y: "-100%" }}
             animate={isHovered ? { y: "200%" } : { y: "-100%" }}
-            transition={{ duration: 1.5, ease: "linear", repeat: isHovered ? Infinity : 0 }}
+            transition={{
+              duration: 1.5,
+              ease: "linear",
+              repeat: isHovered ? Infinity : 0,
+            }}
           />
         </div>
 
@@ -1049,10 +1130,10 @@ function ProgramBuilderMini() {
                     dayIdx === 2
                       ? "rgba(255,255,255,0.03)"
                       : drillIdx === 0
-                      ? "rgba(229,178,50,0.3)"
-                      : drillIdx === 1
-                      ? "rgba(229,178,50,0.2)"
-                      : "rgba(255,255,255,0.05)",
+                        ? "rgba(229,178,50,0.3)"
+                        : drillIdx === 1
+                          ? "rgba(229,178,50,0.2)"
+                          : "rgba(255,255,255,0.05)",
                 }}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -1088,7 +1169,11 @@ function VideoAnalysisMini() {
             className="h-full bg-[#E5B232]/60 rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: "65%" }}
-            transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
           />
         </div>
         {/* Annotation dots */}
@@ -1105,7 +1190,10 @@ function VideoAnalysisMini() {
             key={idx}
             className="flex-1 rounded"
             style={{
-              backgroundColor: idx === 0 ? `rgba(229,178,50,${opacity})` : `rgba(255,255,255,${opacity})`,
+              backgroundColor:
+                idx === 0
+                  ? `rgba(229,178,50,${opacity})`
+                  : `rgba(255,255,255,${opacity})`,
             }}
           />
         ))}
@@ -1148,7 +1236,9 @@ function ClientManagementMini() {
                 />
               </div>
             </div>
-            <div className="text-[8px] text-zinc-500 w-6 text-right">{client.progress}%</div>
+            <div className="text-[8px] text-zinc-500 w-6 text-right">
+              {client.progress}%
+            </div>
           </motion.div>
         ))}
       </div>
@@ -1205,7 +1295,9 @@ function MessagingMini() {
             className={`p-1 rounded ${active ? "bg-[#E5B232]/20" : "bg-white/5"}`}
           >
             <div className="flex items-center gap-1">
-              <div className={`w-4 h-4 rounded-full ${active ? "bg-[#E5B232]/40" : "bg-white/10"}`} />
+              <div
+                className={`w-4 h-4 rounded-full ${active ? "bg-[#E5B232]/40" : "bg-white/10"}`}
+              />
               <div className="flex-1">
                 <div className="h-1 w-6 bg-white/20 rounded" />
                 <div className="h-0.5 w-4 bg-white/10 rounded mt-0.5" />
@@ -1257,7 +1349,9 @@ function AnalyticsMini() {
           { value: "12", label: "Active" },
         ].map((stat, idx) => (
           <div key={idx} className="flex-1 bg-white/5 rounded p-1 text-center">
-            <div className="text-[10px] font-bold text-[#E5B232]">{stat.value}</div>
+            <div className="text-[10px] font-bold text-[#E5B232]">
+              {stat.value}
+            </div>
             <div className="text-[6px] text-zinc-500">{stat.label}</div>
           </div>
         ))}
@@ -1268,7 +1362,9 @@ function AnalyticsMini() {
           <motion.div
             key={idx}
             className="flex-1 rounded-t"
-            style={{ backgroundColor: idx === 5 ? "#E5B232" : "rgba(229,178,50,0.3)" }}
+            style={{
+              backgroundColor: idx === 5 ? "#E5B232" : "rgba(229,178,50,0.3)",
+            }}
             initial={{ height: 0 }}
             animate={{ height: `${height}%` }}
             transition={{ duration: 0.5, delay: idx * 0.05 }}
@@ -1296,7 +1392,9 @@ function DeviceMockup() {
                 <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
               </div>
               <div className="flex-1 bg-[#2A3133] rounded px-3 py-1 mx-2">
-                <div className="text-[10px] text-zinc-500">app.nextlevelcoaching.com</div>
+                <div className="text-[10px] text-zinc-500">
+                  app.nextlevelcoaching.com
+                </div>
               </div>
             </div>
 
@@ -1327,8 +1425,12 @@ function DeviceMockup() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                   >
-                    <h2 className="text-lg font-bold text-white mb-1">Welcome back, Coach</h2>
-                    <p className="text-xs text-zinc-500">Monday, January 15, 2025</p>
+                    <h2 className="text-lg font-bold text-white mb-1">
+                      Welcome back, Coach
+                    </h2>
+                    <p className="text-xs text-zinc-500">
+                      Monday, January 15, 2025
+                    </p>
                   </motion.div>
 
                   {/* Stats */}
@@ -1345,8 +1447,12 @@ function DeviceMockup() {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.4, delay: 0.3 + idx * 0.1 }}
                       >
-                        <div className="text-xs text-zinc-500 mb-1">{stat.label}</div>
-                        <div className="text-xl font-bold text-white">{stat.value}</div>
+                        <div className="text-xs text-zinc-500 mb-1">
+                          {stat.label}
+                        </div>
+                        <div className="text-xl font-bold text-white">
+                          {stat.value}
+                        </div>
                       </motion.div>
                     ))}
                   </div>
@@ -1358,7 +1464,9 @@ function DeviceMockup() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.6 }}
                   >
-                    <div className="text-sm font-semibold text-white mb-2">Week at a Glance</div>
+                    <div className="text-sm font-semibold text-white mb-2">
+                      Week at a Glance
+                    </div>
                     <div className="grid grid-cols-7 gap-1">
                       {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => {
                         const isToday = idx === 1;
@@ -1371,9 +1479,13 @@ function DeviceMockup() {
                                 : "bg-white/5 border-white/10"
                             }`}
                           >
-                            <div className="text-[9px] text-zinc-500">{day}</div>
-                            <div className="text-[10px] font-medium text-zinc-300">{13 + idx}</div>
+                            <div className="text-[9px] text-zinc-500">
+                              {day}
                             </div>
+                            <div className="text-[10px] font-medium text-zinc-300">
+                              {13 + idx}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -1387,9 +1499,15 @@ function DeviceMockup() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.8 }}
                     >
-                      <h3 className="text-sm font-semibold text-white mb-2">Notifications</h3>
-                      <div className="text-[10px] text-zinc-400">New video from Alex</div>
-                      <div className="text-[10px] text-zinc-400">Program completed by Sarah</div>
+                      <h3 className="text-sm font-semibold text-white mb-2">
+                        Notifications
+                      </h3>
+                      <div className="text-[10px] text-zinc-400">
+                        New video from Alex
+                      </div>
+                      <div className="text-[10px] text-zinc-400">
+                        Program completed by Sarah
+                      </div>
                     </motion.div>
 
                     <motion.div
@@ -1398,16 +1516,22 @@ function DeviceMockup() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.8 }}
                     >
-                      <h3 className="text-sm font-semibold text-white mb-2">Today</h3>
-                      <div className="text-[10px] text-zinc-400">2:00 PM - Alex Thompson</div>
-                      <div className="text-[10px] text-zinc-400">4:00 PM - Sarah Mitchell</div>
-                          </motion.div>
+                      <h3 className="text-sm font-semibold text-white mb-2">
+                        Today
+                      </h3>
+                      <div className="text-[10px] text-zinc-400">
+                        2:00 PM - Alex Thompson
                       </div>
+                      <div className="text-[10px] text-zinc-400">
+                        4:00 PM - Sarah Mitchell
+                      </div>
+                    </motion.div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         <div className="bg-[#1a1a1a] h-2 rounded-b-lg shadow-2xl"></div>
         <div className="bg-[#0f0f0f] h-1 rounded-b-lg mx-8"></div>
       </div>
@@ -1435,16 +1559,16 @@ function CoachDashboardDemo() {
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[9px] text-[#E5B232] font-bold">12</div>
             <div className="text-[7px] text-zinc-500">Athletes</div>
-        </div>
+          </div>
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[9px] text-white font-bold">8</div>
             <div className="text-[7px] text-zinc-500">Programs</div>
-        </div>
+          </div>
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[9px] text-white font-bold">5</div>
             <div className="text-[7px] text-zinc-500">Today</div>
+          </div>
         </div>
-      </div>
         <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-white font-medium mb-1">Recent</div>
           <div className="text-[7px] text-zinc-400">Video from Alex T.</div>
@@ -1466,32 +1590,34 @@ function AthleteDashboardDemo() {
         </div>
       </div>
       <div className="grid grid-cols-3 gap-1 mb-2">
-          <div className="bg-white/5 rounded p-1.5 border border-white/10">
+        <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-zinc-500">Next Lesson</div>
           <div className="text-[10px] text-white font-medium">Tomorrow</div>
-          </div>
-          <div className="bg-white/5 rounded p-1.5 border border-white/10">
+        </div>
+        <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-zinc-500">Progress</div>
           <div className="text-[10px] text-[#E5B232] font-medium">78%</div>
-          </div>
-          <div className="bg-white/5 rounded p-1.5 border border-white/10">
+        </div>
+        <div className="bg-white/5 rounded p-1.5 border border-white/10">
           <div className="text-[8px] text-zinc-500">Messages</div>
           <div className="text-[10px] text-white font-medium">2 new</div>
-          </div>
         </div>
+      </div>
       <div className="flex-1 bg-[#1a1f20] rounded-lg p-2 border border-white/10">
-        <div className="text-[9px] font-semibold text-white mb-1">Today's Workout</div>
-          <div className="space-y-1">
+        <div className="text-[9px] font-semibold text-white mb-1">
+          Today's Workout
+        </div>
+        <div className="space-y-1">
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-green-500/20 flex items-center justify-center">
               <Check className="w-2 h-2 text-green-400" />
             </div>
             <span className="text-[8px] text-zinc-300">Warm-up</span>
-            </div>
+          </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-[#E5B232]/20"></div>
             <span className="text-[8px] text-zinc-300">Mechanics Drill</span>
-            </div>
+          </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-white/10"></div>
             <span className="text-[8px] text-zinc-300">Video Review</span>
@@ -1517,7 +1643,7 @@ function TeamWorkspaceDemo() {
         <div className="flex items-center gap-1 mb-2">
           <div className="w-3 h-3 bg-white/10 rounded"></div>
           <div className="text-[10px] font-bold text-white">Elite Academy</div>
-          </div>
+        </div>
         <div className="grid grid-cols-2 gap-1 mb-2">
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[10px] text-white font-bold">3</div>
@@ -1526,21 +1652,25 @@ function TeamWorkspaceDemo() {
           <div className="bg-white/5 rounded p-1 border border-white/10">
             <div className="text-[10px] text-white font-bold">42</div>
             <div className="text-[7px] text-zinc-500">Athletes</div>
-        </div>
           </div>
+        </div>
         <div className="text-[8px] text-white font-medium mb-1">Team</div>
-          <div className="space-y-1">
+        <div className="space-y-1">
           <div className="flex items-center gap-1 bg-white/5 rounded p-1 border border-white/10">
-            <div className="w-4 h-4 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[7px] font-bold">JD</div>
+            <div className="w-4 h-4 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[7px] font-bold">
+              JD
+            </div>
             <div className="text-[8px] text-white">John Davis</div>
             <div className="text-[6px] text-zinc-500 ml-auto">Owner</div>
-              </div>
+          </div>
           <div className="flex items-center gap-1 bg-white/5 rounded p-1 border border-white/10">
-            <div className="w-4 h-4 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[7px] font-bold">MS</div>
+            <div className="w-4 h-4 rounded-full bg-[#4A5A70] flex items-center justify-center text-white text-[7px] font-bold">
+              MS
+            </div>
             <div className="text-[8px] text-white">Maria Smith</div>
             <div className="text-[6px] text-zinc-500 ml-auto">Coach</div>
-                </div>
-                </div>
+          </div>
+        </div>
       </div>
     </div>
   );
