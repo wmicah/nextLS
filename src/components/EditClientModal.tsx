@@ -67,8 +67,8 @@ export default function EditClientModal({
             typeof value === "number"
               ? "number"
               : typeof value === "boolean"
-              ? "boolean"
-              : "text",
+                ? "boolean"
+                : "text",
         }))
       : []
   );
@@ -97,14 +97,14 @@ export default function EditClientModal({
               typeof value === "number"
                 ? "number"
                 : typeof value === "boolean"
-                ? "boolean"
-                : "text",
+                  ? "boolean"
+                  : "text",
           }))
         : []
     );
   }, [client]);
 
-  const updateClient = trpc.clients.update.useMutation({
+  const updateClient = (trpc.clients.update as any).useMutation({
     onSuccess: () => {
       utils.clients.list.invalidate();
       utils.clients.getById.invalidate({ id: client.id });
@@ -178,19 +178,23 @@ export default function EditClientModal({
       height: formData.height.trim() || undefined,
       customFields:
         customFields.length > 0
-          ? customFields.reduce((acc, field) => {
-              if (field.key.trim()) {
-                let value: string | number | boolean = field.value;
-                if (field.type === "number") {
-                  value = parseFloat(field.value) || 0;
-                } else if (field.type === "boolean") {
-                  value =
-                    field.value.toLowerCase() === "true" || field.value === "1";
+          ? customFields.reduce(
+              (acc, field) => {
+                if (field.key.trim()) {
+                  let value: string | number | boolean = field.value;
+                  if (field.type === "number") {
+                    value = parseFloat(field.value) || 0;
+                  } else if (field.type === "boolean") {
+                    value =
+                      field.value.toLowerCase() === "true" ||
+                      field.value === "1";
+                  }
+                  acc[field.key.trim()] = value;
                 }
-                acc[field.key.trim()] = value;
-              }
-              return acc;
-            }, {} as Record<string, string | number | boolean>)
+                return acc;
+              },
+              {} as Record<string, string | number | boolean>
+            )
           : undefined,
     });
   };

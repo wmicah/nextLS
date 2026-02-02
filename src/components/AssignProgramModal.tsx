@@ -111,8 +111,8 @@ AssignProgramModalProps) {
     archived: false,
   });
 
-  // Sort clients alphabetically by name
-  const clients = [...clientsRaw].sort((a, b) =>
+  // Sort clients alphabetically by name (typed to avoid deep inference)
+  const clients: Client[] = [...(clientsRaw as Client[])].sort((a, b) =>
     (a.name || "").localeCompare(b.name || "")
   );
 

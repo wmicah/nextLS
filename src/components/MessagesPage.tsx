@@ -17,7 +17,13 @@ import {
   Users,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
-import { format, isSameDay, isToday, isYesterday, differenceInDays } from "date-fns";
+import {
+  format,
+  isSameDay,
+  isToday,
+  isYesterday,
+  differenceInDays,
+} from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import FormattedMessage from "./FormattedMessage";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -107,7 +113,7 @@ function MessagesPage({}: MessagesPageProps) {
     enabled: !!currentUser?.id,
     userId: currentUser?.id || null,
     conversationId: selectedConversation,
-    onNewMessage: (data) => {
+    onNewMessage: data => {
       // Invalidate queries to refresh UI when new message arrives
       utils.messaging.getMessages.invalidate();
       utils.messaging.getConversations.invalidate();
@@ -176,7 +182,8 @@ function MessagesPage({}: MessagesPageProps) {
       onError: error => {
         console.error("Failed to get or create conversation:", error);
         // Show user-friendly error message
-        const errorMessage = error.message || "Failed to open conversation. Please try again.";
+        const errorMessage =
+          error.message || "Failed to open conversation. Please try again.";
         // Use window.alert as fallback if toast system not available
         alert(errorMessage);
         // Remove clientId from URL to prevent retry loop
@@ -246,7 +253,7 @@ function MessagesPage({}: MessagesPageProps) {
 
   // Get messages (no polling - updates via WebSocket)
   const {
-    data: messages = [],
+    data: messagesData = [],
     refetch: refetchMessages,
     isLoading: messagesLoading,
   } = trpc.messaging.getMessages.useQuery(
@@ -260,12 +267,32 @@ function MessagesPage({}: MessagesPageProps) {
       refetchOnReconnect: true, // Only refetch on reconnect
     }
   );
+  // Typed list to avoid "type instantiation is excessively deep" from tRPC inference
+  type MessageItem = {
+    id: string;
+    content: string | null;
+    createdAt: Date | string;
+    sender: { id?: string; name?: string };
+  };
+  const messages: MessageItem[] = (messagesData as MessageItem[]) ?? [];
 
   // Get clients for conversation creation
-  const { data: clients = [] } = trpc.clients.list.useQuery({
+  const { data: clientsData = [] } = trpc.clients.list.useQuery({
     archived: false,
     scope: "organization",
   });
+  // Typed list to avoid "type instantiation is excessively deep" from tRPC inference
+  type MessagesClient = {
+    id: string;
+    name: string;
+    email: string | null;
+    userId?: string | null;
+    avatar?: string | null;
+    user?: { settings?: { avatarUrl?: string } };
+    coach?: { name?: string };
+    primaryCoach?: { name?: string };
+  };
+  const clients: MessagesClient[] = clientsData as MessagesClient[];
 
   // Mutations
   const sendMessageMutation = trpc.messaging.sendMessage.useMutation();
@@ -278,7 +305,7 @@ function MessagesPage({}: MessagesPageProps) {
       utils.messaging.getUnreadCount.invalidate();
       utils.messaging.getConversationUnreadCounts.invalidate();
       utils.sidebar.getSidebarData.invalidate(); // This updates the Sidebar badge!
-      
+
       // Force immediate refetch
       utils.messaging.getConversationUnreadCounts.refetch();
       utils.messaging.getUnreadCount.refetch();
@@ -462,7 +489,7 @@ function MessagesPage({}: MessagesPageProps) {
   const formatMessageTime = (date: Date, showDate: boolean = false) => {
     const messageDate = new Date(date);
     const now = new Date();
-    
+
     if (showDate) {
       if (isToday(messageDate)) {
         return format(messageDate, "h:mm a 'Today'");
@@ -959,28 +986,36 @@ function MessagesPage({}: MessagesPageProps) {
 
                         // Check if we need to show a date separator
                         const currentMessageDate = new Date(message.createdAt);
-                        const previousMessage = index > 0 ? messages[index - 1] : null;
+                        const previousMessage =
+                          index > 0 ? messages[index - 1] : null;
                         const previousMessageDate = previousMessage
                           ? new Date(previousMessage.createdAt)
                           : null;
                         const showDateSeparator =
                           !previousMessageDate ||
                           !isSameDay(currentMessageDate, previousMessageDate);
-                        
+
                         // Check if all messages are on the same day
-                        const allMessagesSameDay = messages.length > 0 && 
-                          messages.every((msg: any) => 
-                            isSameDay(new Date(msg.createdAt), currentMessageDate)
+                        const allMessagesSameDay =
+                          messages.length > 0 &&
+                          messages.every((msg: any) =>
+                            isSameDay(
+                              new Date(msg.createdAt),
+                              currentMessageDate
+                            )
                           );
                         // Show date on first message timestamp if all messages are same day
-                        const showDateOnFirstMessage = allMessagesSameDay && index === 0;
+                        const showDateOnFirstMessage =
+                          allMessagesSameDay && index === 0;
                         // Show date separator at top if all messages are same day and this is first message
-                        const showTopDateSeparator = allMessagesSameDay && index === 0;
+                        const showTopDateSeparator =
+                          allMessagesSameDay && index === 0;
 
                         return (
                           <div key={message.id} className="space-y-2">
                             {/* Date Separator - show at top if all messages same day, or between different days */}
-                            {(showTopDateSeparator || (showDateSeparator && !allMessagesSameDay)) && (
+                            {(showTopDateSeparator ||
+                              (showDateSeparator && !allMessagesSameDay)) && (
                               <div className="flex items-center justify-center py-2">
                                 <div
                                   className="px-3 py-1 rounded-full text-xs font-medium"
@@ -993,218 +1028,228 @@ function MessagesPage({}: MessagesPageProps) {
                                   {isToday(currentMessageDate)
                                     ? "Today"
                                     : isYesterday(currentMessageDate)
-                                    ? "Yesterday"
-                                    : format(currentMessageDate, "EEEE, MMMM d, yyyy")}
+                                      ? "Yesterday"
+                                      : format(
+                                          currentMessageDate,
+                                          "EEEE, MMMM d, yyyy"
+                                        )}
                                 </div>
                               </div>
                             )}
-                            
+
                             <div
                               className={`flex ${
                                 isWorkoutNote && isFromClient
                                   ? "justify-start"
                                   : message.sender.id === currentUser?.id
-                                  ? "justify-end"
-                                  : "justify-start"
+                                    ? "justify-end"
+                                    : "justify-start"
                               }`}
                             >
-                            <div
-                              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
-                                message.sender.id === currentUser?.id
-                                  ? "rounded-br-sm"
-                                  : "rounded-bl-sm"
-                              } ${
-                                isWorkoutNote && isFromClient
-                                  ? "border border-blue-400/30"
-                                  : ""
-                              }`}
-                              style={{
-                                backgroundColor:
+                              <div
+                                className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                                   message.sender.id === currentUser?.id
-                                    ? COLORS.GOLDEN_ACCENT
-                                    : isWorkoutNote && isFromClient
-                                    ? COLORS.BACKGROUND_CARD
-                                    : COLORS.BACKGROUND_CARD,
-                                color:
-                                  message.sender.id === currentUser?.id
-                                    ? "#000000"
-                                    : COLORS.TEXT_PRIMARY,
-                                border:
+                                    ? "rounded-br-sm"
+                                    : "rounded-bl-sm"
+                                } ${
                                   isWorkoutNote && isFromClient
-                                    ? `1px solid ${COLORS.GOLDEN_ACCENT}`
-                                    : message.sender.id === currentUser?.id
-                                    ? `1px solid ${COLORS.GOLDEN_BORDER}`
-                                    : `1px solid ${COLORS.BORDER_SUBTLE}`,
-                              }}
-                            >
-                              {/* Workout Note Header */}
-                              {isWorkoutNote && isFromClient && (
-                                <div className="mb-3">
-                                  <div className="text-blue-400 font-medium text-sm mb-1">
-                                    📝 Feedback for program day
-                                  </div>
-                                  <div className="text-xs text-gray-400 mb-2">
-                                    {new Date(
-                                      message.createdAt
-                                    ).toLocaleDateString()}
-                                  </div>
-                                </div>
-                              )}
-
-                              {message.content && (
-                                <div className="text-sm mb-2">
-                                  <FormattedMessage content={message.content} />
-                                </div>
-                              )}
-
-                              {/* Message Acknowledgment */}
-                              <MessageAcknowledgment
-                                messageId={message.id}
-                                requiresAcknowledgment={
-                                  message.requiresAcknowledgment || false
-                                }
-                                isAcknowledged={message.isAcknowledged || false}
-                                acknowledgedAt={
-                                  message.acknowledgedAt
-                                    ? new Date(message.acknowledgedAt)
-                                    : null
-                                }
-                                isOwnMessage={
-                                  message.sender.id === currentUser?.id
-                                }
-                                messageData={
-                                  message.data as
-                                    | { type?: string; swapRequestId?: string }
-                                    | undefined
-                                }
-                              />
-
-                              {/* File Attachment */}
-                              {message.attachmentUrl && (
-                                <div className="mb-2">
-                                  {message.attachmentType?.startsWith(
-                                    "image/"
-                                  ) ? (
-                                    <img
-                                      src={message.attachmentUrl}
-                                      alt={message.attachmentName || "Image"}
-                                      className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
-                                      style={{ maxHeight: "300px" }}
-                                      onClick={() =>
-                                        message.attachmentUrl &&
-                                        window.open(
-                                          message.attachmentUrl,
-                                          "_blank"
-                                        )
-                                      }
-                                    />
-                                  ) : message.attachmentType?.startsWith(
-                                      "video/"
-                                    ) ? (
-                                    <div className="space-y-2">
-                                      <video
-                                        src={message.attachmentUrl}
-                                        controls
-                                        className="max-w-full rounded-lg"
-                                        style={{ maxHeight: "300px" }}
-                                        preload="metadata"
-                                      >
-                                        Your browser does not support the video
-                                        tag.
-                                      </video>
-                                      <div className="flex items-center gap-2">
-                                        <button
-                                          onClick={() => {
-                                            // Create video record from message attachment
-                                            createVideoMutation.mutate({
-                                              title:
-                                                message.attachmentName ||
-                                                "Video from Message",
-                                              description: `Video attachment from message`,
-                                              url: message.attachmentUrl,
-                                              duration: 0, // Will be updated when video loads
-                                              fileSize:
-                                                message.attachmentSize || 0,
-                                            });
-                                          }}
-                                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                                        >
-                                          <svg
-                                            className="w-3 h-3"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                            />
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                            />
-                                          </svg>
-                                          Annotate Video
-                                        </button>
-                                      </div>
+                                    ? "border border-blue-400/30"
+                                    : ""
+                                }`}
+                                style={{
+                                  backgroundColor:
+                                    message.sender.id === currentUser?.id
+                                      ? COLORS.GOLDEN_ACCENT
+                                      : isWorkoutNote && isFromClient
+                                        ? COLORS.BACKGROUND_CARD
+                                        : COLORS.BACKGROUND_CARD,
+                                  color:
+                                    message.sender.id === currentUser?.id
+                                      ? "#000000"
+                                      : COLORS.TEXT_PRIMARY,
+                                  border:
+                                    isWorkoutNote && isFromClient
+                                      ? `1px solid ${COLORS.GOLDEN_ACCENT}`
+                                      : message.sender.id === currentUser?.id
+                                        ? `1px solid ${COLORS.GOLDEN_BORDER}`
+                                        : `1px solid ${COLORS.BORDER_SUBTLE}`,
+                                }}
+                              >
+                                {/* Workout Note Header */}
+                                {isWorkoutNote && isFromClient && (
+                                  <div className="mb-3">
+                                    <div className="text-blue-400 font-medium text-sm mb-1">
+                                      📝 Feedback for program day
                                     </div>
-                                  ) : (
-                                    <a
-                                      href={message.attachmentUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-2 p-2 rounded-lg transition-all duration-200 hover:scale-105"
-                                      style={{
-                                        backgroundColor: "#2A3133",
-                                        color: "#C3BCC2",
-                                        border: "1px solid #606364",
-                                      }}
-                                    >
-                                      {message.attachmentType?.startsWith(
-                                        "audio/"
+                                    <div className="text-xs text-gray-400 mb-2">
+                                      {new Date(
+                                        message.createdAt
+                                      ).toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {message.content && (
+                                  <div className="text-sm mb-2">
+                                    <FormattedMessage
+                                      content={message.content}
+                                    />
+                                  </div>
+                                )}
+
+                                {/* Message Acknowledgment */}
+                                <MessageAcknowledgment
+                                  messageId={message.id}
+                                  requiresAcknowledgment={
+                                    message.requiresAcknowledgment || false
+                                  }
+                                  isAcknowledged={
+                                    message.isAcknowledged || false
+                                  }
+                                  acknowledgedAt={
+                                    message.acknowledgedAt
+                                      ? new Date(message.acknowledgedAt)
+                                      : null
+                                  }
+                                  isOwnMessage={
+                                    message.sender.id === currentUser?.id
+                                  }
+                                  messageData={
+                                    message.data as
+                                      | {
+                                          type?: string;
+                                          swapRequestId?: string;
+                                        }
+                                      | undefined
+                                  }
+                                />
+
+                                {/* File Attachment */}
+                                {message.attachmentUrl && (
+                                  <div className="mb-2">
+                                    {message.attachmentType?.startsWith(
+                                      "image/"
+                                    ) ? (
+                                      <img
+                                        src={message.attachmentUrl}
+                                        alt={message.attachmentName || "Image"}
+                                        className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
+                                        style={{ maxHeight: "300px" }}
+                                        onClick={() =>
+                                          message.attachmentUrl &&
+                                          window.open(
+                                            message.attachmentUrl,
+                                            "_blank"
+                                          )
+                                        }
+                                      />
+                                    ) : message.attachmentType?.startsWith(
+                                        "video/"
                                       ) ? (
-                                        <File className="h-4 w-4" />
-                                      ) : (
-                                        <File className="h-4 w-4" />
-                                      )}
-                                      <span className="text-sm">
-                                        {message.attachmentName}
-                                      </span>
-                                    </a>
+                                      <div className="space-y-2">
+                                        <video
+                                          src={message.attachmentUrl}
+                                          controls
+                                          className="max-w-full rounded-lg"
+                                          style={{ maxHeight: "300px" }}
+                                          preload="metadata"
+                                        >
+                                          Your browser does not support the
+                                          video tag.
+                                        </video>
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => {
+                                              // Create video record from message attachment
+                                              createVideoMutation.mutate({
+                                                title:
+                                                  message.attachmentName ||
+                                                  "Video from Message",
+                                                description: `Video attachment from message`,
+                                                url: message.attachmentUrl,
+                                                duration: 0, // Will be updated when video loads
+                                                fileSize:
+                                                  message.attachmentSize || 0,
+                                              });
+                                            }}
+                                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                                          >
+                                            <svg
+                                              className="w-3 h-3"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                              />
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                              />
+                                            </svg>
+                                            Annotate Video
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <a
+                                        href={message.attachmentUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 p-2 rounded-lg transition-all duration-200 hover:scale-105"
+                                        style={{
+                                          backgroundColor: "#2A3133",
+                                          color: "#C3BCC2",
+                                          border: "1px solid #606364",
+                                        }}
+                                      >
+                                        {message.attachmentType?.startsWith(
+                                          "audio/"
+                                        ) ? (
+                                          <File className="h-4 w-4" />
+                                        ) : (
+                                          <File className="h-4 w-4" />
+                                        )}
+                                        <span className="text-sm">
+                                          {message.attachmentName}
+                                        </span>
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-end gap-1 mt-1">
+                                  <span
+                                    className="text-xs"
+                                    style={{
+                                      color:
+                                        message.sender.id === currentUser?.id
+                                          ? "rgba(0, 0, 0, 0.6)"
+                                          : COLORS.TEXT_MUTED,
+                                    }}
+                                  >
+                                    {formatMessageTime(
+                                      new Date(message.createdAt),
+                                      showDateOnFirstMessage
+                                    )}
+                                  </span>
+                                  {message.sender.id === currentUser?.id && (
+                                    <CheckCheck
+                                      className="h-3 w-3"
+                                      style={{ color: "rgba(0, 0, 0, 0.6)" }}
+                                    />
                                   )}
                                 </div>
-                              )}
-
-                              <div className="flex items-center justify-end gap-1 mt-1">
-                                <span
-                                  className="text-xs"
-                                  style={{
-                                    color:
-                                      message.sender.id === currentUser?.id
-                                        ? "rgba(0, 0, 0, 0.6)"
-                                        : COLORS.TEXT_MUTED,
-                                  }}
-                                >
-                                  {formatMessageTime(
-                                    new Date(message.createdAt),
-                                    showDateOnFirstMessage
-                                  )}
-                                </span>
-                                {message.sender.id === currentUser?.id && (
-                                  <CheckCheck
-                                    className="h-3 w-3"
-                                    style={{ color: "rgba(0, 0, 0, 0.6)" }}
-                                  />
-                                )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
+                        );
                       })}
 
                       {/* Pending Messages */}

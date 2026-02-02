@@ -936,7 +936,6 @@ export const clientRouterRouter = router({
                   dayData.totalDrills = totalDrills;
                   dayData.completedDrills = completedDrills;
 
-
                   dayData.programs.push({
                     id: program.id,
                     title: program.title,
@@ -1266,7 +1265,6 @@ export const clientRouterRouter = router({
                   const completion = allCompletionsCombined.find(
                     (c: any) => c.drillId === drill.id
                   );
-
 
                   if (drill.routineId && drill.type === "routine") {
                     // This is a routine drill - fetch and expand the routine
@@ -1811,7 +1809,6 @@ export const clientRouterRouter = router({
           expectedTime: 0,
           drills: [], // For backward compatibility
         };
-
 
         // Process program assignments for this date
         for (const assignment of (client as any).programAssignments) {
@@ -3072,7 +3069,6 @@ export const clientRouterRouter = router({
         });
       }
 
-
       return {
         success: true,
         message: input.completed
@@ -3105,7 +3101,6 @@ export const clientRouterRouter = router({
           message: "Only clients can access this endpoint",
         });
       }
-
 
       console.log("🔍 Debug - Client ID:", client.id);
 
@@ -3416,7 +3411,6 @@ export const clientRouterRouter = router({
         orderBy: { date: "asc" },
       });
 
-
       return pendingRequests;
     }),
 
@@ -3591,11 +3585,14 @@ export const clientRouterRouter = router({
         },
       });
 
-      const coachSettingsMap = coachSettings.reduce((acc, setting) => {
-        acc[setting.userId] =
-          (setting as any)?.clientScheduleAdvanceLimitDays ?? null;
-        return acc;
-      }, {} as Record<string, number | null>);
+      const coachSettingsMap = coachSettings.reduce(
+        (acc, setting) => {
+          acc[setting.userId] =
+            (setting as any)?.clientScheduleAdvanceLimitDays ?? null;
+          return acc;
+        },
+        {} as Record<string, number | null>
+      );
 
       // Calculate month start and end dates
       const monthStart = new Date(input.year, input.month, 1);
@@ -3837,7 +3834,6 @@ export const clientRouterRouter = router({
       },
     });
 
-
     return pendingRequests;
   }),
 
@@ -3991,7 +3987,7 @@ export const clientRouterRouter = router({
 
       // Create notification for the client
       if (event.client?.userId) {
-        const notification = await db.notification.create({
+        await db.notification.create({
           data: {
             userId: event.client.userId,
             type: "LESSON_SCHEDULED",
@@ -4008,28 +4004,12 @@ export const clientRouterRouter = router({
             },
           },
         });
-
-        // Send push notification
-        try {
-          const { sendNotificationPush } = await import(
-            "@/lib/pushNotificationService"
-          );
-          await sendNotificationPush(
-            event.client.userId,
-            "LESSON_SCHEDULED",
-            notification.title,
-            notification.message,
-            notification.data as any
-          );
-        } catch (error) {
-          console.error("Failed to send push notification for schedule request approved:", error);
-        }
       }
 
       return updatedEvent;
     }),
 
-  // Reject a schedule request (COACH ONLY) - restores old lesson if it was an exchange
+  // Reject a schedule request (COACH ONLY)
   rejectScheduleRequest: publicProcedure
     .input(
       z.object({
@@ -4080,61 +4060,6 @@ export const clientRouterRouter = router({
         });
       }
 
-      // Check if this was an exchange (old lesson data stored in description)
-      const reasonText = event.description || "";
-      
-      // Extract the outermost [OLD_LESSON_DATA] tag (handle nested patterns)
-      // Find the first [OLD_LESSON_DATA] and match to the last [/OLD_LESSON_DATA] to get outermost
-      const firstIndex = reasonText.indexOf("[OLD_LESSON_DATA]");
-      const lastIndex = reasonText.lastIndexOf("[/OLD_LESSON_DATA]");
-      
-      let restoredLesson = null;
-      if (firstIndex !== -1 && lastIndex !== -1 && lastIndex > firstIndex) {
-        try {
-          // Extract the content between first [OLD_LESSON_DATA] and last [/OLD_LESSON_DATA]
-          const dataStart = firstIndex + "[OLD_LESSON_DATA]".length;
-          const dataEnd = lastIndex;
-          let extractedData = reasonText.substring(dataStart, dataEnd);
-          
-          // Remove any nested [OLD_LESSON_DATA] tags from the extracted data
-          let cleanedData = extractedData;
-          let dataPreviousLength = 0;
-          while (cleanedData.length !== dataPreviousLength) {
-            dataPreviousLength = cleanedData.length;
-            cleanedData = cleanedData.replace(/\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g, "");
-          }
-          
-          const oldLessonData = JSON.parse(cleanedData);
-          
-          // Clean the description field if it contains nested tags
-          let cleanDescription = oldLessonData.description || "";
-          if (cleanDescription) {
-            let descPreviousLength = 0;
-            while (cleanDescription.length !== descPreviousLength) {
-              descPreviousLength = cleanDescription.length;
-              cleanDescription = cleanDescription.replace(/\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g, "");
-            }
-            cleanDescription = cleanDescription.trim();
-          }
-          
-          // Restore the old lesson
-          restoredLesson = await db.event.create({
-            data: {
-              coachId: event.coachId,
-              clientId: event.clientId,
-              date: new Date(oldLessonData.date),
-              title: oldLessonData.title,
-              description: cleanDescription,
-              status: oldLessonData.status === "CONFIRMED" ? "CONFIRMED" : "PENDING",
-            },
-          });
-        } catch (error) {
-          console.error("Error restoring old lesson:", error);
-          console.error("Failed to parse old lesson data. First index:", firstIndex, "Last index:", lastIndex);
-          // Continue with rejection even if restoration fails
-        }
-      }
-
       // Delete the declined event to free up the time slot
       const deletedEvent = await db.event.delete({
         where: { id: input.eventId },
@@ -4142,55 +4067,159 @@ export const clientRouterRouter = router({
 
       // Create notification for the client
       if (event.client?.userId) {
-        const message = restoredLesson
-          ? `Your schedule request for ${format(
-              new Date(event.date),
-              "MMM d, yyyy 'at' h:mm a"
-            )} has been declined. Your original lesson has been restored.${
-              input.reason ? ` Reason: ${input.reason}` : ""
-            }`
-          : `Your schedule request for ${format(
+        await db.notification.create({
+          data: {
+            userId: event.client.userId,
+            type: "LESSON_CANCELLED",
+            title: "Schedule Request Declined",
+            message: `Your schedule request for ${format(
               new Date(event.date),
               "MMM d, yyyy 'at' h:mm a"
             )} has been declined and the time slot is now available.${
               input.reason ? ` Reason: ${input.reason}` : ""
-            }`;
-
-        const notification = await db.notification.create({
-          data: {
-            userId: event.client.userId,
-            type: restoredLesson ? "LESSON_RESTORED" : "LESSON_CANCELLED",
-            title: restoredLesson ? "Schedule Request Declined - Lesson Restored" : "Schedule Request Declined",
-            message: message,
+            }`,
             data: {
               eventId: event.id,
               clientId: event.clientId,
               coachId: ensureUserId(user.id),
               coachName: coach.name,
               reason: input.reason,
-              restoredLessonId: restoredLesson?.id,
             },
           },
         });
-
-        // Send push notification
-        try {
-          const { sendNotificationPush } = await import(
-            "@/lib/pushNotificationService"
-          );
-          await sendNotificationPush(
-            event.client.userId,
-            restoredLesson ? "LESSON_RESTORED" : "LESSON_CANCELLED",
-            notification.title,
-            notification.message,
-            notification.data as any
-          );
-        } catch (error) {
-          console.error("Failed to send push notification for schedule request declined:", error);
-        }
       }
 
-      return { deletedEvent, restoredLesson };
+      return deletedEvent;
+    }),
+
+  // Exchange lesson: request to move an existing lesson to a new date/time
+  exchangeLesson: publicProcedure
+    .input(
+      z.object({
+        oldLessonId: z.string(),
+        requestedDate: z.string(),
+        requestedTime: z.string(),
+        reason: z.string().optional(),
+        timeZone: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const dbUser = await db.user.findFirst({
+        where: { id: user.id, role: "CLIENT" },
+      });
+      if (!dbUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only clients can request lesson exchanges",
+        });
+      }
+
+      const client = await db.client.findFirst({
+        where: { userId: user.id },
+        include: { coach: true },
+      });
+      if (!client) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Client profile not found",
+        });
+      }
+
+      const oldEvent = await db.event.findFirst({
+        where: { id: input.oldLessonId, clientId: client.id },
+      });
+      if (!oldEvent) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lesson not found or you do not own it",
+        });
+      }
+
+      const targetCoachId = oldEvent.coachId;
+      const dateStr = input.requestedDate;
+      const timeStr = input.requestedTime;
+
+      const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!timeMatch) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid time format (use e.g. 2:00 PM)",
+        });
+      }
+
+      const [_, hour, minute, period] = timeMatch;
+      let hour24 = parseInt(hour, 10);
+      if (period!.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
+      else if (period!.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
+
+      const fullDateStr = `${dateStr}T${hour24.toString().padStart(2, "0")}:${minute}:00`;
+      const timeZone = input.timeZone || "America/New_York";
+      const utcDateTime = fromZonedTime(fullDateStr, timeZone);
+
+      if (isNaN(utcDateTime.getTime())) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid date/time combination",
+        });
+      }
+
+      const now = new Date();
+      if (utcDateTime <= now) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot request lessons in the past",
+        });
+      }
+
+      const existingLesson = await db.event.findFirst({
+        where: { coachId: targetCoachId, date: utcDateTime },
+      });
+      if (existingLesson) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This time slot is already booked",
+        });
+      }
+
+      const scheduleRequest = await db.event.create({
+        data: {
+          title: `Exchange Request - ${client.name}`,
+          description:
+            input.reason || "Client requested to exchange lesson time",
+          date: utcDateTime,
+          clientId: client.id,
+          coachId: targetCoachId,
+          status: "PENDING",
+        },
+      });
+
+      await db.event.update({
+        where: { id: input.oldLessonId },
+        data: { status: "CANCELLED" },
+      });
+
+      await db.notification.create({
+        data: {
+          userId: targetCoachId,
+          type: "SCHEDULE_REQUEST",
+          title: "Lesson Exchange Request",
+          message: `${client.name} wants to move their lesson to ${format(utcDateTime, "MMM d, yyyy 'at' h:mm a")}${input.reason ? `: ${input.reason}` : ""}`,
+          data: {
+            eventId: scheduleRequest.id,
+            exchangeFromEventId: input.oldLessonId,
+            clientId: client.id,
+            clientName: client.name,
+            requestedDate: utcDateTime,
+            reason: input.reason,
+          },
+        },
+      });
+
+      return scheduleRequest;
     }),
 
   // Request a schedule change
@@ -4482,7 +4511,7 @@ export const clientRouterRouter = router({
       });
 
       // Create notification for the coach
-      const notification = await db.notification.create({
+      await db.notification.create({
         data: {
           userId: targetCoachId,
           type: "SCHEDULE_REQUEST",
@@ -4502,271 +4531,6 @@ export const clientRouterRouter = router({
           },
         },
       });
-
-      // Send push notification
-      try {
-        const { sendNotificationPush } = await import(
-          "@/lib/pushNotificationService"
-        );
-        await sendNotificationPush(
-          targetCoachId,
-          "SCHEDULE_REQUEST",
-          notification.title,
-          notification.message,
-          notification.data as any
-        );
-      } catch (error) {
-        console.error("Failed to send push notification for schedule request:", error);
-      }
-
-      return scheduleRequest;
-    }),
-
-  // Exchange lesson - removes old lesson and creates new request (can restore if rejected)
-  exchangeLesson: publicProcedure
-    .input(
-      z.object({
-        oldLessonId: z.string(),
-        requestedDate: z.string(),
-        requestedTime: z.string(),
-        reason: z.string().optional(),
-        timeZone: z.string().optional(),
-        coachId: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const { getUser } = getKindeServerSession();
-      const user = await getUser();
-      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-      // Verify user is a CLIENT
-      const dbUser = await db.user.findFirst({
-        where: { id: user.id, role: "CLIENT" },
-      });
-
-      if (!dbUser) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only clients can exchange lessons",
-        });
-      }
-
-      // Get client record
-      const client = await db.client.findFirst({
-        where: { userId: user.id },
-        include: {
-          coach: {
-            include: {
-              coachOrganizations: {
-                where: { isActive: true },
-              },
-            },
-          },
-        },
-      });
-
-      if (!client) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Client profile not found",
-        });
-      }
-
-      // Get the old lesson
-      const oldLesson = await db.event.findFirst({
-        where: {
-          id: input.oldLessonId,
-          clientId: client.id,
-        },
-        include: {
-          client: true,
-        },
-      });
-
-      if (!oldLesson) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Lesson not found",
-        });
-      }
-
-      // Determine which coach to send the request to
-      let targetCoachId = input.coachId || client.coachId;
-
-      if (!targetCoachId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "No coach specified",
-        });
-      }
-
-      // Parse the requested date and time
-      const dateStr = input.requestedDate;
-      const timeStr = input.requestedTime;
-
-      // Parse the time string (e.g., "2:00 PM")
-      const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (!timeMatch) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid time format",
-        });
-      }
-
-      const [_, hour, minute, period] = timeMatch;
-      let hour24 = parseInt(hour);
-
-      // Convert to 24-hour format
-      if (period.toUpperCase() === "PM" && hour24 !== 12) {
-        hour24 += 12;
-      } else if (period.toUpperCase() === "AM" && hour24 === 12) {
-        hour24 = 0;
-      }
-
-      // Create the full date string in local time
-      const fullDateStr = `${dateStr}T${hour24
-        .toString()
-        .padStart(2, "0")}:${minute}:00`;
-
-      // Convert local time to UTC using the user's timezone
-      const timeZone = input.timeZone || "America/New_York";
-      const { fromZonedTime } = await import("date-fns-tz");
-      const utcDateTime = fromZonedTime(fullDateStr, timeZone);
-
-      // Validate the date
-      if (isNaN(utcDateTime.getTime())) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid date/time combination",
-        });
-      }
-
-      // Check if the requested time is in the past
-      const now = new Date();
-      if (utcDateTime <= now) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot request lessons in the past",
-        });
-      }
-
-      // Get coach name for the title
-      const targetCoach = await db.user.findFirst({
-        where: { id: targetCoachId },
-        select: { name: true },
-      });
-
-      // Store old lesson data in the description field (we'll use a special format)
-      const oldLessonData = JSON.stringify({
-        id: oldLesson.id,
-        date: oldLesson.date.toISOString(),
-        title: oldLesson.title,
-        description: oldLesson.description,
-        status: oldLesson.status,
-      });
-
-      // Delete the old lesson
-      await db.event.delete({
-        where: { id: input.oldLessonId },
-      });
-
-      // Create new schedule request (as Event) with old lesson data stored in description
-      const scheduleRequest = await db.event.create({
-        data: {
-          title: `Schedule Request - ${client.name}${
-            input.coachId && input.coachId !== client.coachId
-              ? ` (requesting ${targetCoach?.name || "Coach"})`
-              : ""
-          }`,
-          description: `${input.reason || "Client requested to exchange lesson time"}\n\n[OLD_LESSON_DATA]${oldLessonData}[/OLD_LESSON_DATA]`,
-          date: utcDateTime,
-          clientId: client.id,
-          coachId: targetCoachId,
-          status: "PENDING",
-        },
-      });
-
-      // Format dates in UTC for notification/email
-      const { formatInTimeZone } = await import("date-fns-tz");
-      const utcTimeZone = "UTC";
-      
-      // Format dates explicitly in UTC timezone
-      const oldLessonDate = formatInTimeZone(oldLesson.date, utcTimeZone, "MMM d, yyyy 'at' h:mm a");
-      const newRequestedDate = formatInTimeZone(utcDateTime, utcTimeZone, "MMM d, yyyy 'at' h:mm a");
-
-      // Create notification for the coach
-      const notification = await db.notification.create({
-        data: {
-          userId: targetCoachId,
-          type: "SCHEDULE_REQUEST",
-          title: "Lesson Exchange Request",
-          message: `${client.name} wants to exchange their lesson on ${oldLessonDate} UTC for ${newRequestedDate} UTC${input.reason ? `: ${input.reason}` : ""}`,
-          data: {
-            eventId: scheduleRequest.id,
-            clientId: client.id,
-            clientName: client.name,
-            clientUserId: client.userId,
-            requestedDate: utcDateTime,
-            reason: input.reason,
-            coachId: targetCoachId,
-            oldLessonId: oldLesson.id,
-            oldLessonDate: oldLesson.date.toISOString(),
-            isExchange: true,
-          },
-        },
-      });
-
-      // Send push notification
-      try {
-        const { sendNotificationPush } = await import(
-          "@/lib/pushNotificationService"
-        );
-        await sendNotificationPush(
-          targetCoachId,
-          "SCHEDULE_REQUEST",
-          notification.title,
-          notification.message,
-          notification.data as any
-        );
-      } catch (error) {
-        console.error("Failed to send push notification for lesson exchange request:", error);
-      }
-
-      // Send email notification to coach
-      const { CompleteEmailService } = await import("@/lib/complete-email-service");
-      const emailService = CompleteEmailService.getInstance();
-      
-      // Get coach user record for email
-      const coachUser = await db.user.findFirst({
-        where: { id: targetCoachId },
-        select: { email: true, name: true },
-      });
-
-      if (coachUser?.email) {
-        // Format dates in coach's timezone for email (not UTC)
-        const { getUserTimezoneFromDB, formatTimeInTimezone, formatDateInTimezone } = await import("@/lib/timezone-utils");
-        const coachTimezone = await getUserTimezoneFromDB(targetCoachId);
-        
-        const oldLessonDateFormatted = formatDateInTimezone(oldLesson.date, coachTimezone, "MMM d, yyyy");
-        const oldLessonTimeFormatted = formatTimeInTimezone(oldLesson.date, coachTimezone, "h:mm a");
-        const newDateFormatted = formatDateInTimezone(utcDateTime, coachTimezone, "MMM d, yyyy");
-        const newTimeFormatted = formatTimeInTimezone(utcDateTime, coachTimezone, "h:mm a");
-
-        await emailService.sendScheduleExchangeRequest(
-          coachUser.email,
-          coachUser.name || "Coach",
-          client.name,
-          oldLessonDateFormatted,
-          oldLessonTimeFormatted,
-          newDateFormatted,
-          newTimeFormatted,
-          input.reason,
-          targetCoachId
-        ).catch((error) => {
-          console.error("Failed to send exchange request email to coach:", error);
-          // Don't throw - email failure shouldn't break the exchange
-        });
-      }
 
       return scheduleRequest;
     }),
@@ -5009,7 +4773,9 @@ export const clientRouterRouter = router({
 
         if (!drill) {
           // Drill doesn't exist - log warning but allow submission without drillId
-          console.warn(`Drill ID ${input.drillId} not found, submitting video without drill reference`);
+          console.warn(
+            `Drill ID ${input.drillId} not found, submitting video without drill reference`
+          );
           validDrillId = null;
         } else {
           validDrillId = input.drillId;
@@ -5042,22 +4808,24 @@ export const clientRouterRouter = router({
           drillId: validDrillId,
           videoUrl: input.videoUrl,
         });
-        
+
         // Provide more specific error messages
         if (error.code === "P2002") {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "A video submission with this information already exists. Please try again.",
+            message:
+              "A video submission with this information already exists. Please try again.",
           });
         }
-        
+
         // Handle foreign key constraint violations
         if (error.code === "P2003") {
           const field = error.meta?.field_name || "unknown field";
           if (field.includes("drillId") || field.includes("drill")) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "The program drill reference is invalid. The video has been submitted without the drill reference.",
+              message:
+                "The program drill reference is invalid. The video has been submitted without the drill reference.",
             });
           }
           throw new TRPCError({
@@ -5065,11 +4833,12 @@ export const clientRouterRouter = router({
             message: `Invalid reference: ${field}. Please try again.`,
           });
         }
-        
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to submit video: ${
-            error.message || "Please try again or contact support if the problem persists."
+            error.message ||
+            "Please try again or contact support if the problem persists."
           }`,
         });
       }
@@ -5404,7 +5173,6 @@ export const clientRouterRouter = router({
         let programName = "";
         let exerciseName = "";
 
-
         // First, try to find if it's a real ProgramDrill ID
         const existingDrill = await db.programDrill.findUnique({
           where: { id: input.drillId },
@@ -5438,7 +5206,6 @@ export const clientRouterRouter = router({
             const parts = input.drillId.split("-routine-");
             const programDrillId = parts[0];
             const exerciseId = parts[1];
-
 
             // Try to find the program drill and exercise
             const programDrill = await db.programDrill.findUnique({
@@ -5504,7 +5271,6 @@ export const clientRouterRouter = router({
               firstDashIndex
             );
             const exerciseId = input.drillId.substring(firstDashIndex + 1);
-
 
             const routineAssignment = await db.routineAssignment.findUnique({
               where: { id: routineAssignmentId },

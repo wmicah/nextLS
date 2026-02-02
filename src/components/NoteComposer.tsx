@@ -2,21 +2,11 @@
 
 import React, { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
-import {
-  X,
-  Send,
-  Loader2,
-  Paperclip,
-  Trash2,
-} from "lucide-react";
+import { X, Send, Loader2, Paperclip, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { UploadButton } from "@uploadthing/react";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
-import {
-  COLORS,
-  getGoldenAccent,
-  getRedAlert,
-} from "@/lib/colors";
+import { COLORS, getGoldenAccent, getRedAlert } from "@/lib/colors";
 
 interface NoteComposerProps {
   isOpen: boolean;
@@ -273,7 +263,6 @@ export default function NoteComposer({
     }
   };
 
-
   if (!isOpen) return null;
 
   return (
@@ -312,7 +301,8 @@ export default function NoteComposer({
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: COLORS.TEXT_SECONDARY }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
             }}
             onMouseLeave={e => {
@@ -382,7 +372,7 @@ export default function NoteComposer({
                     e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   }}
                 >
-                  <option 
+                  <option
                     value="GENERAL"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -391,7 +381,7 @@ export default function NoteComposer({
                   >
                     General
                   </option>
-                  <option 
+                  <option
                     value="PROGRESS"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -400,7 +390,7 @@ export default function NoteComposer({
                   >
                     Progress
                   </option>
-                  <option 
+                  <option
                     value="FEEDBACK"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -409,7 +399,7 @@ export default function NoteComposer({
                   >
                     Feedback
                   </option>
-                  <option 
+                  <option
                     value="GOAL"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -418,7 +408,7 @@ export default function NoteComposer({
                   >
                     Goal
                   </option>
-                  <option 
+                  <option
                     value="INJURY"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -427,7 +417,7 @@ export default function NoteComposer({
                   >
                     Injury
                   </option>
-                  <option 
+                  <option
                     value="TECHNIQUE"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -436,7 +426,7 @@ export default function NoteComposer({
                   >
                     Technique
                   </option>
-                  <option 
+                  <option
                     value="MOTIVATION"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -445,7 +435,7 @@ export default function NoteComposer({
                   >
                     Motivation
                   </option>
-                  <option 
+                  <option
                     value="SCHEDULE"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -480,7 +470,7 @@ export default function NoteComposer({
                     e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   }}
                 >
-                  <option 
+                  <option
                     value="LOW"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -489,7 +479,7 @@ export default function NoteComposer({
                   >
                     Low
                   </option>
-                  <option 
+                  <option
                     value="NORMAL"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -498,7 +488,7 @@ export default function NoteComposer({
                   >
                     Normal
                   </option>
-                  <option 
+                  <option
                     value="HIGH"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -507,7 +497,7 @@ export default function NoteComposer({
                   >
                     High
                   </option>
-                  <option 
+                  <option
                     value="URGENT"
                     style={{
                       backgroundColor: COLORS.BACKGROUND_DARK,
@@ -561,7 +551,6 @@ export default function NoteComposer({
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  {/* @ts-expect-error - effect version conflict workaround */}
                   <UploadButton<OurFileRouter, "noteAttachmentUploader">
                     endpoint="noteAttachmentUploader"
                     onBeforeUploadBegin={(files: File[]) => {
@@ -587,14 +576,17 @@ export default function NoteComposer({
                           }}
                           onMouseEnter={e => {
                             if (ready && !isUploading) {
-                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.borderColor =
+                                COLORS.GOLDEN_ACCENT;
                               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                             }
                           }}
                           onMouseLeave={e => {
                             if (ready && !isUploading) {
-                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                              e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                              e.currentTarget.style.borderColor =
+                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.color =
+                                COLORS.TEXT_SECONDARY;
                             }
                           }}
                         >
@@ -634,7 +626,10 @@ export default function NoteComposer({
                           >
                             {attachment.fileName}
                           </p>
-                          <p className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
+                          <p
+                            className="text-[10px]"
+                            style={{ color: COLORS.TEXT_MUTED }}
+                          >
                             {(attachment.fileSize / 1024 / 1024).toFixed(1)} MB
                           </p>
                         </div>
@@ -643,11 +638,13 @@ export default function NoteComposer({
                           className="p-1 rounded transition-colors ml-2 flex-shrink-0"
                           style={{ color: COLORS.TEXT_SECONDARY }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor = getRedAlert(0.1);
+                            e.currentTarget.style.backgroundColor =
+                              getRedAlert(0.1);
                             e.currentTarget.style.color = COLORS.RED_ALERT;
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                           }}
                         >
@@ -697,7 +694,8 @@ export default function NoteComposer({
               border: `1px solid ${COLORS.BORDER_SUBTLE}`,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
             }}
             onMouseLeave={e => {
@@ -744,8 +742,8 @@ export default function NoteComposer({
                 ? "Saving..."
                 : "Save"
               : createNoteMutation.isPending
-              ? "Sending..."
-              : "Send"}
+                ? "Sending..."
+                : "Send"}
           </button>
         </div>
       </div>

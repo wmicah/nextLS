@@ -186,38 +186,8 @@ export function validateFileSecurity(
   const warnings: string[] = [];
   let riskLevel: "low" | "medium" | "high" = "low";
 
-  // Extract file name and extension once for all checks
-  const fileName = file.name.toLowerCase();
-  const fileExtension = fileName.substring(fileName.lastIndexOf("."));
-
   // 1. Check file size
-  // For messageAttachment, use different limits based on file type
-  let maxSize = FILE_SIZE_LIMITS[uploadType];
-  if (uploadType === "messageAttachment") {
-    // Determine size limit based on file type or extension
-    const isVideoMimeType = file.type?.startsWith("video/");
-    const isAudioMimeType = file.type?.startsWith("audio/");
-    const isVideoExtension = fileExtension && ALLOWED_VIDEO_EXTENSIONS.includes(fileExtension as any);
-    const isImageMimeType = file.type?.startsWith("image/");
-    
-    if (isVideoMimeType || isVideoExtension) {
-      maxSize = 128 * 1024 * 1024; // 128MB for videos
-    } else if (isAudioMimeType) {
-      maxSize = 64 * 1024 * 1024; // 64MB for audio
-    } else if (file.type === "application/pdf" || 
-               file.type === "application/msword" ||
-               file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-      maxSize = 16 * 1024 * 1024; // 16MB for documents
-    } else if (file.type?.startsWith("text/")) {
-      maxSize = 8 * 1024 * 1024; // 8MB for text files
-    } else if (isImageMimeType) {
-      maxSize = 16 * 1024 * 1024; // 16MB for images
-    } else {
-      // Default to 16MB for unknown types
-      maxSize = 16 * 1024 * 1024;
-    }
-  }
-  
+  const maxSize = FILE_SIZE_LIMITS[uploadType];
   if (file.size > maxSize) {
     errors.push(
       `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds limit (${(
@@ -229,15 +199,15 @@ export function validateFileSecurity(
     riskLevel = "high";
   }
 
+  // Extract file name and extension once for all checks
+  const fileName = file.name.toLowerCase();
+  const fileExtension = fileName.substring(fileName.lastIndexOf("."));
+
   // 2. Check file type
   // For video uploads, be more lenient - accept any video/* MIME type or check extension
-  // messageAttachment can also accept videos, audio, images, and documents
-  if (uploadType === "video" || uploadType === "feedbackVideo" || uploadType === "messageAttachment") {
+  if (uploadType === "video" || uploadType === "feedbackVideo") {
     // Check if it's a video MIME type (starts with "video/")
     const isVideoMimeType = file.type && file.type.startsWith("video/");
-    
-    // For messageAttachment, also check if it's an audio file (audio/*)
-    const isAudioMimeType = uploadType === "messageAttachment" && file.type && file.type.startsWith("audio/");
 
     // Check if extension is in allowed video extensions
     const isVideoExtension =
@@ -249,35 +219,21 @@ export function validateFileSecurity(
       file.type === "" ||
       file.type === "application/octet-stream";
 
-    // For messageAttachment, also check if it's a non-video/audio file type that's allowed
-    const isAllowedNonVideoAudioType = uploadType === "messageAttachment" && 
-      ALLOWED_FILE_TYPES[file.type as keyof typeof ALLOWED_FILE_TYPES];
-
     // Allow if:
     // 1. MIME type starts with "video/" (any video format)
-    // 2. For messageAttachment: MIME type starts with "audio/" (any audio format)
-    // 3. MIME type is unknown BUT extension is valid (mobile devices)
-    // 4. For messageAttachment: it's an allowed non-video/audio file type (images, PDF, etc.)
+    // 2. MIME type is unknown BUT extension is valid (mobile devices)
+    // Reject if:
+    // 1. MIME type is not video AND extension is not video
+    // 2. MIME type is unknown AND extension is not video
     if (isVideoMimeType) {
       // Valid video MIME type - allow
-    } else if (isAudioMimeType) {
-      // Valid audio MIME type for messageAttachment - allow
     } else if (isUnknownMimeType && isVideoExtension) {
       // Unknown MIME type but valid extension - allow with warning (common on mobile)
       warnings.push(
         "File MIME type is unknown, but extension suggests it's a video file"
       );
-    } else if (isAllowedNonVideoAudioType) {
-      // For messageAttachment, allow other valid file types (images, PDF, documents, etc.)
-      // No error needed - this is allowed
-    } else if (uploadType === "messageAttachment") {
-      // For messageAttachment, reject if it's not video, audio, or an allowed file type
-      errors.push(
-        `File type '${file.type || "unknown"}' is not allowed for message attachments. Please upload an image, video, audio, PDF, or document file.`
-      );
-      riskLevel = "high";
     } else if (!isVideoExtension) {
-      // Invalid extension for video-only upload types
+      // Invalid extension
       errors.push(
         `File extension '${
           fileExtension || "none"

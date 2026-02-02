@@ -122,7 +122,9 @@ function SendBugReportAnnouncementButton() {
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
-  const [masterLibrarySubTab, setMasterLibrarySubTab] = useState<"videos" | "programs" | "routines">("videos");
+  const [masterLibrarySubTab, setMasterLibrarySubTab] = useState<
+    "videos" | "programs" | "routines"
+  >("videos");
   const [selectedResource, setSelectedResource] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
@@ -151,36 +153,45 @@ export default function AdminDashboard() {
   // Check if user is admin
   const { data: authData } = trpc.authCallback.useQuery();
   const utils = trpc.useUtils();
-  
+
   // Master library search and filter state
-  const [masterLibraryProgramSearch, setMasterLibraryProgramSearch] = useState("");
-  const debouncedMasterLibraryProgramSearch = useDebounce(masterLibraryProgramSearch, 300);
-  const [masterLibrarySelectedCoachId, setMasterLibrarySelectedCoachId] = useState("");
-  
+  const [masterLibraryProgramSearch, setMasterLibraryProgramSearch] =
+    useState("");
+  const debouncedMasterLibraryProgramSearch = useDebounce(
+    masterLibraryProgramSearch,
+    300
+  );
+  const [masterLibrarySelectedCoachId, setMasterLibrarySelectedCoachId] =
+    useState("");
+
   const { data: masterLibrary = [], refetch: refetchMasterLibrary } =
     trpc.admin.getMasterLibraryForAdmin.useQuery();
   const { data: adminCoaches = [] } = trpc.admin.getAdminCoaches.useQuery();
-  const { data: masterLibraryPrograms = [], refetch: refetchMasterLibraryPrograms } =
-    trpc.admin.getMasterLibraryProgramsForAdmin.useQuery(
-      {
-        search: debouncedMasterLibraryProgramSearch || undefined,
-        coachId: masterLibrarySelectedCoachId || undefined,
-      },
-      {
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-        gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-        refetchOnWindowFocus: false, // Don't refetch on window focus
-        refetchOnMount: false, // Don't refetch on mount if data exists
-        refetchOnReconnect: true, // Only refetch on reconnect
-        retry: 1, // Only retry once on failure
-        retryDelay: 1000, // Wait 1 second before retry
-      }
-    );
-  const { data: masterLibraryRoutines = [], refetch: refetchMasterLibraryRoutines } =
-    trpc.admin.getMasterLibraryRoutinesForAdmin.useQuery({
+  const {
+    data: masterLibraryPrograms = [],
+    refetch: refetchMasterLibraryPrograms,
+  } = trpc.admin.getMasterLibraryProgramsForAdmin.useQuery(
+    {
       search: debouncedMasterLibraryProgramSearch || undefined,
       coachId: masterLibrarySelectedCoachId || undefined,
-    });
+    },
+    {
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnMount: false, // Don't refetch on mount if data exists
+      refetchOnReconnect: true, // Only refetch on reconnect
+      retry: 1, // Only retry once on failure
+      retryDelay: 1000, // Wait 1 second before retry
+    }
+  );
+  const {
+    data: masterLibraryRoutines = [],
+    refetch: refetchMasterLibraryRoutines,
+  } = trpc.admin.getMasterLibraryRoutinesForAdmin.useQuery({
+    search: debouncedMasterLibraryProgramSearch || undefined,
+    coachId: masterLibrarySelectedCoachId || undefined,
+  });
   const { data: allPrograms = [] } = trpc.admin.getAllProgramsForAdmin.useQuery(
     {
       search: debouncedMasterLibraryProgramSearch || undefined,
@@ -227,14 +238,19 @@ export default function AdminDashboard() {
     trpc.bugReports.list.useQuery({
       includeArchived: true,
     });
-  
+
   // Filter archived reports from all reports
-  const archivedBugReportsData = allBugReportsData ? {
-    ...allBugReportsData,
-    bugReports: allBugReportsData.bugReports?.filter((b: any) => b.isArchived) || [],
-    total: allBugReportsData.bugReports?.filter((b: any) => b.isArchived).length || 0,
-  } : undefined;
-  
+  const archivedBugReportsData = allBugReportsData
+    ? {
+        ...allBugReportsData,
+        bugReports:
+          allBugReportsData.bugReports?.filter((b: any) => b.isArchived) || [],
+        total:
+          allBugReportsData.bugReports?.filter((b: any) => b.isArchived)
+            .length || 0,
+      }
+    : undefined;
+
   const updateBugStatusMutation = trpc.bugReports.updateStatus.useMutation({
     onSuccess: () => {
       refetchBugReports();
@@ -255,7 +271,7 @@ export default function AdminDashboard() {
       setEmailSubject("");
       setEmailMessage("");
     },
-    onError: (error) => {
+    onError: error => {
       alert(`Failed to send email: ${error.message}`);
     },
   });
@@ -263,7 +279,9 @@ export default function AdminDashboard() {
   const handleOpenEmailModal = (report: any) => {
     setSelectedBugReport(report);
     setEmailSubject(`Re: Bug Report - ${report.title}`);
-    setEmailMessage(`Hi ${report.user?.name || report.user?.email},\n\nThank you for reporting this bug. `);
+    setEmailMessage(
+      `Hi ${report.user?.name || report.user?.email},\n\nThank you for reporting this bug. `
+    );
     setEmailModalOpen(true);
   };
 
@@ -313,58 +331,62 @@ export default function AdminDashboard() {
   });
 
   // Master Library Programs mutations
-  const addProgramToMasterLibraryMutation = trpc.admin.addProgramToMasterLibrary.useMutation({
-    onSuccess: () => {
-      refetchMasterLibraryPrograms();
-      refetchMasterLibrary();
-      // Invalidate the listMasterLibrary query so MasterProgramsTab refreshes
-      utils.programs.listMasterLibrary.invalidate();
-      alert("Program added to master library successfully!");
-    },
-    onError: error => {
-      console.error("Failed to add program:", error);
-      alert(`Failed to add program: ${error.message}`);
-    },
-  });
+  const addProgramToMasterLibraryMutation =
+    trpc.admin.addProgramToMasterLibrary.useMutation({
+      onSuccess: () => {
+        refetchMasterLibraryPrograms();
+        refetchMasterLibrary();
+        // Invalidate the listMasterLibrary query so MasterProgramsTab refreshes
+        utils.programs.listMasterLibrary.invalidate();
+        alert("Program added to master library successfully!");
+      },
+      onError: error => {
+        console.error("Failed to add program:", error);
+        alert(`Failed to add program: ${error.message}`);
+      },
+    });
 
-  const removeProgramFromMasterLibraryMutation = trpc.admin.removeProgramFromMasterLibrary.useMutation({
-    onSuccess: () => {
-      refetchMasterLibraryPrograms();
-      refetchMasterLibrary();
-      // Invalidate the listMasterLibrary query so MasterProgramsTab refreshes
-      utils.programs.listMasterLibrary.invalidate();
-      alert("Program removed from master library successfully!");
-    },
-    onError: error => {
-      console.error("Failed to remove program:", error);
-      alert(`Failed to remove program: ${error.message}`);
-    },
-  });
+  const removeProgramFromMasterLibraryMutation =
+    trpc.admin.removeProgramFromMasterLibrary.useMutation({
+      onSuccess: () => {
+        refetchMasterLibraryPrograms();
+        refetchMasterLibrary();
+        // Invalidate the listMasterLibrary query so MasterProgramsTab refreshes
+        utils.programs.listMasterLibrary.invalidate();
+        alert("Program removed from master library successfully!");
+      },
+      onError: error => {
+        console.error("Failed to remove program:", error);
+        alert(`Failed to remove program: ${error.message}`);
+      },
+    });
 
   // Master Library Routines mutations
-  const addRoutineToMasterLibraryMutation = trpc.admin.addRoutineToMasterLibrary.useMutation({
-    onSuccess: () => {
-      refetchMasterLibraryRoutines();
-      refetchMasterLibrary();
-      alert("Routine added to master library successfully!");
-    },
-    onError: error => {
-      console.error("Failed to add routine:", error);
-      alert(`Failed to add routine: ${error.message}`);
-    },
-  });
+  const addRoutineToMasterLibraryMutation =
+    trpc.admin.addRoutineToMasterLibrary.useMutation({
+      onSuccess: () => {
+        refetchMasterLibraryRoutines();
+        refetchMasterLibrary();
+        alert("Routine added to master library successfully!");
+      },
+      onError: error => {
+        console.error("Failed to add routine:", error);
+        alert(`Failed to add routine: ${error.message}`);
+      },
+    });
 
-  const removeRoutineFromMasterLibraryMutation = trpc.admin.removeRoutineFromMasterLibrary.useMutation({
-    onSuccess: () => {
-      refetchMasterLibraryRoutines();
-      refetchMasterLibrary();
-      alert("Routine removed from master library successfully!");
-    },
-    onError: error => {
-      console.error("Failed to remove routine:", error);
-      alert(`Failed to remove routine: ${error.message}`);
-    },
-  });
+  const removeRoutineFromMasterLibraryMutation =
+    trpc.admin.removeRoutineFromMasterLibrary.useMutation({
+      onSuccess: () => {
+        refetchMasterLibraryRoutines();
+        refetchMasterLibrary();
+        alert("Routine removed from master library successfully!");
+      },
+      onError: error => {
+        console.error("Failed to remove routine:", error);
+        alert(`Failed to remove routine: ${error.message}`);
+      },
+    });
 
   // Redirect if not admin
   useEffect(() => {
@@ -387,10 +409,21 @@ export default function AdminDashboard() {
 
   if (!authData?.user || !authData.user.isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
         <div className="text-center">
-          <Shield className="w-16 h-16 mx-auto mb-4" style={{ color: COLORS.RED_ALERT }} />
-          <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>Access Denied</h1>
+          <Shield
+            className="w-16 h-16 mx-auto mb-4"
+            style={{ color: COLORS.RED_ALERT }}
+          />
+          <h1
+            className="text-2xl font-bold mb-2"
+            style={{ color: COLORS.TEXT_PRIMARY }}
+          >
+            Access Denied
+          </h1>
           <p style={{ color: COLORS.TEXT_SECONDARY }}>
             You don't have permission to access this page.
           </p>
@@ -420,26 +453,65 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>
+    <div
+      className="min-h-screen"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_DARK,
+        color: COLORS.TEXT_PRIMARY,
+      }}
+    >
       {/* Mobile Header */}
-      <div className="md:hidden border-b p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <div
+        className="md:hidden border-b p-4"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
-              <Shield className="w-5 h-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center border"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              <Shield
+                className="w-5 h-5"
+                style={{ color: COLORS.GOLDEN_ACCENT }}
+              />
             </div>
             <div>
-              <h1 className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Admin</h1>
+              <h1
+                className="text-lg font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Admin
+              </h1>
               <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                 {authData.user.name || authData.user.email}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE }}>
+            <span
+              className="px-2 py-1 rounded-full text-xs font-medium border"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
               {authData.user.role}
             </span>
-            <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: getGoldenAccent(0.2), color: COLORS.TEXT_PRIMARY }}>
+            <span
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: getGoldenAccent(0.2),
+                color: COLORS.TEXT_PRIMARY,
+              }}
+            >
               Admin
             </span>
           </div>
@@ -447,15 +519,35 @@ export default function AdminDashboard() {
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden md:block border-b p-6" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <div
+        className="hidden md:block border-b p-6"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
-                <Shield className="w-6 h-6" style={{ color: COLORS.GOLDEN_ACCENT }} />
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center border"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
+                <Shield
+                  className="w-6 h-6"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
               </div>
               <div>
-                <h1 className="text-3xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Admin Dashboard</h1>
+                <h1
+                  className="text-3xl font-bold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Admin Dashboard
+                </h1>
                 <p style={{ color: COLORS.TEXT_SECONDARY }}>
                   Welcome back, {authData.user.name || authData.user.email}
                 </p>
@@ -463,10 +555,23 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-sm font-medium border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE }}>
+                <span
+                  className="px-3 py-1 rounded-full text-sm font-medium border"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    color: COLORS.TEXT_PRIMARY,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                >
                   {authData.user.role}
                 </span>
-                <span className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: getGoldenAccent(0.2), color: COLORS.TEXT_PRIMARY }}>
+                <span
+                  className="px-3 py-1 rounded-full text-sm font-medium"
+                  style={{
+                    backgroundColor: getGoldenAccent(0.2),
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                >
                   Admin
                 </span>
               </div>
@@ -481,17 +586,18 @@ export default function AdminDashboard() {
           <button
             onClick={() => router.push("/dashboard")}
             className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 border text-sm"
-            style={{ 
-              color: COLORS.TEXT_SECONDARY, 
+            style={{
+              color: COLORS.TEXT_SECONDARY,
               backgroundColor: COLORS.BACKGROUND_CARD,
               borderColor: COLORS.BORDER_SUBTLE,
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.borderColor = getGoldenAccent(0.3);
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
               e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
@@ -507,17 +613,18 @@ export default function AdminDashboard() {
           <button
             onClick={() => router.push("/dashboard")}
             className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 border"
-            style={{ 
-              color: COLORS.TEXT_SECONDARY, 
+            style={{
+              color: COLORS.TEXT_SECONDARY,
               backgroundColor: COLORS.BACKGROUND_CARD,
               borderColor: COLORS.BORDER_SUBTLE,
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.borderColor = getGoldenAccent(0.3);
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
               e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
               e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
@@ -530,7 +637,13 @@ export default function AdminDashboard() {
 
         {/* Mobile Navigation Tabs */}
         <div className="md:hidden mb-4">
-          <div className="flex space-x-1 rounded-lg p-1 overflow-x-auto border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+          <div
+            className="flex space-x-1 rounded-lg p-1 overflow-x-auto border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
@@ -539,17 +652,27 @@ export default function AdminDashboard() {
                   onClick={() => setActiveTab(tab.id)}
                   className="flex items-center gap-1 px-3 py-2 rounded-md transition-all duration-200 whitespace-nowrap border"
                   style={{
-                    backgroundColor: activeTab === tab.id ? getGoldenAccent(0.2) : "transparent",
-                    color: activeTab === tab.id ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-                    borderColor: activeTab === tab.id ? getGoldenAccent(0.4) : "transparent",
+                    backgroundColor:
+                      activeTab === tab.id
+                        ? getGoldenAccent(0.2)
+                        : "transparent",
+                    color:
+                      activeTab === tab.id
+                        ? COLORS.TEXT_PRIMARY
+                        : COLORS.TEXT_SECONDARY,
+                    borderColor:
+                      activeTab === tab.id
+                        ? getGoldenAccent(0.4)
+                        : "transparent",
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     if (activeTab !== tab.id) {
                       e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
                     }
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     if (activeTab !== tab.id) {
                       e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                       e.currentTarget.style.backgroundColor = "transparent";
@@ -565,7 +688,13 @@ export default function AdminDashboard() {
         </div>
 
         {/* Desktop Navigation Tabs */}
-        <div className="hidden md:flex space-x-1 rounded-lg p-1 mb-8 border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+        <div
+          className="hidden md:flex space-x-1 rounded-lg p-1 mb-8 border"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
@@ -574,17 +703,23 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab(tab.id)}
                 className="flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 border"
                 style={{
-                  backgroundColor: activeTab === tab.id ? getGoldenAccent(0.2) : "transparent",
-                  color: activeTab === tab.id ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-                  borderColor: activeTab === tab.id ? getGoldenAccent(0.4) : "transparent",
+                  backgroundColor:
+                    activeTab === tab.id ? getGoldenAccent(0.2) : "transparent",
+                  color:
+                    activeTab === tab.id
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
+                  borderColor:
+                    activeTab === tab.id ? getGoldenAccent(0.4) : "transparent",
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   if (activeTab !== tab.id) {
                     e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                   }
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   if (activeTab !== tab.id) {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     e.currentTarget.style.backgroundColor = "transparent";
@@ -721,7 +856,8 @@ export default function AdminDashboard() {
                   Master Library Management
                 </h2>
                 <p className="text-gray-400">
-                  Manage the central library (videos, programs, routines) available to all coaches with Master Library tier
+                  Manage the central library (videos, programs, routines)
+                  available to all coaches with Master Library tier
                 </p>
               </div>
               {masterLibrarySubTab === "videos" && (
@@ -763,15 +899,24 @@ export default function AdminDashboard() {
             </div>
 
             {/* Sub-tabs for Master Library */}
-            <div className="flex gap-2 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+            <div
+              className="flex gap-2 border-b"
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+            >
               <button
                 onClick={() => setMasterLibrarySubTab("videos")}
                 className={`px-4 py-2 font-medium transition-colors border-b-2 ${
                   masterLibrarySubTab === "videos" ? "" : ""
                 }`}
                 style={{
-                  color: masterLibrarySubTab === "videos" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-                  borderBottomColor: masterLibrarySubTab === "videos" ? COLORS.GOLDEN_ACCENT : "transparent",
+                  color:
+                    masterLibrarySubTab === "videos"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
+                  borderBottomColor:
+                    masterLibrarySubTab === "videos"
+                      ? COLORS.GOLDEN_ACCENT
+                      : "transparent",
                 }}
               >
                 <Video className="w-4 h-4 inline mr-2" />
@@ -783,8 +928,14 @@ export default function AdminDashboard() {
                   masterLibrarySubTab === "programs" ? "" : ""
                 }`}
                 style={{
-                  color: masterLibrarySubTab === "programs" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-                  borderBottomColor: masterLibrarySubTab === "programs" ? COLORS.GOLDEN_ACCENT : "transparent",
+                  color:
+                    masterLibrarySubTab === "programs"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
+                  borderBottomColor:
+                    masterLibrarySubTab === "programs"
+                      ? COLORS.GOLDEN_ACCENT
+                      : "transparent",
                 }}
               >
                 <Target className="w-4 h-4 inline mr-2" />
@@ -796,8 +947,14 @@ export default function AdminDashboard() {
                   masterLibrarySubTab === "routines" ? "" : ""
                 }`}
                 style={{
-                  color: masterLibrarySubTab === "routines" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-                  borderBottomColor: masterLibrarySubTab === "routines" ? COLORS.GOLDEN_ACCENT : "transparent",
+                  color:
+                    masterLibrarySubTab === "routines"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
+                  borderBottomColor:
+                    masterLibrarySubTab === "routines"
+                      ? COLORS.GOLDEN_ACCENT
+                      : "transparent",
                 }}
               >
                 <Dumbbell className="w-4 h-4 inline mr-2" />
@@ -809,83 +966,83 @@ export default function AdminDashboard() {
             {masterLibrarySubTab === "videos" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {masterLibrary.map((resource: any) => (
-                <div
-                  key={resource.id}
-                  className="bg-[#1A1D1E] rounded-xl border-2 border-[#2D3748] hover:border-[#4A5A70] transition-all duration-300 cursor-pointer group"
-                >
-                  {/* Thumbnail */}
-                  <div className="h-32 rounded-t-xl bg-[#0F1416] flex items-center justify-center relative">
-                    <VideoThumbnail
-                      item={resource}
-                      videoType="master"
-                      className="h-32"
-                    />
+                  <div
+                    key={resource.id}
+                    className="bg-[#1A1D1E] rounded-xl border-2 border-[#2D3748] hover:border-[#4A5A70] transition-all duration-300 cursor-pointer group"
+                  >
+                    {/* Thumbnail */}
+                    <div className="h-32 rounded-t-xl bg-[#0F1416] flex items-center justify-center relative">
+                      <VideoThumbnail
+                        item={resource}
+                        videoType="master"
+                        className="h-32"
+                      />
 
-                    {/* Status Indicators */}
-                    <div className="absolute top-2 right-2 flex gap-1">
-                      {!resource.isActive && (
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      )}
-                      {resource.isFeatured && (
-                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-[#4A5A70] text-white">
-                        {resource.category}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-400">
-                          {resource.type}
-                        </span>
+                      {/* Status Indicators */}
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        {!resource.isActive && (
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        )}
+                        {resource.isFeatured && (
+                          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        )}
                       </div>
                     </div>
 
-                    <h3 className="font-bold text-white mb-2 line-clamp-1">
-                      {resource.title}
-                    </h3>
+                    {/* Content */}
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-[#4A5A70] text-white">
+                          {resource.category}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400">
+                            {resource.type}
+                          </span>
+                        </div>
+                      </div>
 
-                    <p className="text-sm text-gray-400 mb-3 line-clamp-2">
-                      {resource.description}
-                    </p>
+                      <h3 className="font-bold text-white mb-2 line-clamp-1">
+                        {resource.title}
+                      </h3>
 
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedResource(resource);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="flex-1 px-3 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors flex items-center justify-center gap-1"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          // Toggle active status
-                        }}
-                        className={`px-3 py-2 rounded-lg transition-colors flex items-center justify-center ${
-                          resource.isActive
-                            ? "bg-red-600 hover:bg-red-700 text-white"
-                            : "bg-green-600 hover:bg-green-700 text-white"
-                        }`}
-                        title={resource.isActive ? "Deactivate" : "Activate"}
-                      >
-                        {resource.isActive ? (
-                          <AlertTriangle className="w-3 h-3" />
-                        ) : (
-                          <CheckCircle className="w-3 h-3" />
-                        )}
-                      </button>
+                      <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                        {resource.description}
+                      </p>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedResource(resource);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="flex-1 px-3 py-2 bg-[#4A5A70] text-white rounded-lg hover:bg-[#606364] transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Toggle active status
+                          }}
+                          className={`px-3 py-2 rounded-lg transition-colors flex items-center justify-center ${
+                            resource.isActive
+                              ? "bg-red-600 hover:bg-red-700 text-white"
+                              : "bg-green-600 hover:bg-green-700 text-white"
+                          }`}
+                          title={resource.isActive ? "Deactivate" : "Activate"}
+                        >
+                          {resource.isActive ? (
+                            <AlertTriangle className="w-3 h-3" />
+                          ) : (
+                            <CheckCircle className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
               </div>
             )}
 
@@ -893,9 +1050,12 @@ export default function AdminDashboard() {
             {masterLibrarySubTab === "programs" && (
               <div className="space-y-6">
                 <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
-                  <h3 className="text-xl font-bold mb-4">Master Library Programs</h3>
+                  <h3 className="text-xl font-bold mb-4">
+                    Master Library Programs
+                  </h3>
                   <p className="text-gray-400 mb-4">
-                    Programs currently in the master library. Select programs from all programs to add to master library.
+                    Programs currently in the master library. Select programs
+                    from all programs to add to master library.
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -904,7 +1064,9 @@ export default function AdminDashboard() {
                         type="text"
                         placeholder="Search programs..."
                         value={masterLibraryProgramSearch}
-                        onChange={(e) => setMasterLibraryProgramSearch(e.target.value)}
+                        onChange={e =>
+                          setMasterLibraryProgramSearch(e.target.value)
+                        }
                         className="pl-10 bg-[#2A3133] border-[#4A5A70] text-white"
                       />
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -912,7 +1074,9 @@ export default function AdminDashboard() {
                     <div className="w-full sm:w-64">
                       <select
                         value={masterLibrarySelectedCoachId}
-                        onChange={(e) => setMasterLibrarySelectedCoachId(e.target.value)}
+                        onChange={e =>
+                          setMasterLibrarySelectedCoachId(e.target.value)
+                        }
                         className="w-full px-4 py-2 bg-[#2A3133] border border-[#4A5A70] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
                       >
                         <option value="">All Admin Coaches</option>
@@ -923,7 +1087,8 @@ export default function AdminDashboard() {
                         ))}
                       </select>
                     </div>
-                    {(masterLibraryProgramSearch || masterLibrarySelectedCoachId) && (
+                    {(masterLibraryProgramSearch ||
+                      masterLibrarySelectedCoachId) && (
                       <button
                         onClick={() => {
                           setMasterLibraryProgramSearch("");
@@ -937,15 +1102,21 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Results count */}
-                  {(debouncedMasterLibraryProgramSearch || masterLibrarySelectedCoachId) && (
+                  {(debouncedMasterLibraryProgramSearch ||
+                    masterLibrarySelectedCoachId) && (
                     <div className="mb-4 text-sm text-gray-400">
-                      Showing {masterLibraryPrograms.length} program{masterLibraryPrograms.length !== 1 ? 's' : ''}
-                      {debouncedMasterLibraryProgramSearch && ` matching "${debouncedMasterLibraryProgramSearch}"`}
-                      {masterLibrarySelectedCoachId && adminCoaches.find((c: any) => c.id === masterLibrarySelectedCoachId) &&
-                        ` from ${adminCoaches.find((c: any) => c.id === masterLibrarySelectedCoachId)?.name || 'selected coach'}`}
+                      Showing {masterLibraryPrograms.length} program
+                      {masterLibraryPrograms.length !== 1 ? "s" : ""}
+                      {debouncedMasterLibraryProgramSearch &&
+                        ` matching "${debouncedMasterLibraryProgramSearch}"`}
+                      {masterLibrarySelectedCoachId &&
+                        adminCoaches.find(
+                          (c: any) => c.id === masterLibrarySelectedCoachId
+                        ) &&
+                        ` from ${adminCoaches.find((c: any) => c.id === masterLibrarySelectedCoachId)?.name || "selected coach"}`}
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {masterLibraryPrograms.map((program: any) => (
                       <div
@@ -954,20 +1125,32 @@ export default function AdminDashboard() {
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-white mb-1">{program.title}</h4>
+                            <h4 className="font-semibold text-white mb-1">
+                              {program.title}
+                            </h4>
                             {program.description && (
-                              <p className="text-sm text-gray-400 line-clamp-2 mb-2">{program.description}</p>
+                              <p className="text-sm text-gray-400 line-clamp-2 mb-2">
+                                {program.description}
+                              </p>
                             )}
                             <div className="flex items-center gap-3 text-xs text-gray-500">
                               {program.level && <span>{program.level}</span>}
-                              {program.duration && <span>{program.duration} weeks</span>}
+                              {program.duration && (
+                                <span>{program.duration} weeks</span>
+                              )}
                             </div>
                           </div>
                         </div>
                         <button
                           onClick={() => {
-                            if (confirm(`Remove "${program.title}" from master library?`)) {
-                              removeProgramFromMasterLibraryMutation.mutate({ programId: program.id });
+                            if (
+                              confirm(
+                                `Remove "${program.title}" from master library?`
+                              )
+                            ) {
+                              removeProgramFromMasterLibraryMutation.mutate({
+                                programId: program.id,
+                              });
                             }
                           }}
                           className="w-full mt-3 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
@@ -983,54 +1166,80 @@ export default function AdminDashboard() {
                     </p>
                   )}
 
-                  <div className="border-t pt-6" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+                  <div
+                    className="border-t pt-6"
+                    style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                  >
                     <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-white">All Programs - Add to Master Library</h4>
+                      <h4 className="font-semibold text-white">
+                        All Programs - Add to Master Library
+                      </h4>
                       <span className="text-sm text-gray-500">
-                        ({allPrograms.filter((p: any) => !p.isMasterLibrary).length} available)
+                        (
+                        {
+                          allPrograms.filter((p: any) => !p.isMasterLibrary)
+                            .length
+                        }{" "}
+                        available)
                       </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {allPrograms
-                        .filter((p: any) => !p.isMasterLibrary)
+                      {allPrograms.filter((p: any) => !p.isMasterLibrary)
                         .length > 0 ? (
                         allPrograms
                           .filter((p: any) => !p.isMasterLibrary)
                           .map((program: any) => (
-                          <div
-                            key={program.id}
-                            className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-white mb-1">{program.title}</h4>
-                                {program.description && (
-                                  <p className="text-sm text-gray-400 line-clamp-2 mb-2">{program.description}</p>
-                                )}
-                                <div className="flex items-center gap-3 text-xs text-gray-500">
-                                  {program.level && <span>{program.level}</span>}
-                                  {program.duration && <span>{program.duration} weeks</span>}
-                                </div>
-                                {program.coach && (
-                                  <p className="text-xs text-gray-500 mt-1">by {program.coach.name}</p>
-                                )}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Add "${program.title}" to master library?`)) {
-                                  addProgramToMasterLibraryMutation.mutate({ programId: program.id });
-                                }
-                              }}
-                              className="w-full mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                            <div
+                              key={program.id}
+                              className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
                             >
-                              Add to Master Library
-                            </button>
-                          </div>
-                        ))
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-white mb-1">
+                                    {program.title}
+                                  </h4>
+                                  {program.description && (
+                                    <p className="text-sm text-gray-400 line-clamp-2 mb-2">
+                                      {program.description}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                                    {program.level && (
+                                      <span>{program.level}</span>
+                                    )}
+                                    {program.duration && (
+                                      <span>{program.duration} weeks</span>
+                                    )}
+                                  </div>
+                                  {program.coach && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      by {program.coach.name}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (
+                                    confirm(
+                                      `Add "${program.title}" to master library?`
+                                    )
+                                  ) {
+                                    addProgramToMasterLibraryMutation.mutate({
+                                      programId: program.id,
+                                    });
+                                  }
+                                }}
+                                className="w-full mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                              >
+                                Add to Master Library
+                              </button>
+                            </div>
+                          ))
                       ) : (
                         <p className="text-gray-400 text-center py-8 col-span-full">
-                          All programs are already in the master library or no programs found matching criteria.
+                          All programs are already in the master library or no
+                          programs found matching criteria.
                         </p>
                       )}
                     </div>
@@ -1043,11 +1252,14 @@ export default function AdminDashboard() {
             {masterLibrarySubTab === "routines" && (
               <div className="space-y-6">
                 <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
-                  <h3 className="text-xl font-bold mb-4">Master Library Routines</h3>
+                  <h3 className="text-xl font-bold mb-4">
+                    Master Library Routines
+                  </h3>
                   <p className="text-gray-400 mb-4">
-                    Routines currently in the master library. Select routines from all routines to add to master library.
+                    Routines currently in the master library. Select routines
+                    from all routines to add to master library.
                   </p>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     {masterLibraryRoutines.map((routine: any) => (
                       <div
@@ -1056,19 +1268,31 @@ export default function AdminDashboard() {
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-white mb-1">{routine.name}</h4>
+                            <h4 className="font-semibold text-white mb-1">
+                              {routine.name}
+                            </h4>
                             {routine.description && (
-                              <p className="text-sm text-gray-400 line-clamp-2 mb-2">{routine.description}</p>
+                              <p className="text-sm text-gray-400 line-clamp-2 mb-2">
+                                {routine.description}
+                              </p>
                             )}
                             {routine.coach && (
-                              <p className="text-xs text-gray-500 mt-1">by {routine.coach.name}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                by {routine.coach.name}
+                              </p>
                             )}
                           </div>
                         </div>
                         <button
                           onClick={() => {
-                            if (confirm(`Remove "${routine.name}" from master library?`)) {
-                              removeRoutineFromMasterLibraryMutation.mutate({ routineId: routine.id });
+                            if (
+                              confirm(
+                                `Remove "${routine.name}" from master library?`
+                              )
+                            ) {
+                              removeRoutineFromMasterLibraryMutation.mutate({
+                                routineId: routine.id,
+                              });
                             }
                           }}
                           className="w-full mt-3 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
@@ -1079,8 +1303,13 @@ export default function AdminDashboard() {
                     ))}
                   </div>
 
-                  <div className="border-t pt-6" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-                    <h4 className="font-semibold mb-4 text-white">All Routines - Add to Master Library</h4>
+                  <div
+                    className="border-t pt-6"
+                    style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                  >
+                    <h4 className="font-semibold mb-4 text-white">
+                      All Routines - Add to Master Library
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {allRoutines
                         .filter((r: any) => !r.isMasterLibrary)
@@ -1091,19 +1320,31 @@ export default function AdminDashboard() {
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex-1">
-                                <h4 className="font-semibold text-white mb-1">{routine.name}</h4>
+                                <h4 className="font-semibold text-white mb-1">
+                                  {routine.name}
+                                </h4>
                                 {routine.description && (
-                                  <p className="text-sm text-gray-400 line-clamp-2 mb-2">{routine.description}</p>
+                                  <p className="text-sm text-gray-400 line-clamp-2 mb-2">
+                                    {routine.description}
+                                  </p>
                                 )}
                                 {routine.coach && (
-                                  <p className="text-xs text-gray-500 mt-1">by {routine.coach.name}</p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    by {routine.coach.name}
+                                  </p>
                                 )}
                               </div>
                             </div>
                             <button
                               onClick={() => {
-                                if (confirm(`Add "${routine.name}" to master library?`)) {
-                                  addRoutineToMasterLibraryMutation.mutate({ routineId: routine.id });
+                                if (
+                                  confirm(
+                                    `Add "${routine.name}" to master library?`
+                                  )
+                                ) {
+                                  addRoutineToMasterLibraryMutation.mutate({
+                                    routineId: routine.id,
+                                  });
                                 }
                               }}
                               className="w-full mt-3 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
@@ -1113,8 +1354,11 @@ export default function AdminDashboard() {
                           </div>
                         ))}
                     </div>
-                    {allRoutines.filter((r: any) => !r.isMasterLibrary).length === 0 && (
-                      <p className="text-gray-400 text-center py-8">All routines are already in the master library.</p>
+                    {allRoutines.filter((r: any) => !r.isMasterLibrary)
+                      .length === 0 && (
+                      <p className="text-gray-400 text-center py-8">
+                        All routines are already in the master library.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1281,7 +1525,12 @@ export default function AdminDashboard() {
         {activeTab === "bug-reports" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>Bug Reports</h2>
+              <h2
+                className="text-2xl font-bold mb-2"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Bug Reports
+              </h2>
               <p style={{ color: COLORS.TEXT_SECONDARY }}>
                 Review and manage bug reports submitted by users
               </p>
@@ -1289,54 +1538,122 @@ export default function AdminDashboard() {
 
             {/* Bug Reports Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+              <div
+                className="rounded-xl p-4 border transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>Total Reports</p>
-                    <p className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      Total Reports
+                    </p>
+                    <p
+                      className="text-2xl font-bold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       {bugReportsData?.total || 0}
                     </p>
                   </div>
-                  <Bug className="w-8 h-8" style={{ color: COLORS.TEXT_MUTED }} />
+                  <Bug
+                    className="w-8 h-8"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  />
                 </div>
               </div>
-              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+              <div
+                className="rounded-xl p-4 border transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>Open</p>
-                    <p className="text-2xl font-bold" style={{ color: COLORS.GOLDEN_ACCENT }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      Open
+                    </p>
+                    <p
+                      className="text-2xl font-bold"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                    >
                       {bugReportsData?.bugReports?.filter(
                         (b: any) => b.status === "OPEN"
                       ).length || 0}
                     </p>
                   </div>
-                  <Clock className="w-8 h-8" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                  <Clock
+                    className="w-8 h-8"
+                    style={{ color: COLORS.GOLDEN_ACCENT }}
+                  />
                 </div>
               </div>
-              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+              <div
+                className="rounded-xl p-4 border transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>In Progress</p>
-                    <p className="text-2xl font-bold" style={{ color: COLORS.BLUE_PRIMARY }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      In Progress
+                    </p>
+                    <p
+                      className="text-2xl font-bold"
+                      style={{ color: COLORS.BLUE_PRIMARY }}
+                    >
                       {bugReportsData?.bugReports?.filter(
                         (b: any) => b.status === "IN_PROGRESS"
                       ).length || 0}
                     </p>
                   </div>
-                  <Clock className="w-8 h-8" style={{ color: COLORS.BLUE_PRIMARY }} />
+                  <Clock
+                    className="w-8 h-8"
+                    style={{ color: COLORS.BLUE_PRIMARY }}
+                  />
                 </div>
               </div>
-              <div className="rounded-xl p-4 border transition-all duration-200 hover:scale-105" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+              <div
+                className="rounded-xl p-4 border transition-all duration-200 hover:scale-105"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>Resolved</p>
-                    <p className="text-2xl font-bold" style={{ color: COLORS.GREEN_PRIMARY }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      Resolved
+                    </p>
+                    <p
+                      className="text-2xl font-bold"
+                      style={{ color: COLORS.GREEN_PRIMARY }}
+                    >
                       {bugReportsData?.bugReports?.filter(
                         (b: any) => b.status === "RESOLVED"
                       ).length || 0}
                     </p>
                   </div>
-                  <CheckCircle2 className="w-8 h-8" style={{ color: COLORS.GREEN_PRIMARY }} />
+                  <CheckCircle2
+                    className="w-8 h-8"
+                    style={{ color: COLORS.GREEN_PRIMARY }}
+                  />
                 </div>
               </div>
             </div>
@@ -1347,280 +1664,40 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold">Active Bug Reports</h3>
                   <button
-                    onClick={() => setShowArchivedBugReports(!showArchivedBugReports)}
+                    onClick={() =>
+                      setShowArchivedBugReports(!showArchivedBugReports)
+                    }
                     className="px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 text-sm flex items-center gap-2 border"
-                    style={{ 
+                    style={{
                       backgroundColor: COLORS.BACKGROUND_CARD,
                       color: COLORS.TEXT_PRIMARY,
                       borderColor: COLORS.BORDER_SUBTLE,
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
                       e.currentTarget.style.borderColor = getGoldenAccent(0.3);
                     }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD;
                       e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     }}
                   >
-                    {showArchivedBugReports ? "Hide" : "Show"} Archived ({archivedBugReportsData?.bugReports?.filter((b: any) => b.isArchived).length || 0})
+                    {showArchivedBugReports ? "Hide" : "Show"} Archived (
+                    {archivedBugReportsData?.bugReports?.filter(
+                      (b: any) => b.isArchived
+                    ).length || 0}
+                    )
                   </button>
                 </div>
                 {bugReportsData?.bugReports &&
-                bugReportsData.bugReports.filter((b: any) => !b.isArchived).length > 0 ? (
+                bugReportsData.bugReports.filter((b: any) => !b.isArchived)
+                  .length > 0 ? (
                   <div className="space-y-4">
-                    {bugReportsData.bugReports.filter((b: any) => !b.isArchived).map((report: any) => {
-                      const priorityColors: Record<string, string> = {
-                        CRITICAL: "bg-red-500",
-                        HIGH: "bg-orange-500",
-                        MEDIUM: "bg-yellow-500",
-                        LOW: "bg-green-500",
-                      };
-                      const statusColors: Record<string, string> = {
-                        OPEN: "bg-yellow-500",
-                        IN_PROGRESS: "bg-blue-500",
-                        RESOLVED: "bg-green-500",
-                        CLOSED: "bg-gray-500",
-                        DUPLICATE: "bg-purple-500",
-                      };
-
-                      return (
-                        <div
-                          key={report.id}
-                          className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h4 className="text-lg font-bold text-white">
-                                  {report.title}
-                                </h4>
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
-                                    priorityColors[report.priority] ||
-                                    "bg-gray-500"
-                                  }`}
-                                >
-                                  {report.priority}
-                                </span>
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
-                                    statusColors[report.status] || "bg-gray-500"
-                                  }`}
-                                >
-                                  {report.status}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-400 mb-2">
-                                Page:{" "}
-                                <span className="text-white">
-                                  {report.page}
-                                </span>
-                              </p>
-                              <p className="text-sm text-gray-400 mb-2">
-                                Device:{" "}
-                                <span className="text-white">
-                                  {report.device || "Not specified"}
-                                </span>
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Reported by:{" "}
-                                <span className="text-white">
-                                  {report.user?.name || report.user?.email} (
-                                  {report.userRole})
-                                </span>
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-400">
-                                {new Date(
-                                  report.createdAt
-                                ).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="mb-3">
-                            <p className="text-sm text-gray-300 whitespace-pre-wrap">
-                              {report.description}
-                            </p>
-                          </div>
-
-                          {/* Debug: Always show if URLs exist (even if empty) */}
-                          {(report.imageUrl !== null || report.videoUrl !== null) && (
-                            <div className="mb-2 p-2 bg-yellow-900 rounded border border-yellow-700">
-                              <p className="text-xs text-yellow-200 mb-1 font-semibold">Debug - Attachment Data:</p>
-                              <p className="text-xs text-yellow-100">
-                                imageUrl: {report.imageUrl === null ? "null" : report.imageUrl === "" ? '"" (empty string)' : `"${report.imageUrl}"`}
-                              </p>
-                              <p className="text-xs text-yellow-100">
-                                videoUrl: {report.videoUrl === null ? "null" : report.videoUrl === "" ? '"" (empty string)' : `"${report.videoUrl}"`}
-                              </p>
-                            </div>
-                          )}
-
-                          {(report.imageUrl && report.imageUrl.trim() !== "") && (
-                            <div className="mb-3">
-                              <p className="text-xs text-gray-400 mb-2">Screenshot:</p>
-                              <div className="relative rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
-                                <img
-                                  src={report.imageUrl}
-                                  alt="Bug screenshot"
-                                  className="max-w-full max-h-96 object-contain rounded-lg"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = "none";
-                                    const errorDiv = document.createElement("div");
-                                    errorDiv.className = "p-4 text-center";
-                                    errorDiv.innerHTML = `
-                                      <p class="text-gray-400 text-sm mb-2">Failed to load image. URL may be invalid or expired.</p>
-                                      <a href="${report.imageUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
-                                        ${report.imageUrl}
-                                      </a>
-                                    `;
-                                    target.parentElement?.appendChild(errorDiv);
-                                  }}
-                                />
-                                <a
-                                  href={report.imageUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="absolute top-2 right-2 px-2 py-1 bg-black hover:bg-gray-900 text-white text-xs rounded transition-colors"
-                                >
-                                  Open Full Size
-                                </a>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1 break-all">
-                                URL: <a href={report.imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.imageUrl}</a>
-                              </p>
-                            </div>
-                          )}
-
-                          {(report.videoUrl && report.videoUrl.trim() !== "") && (
-                            <div className="mb-3">
-                              <p className="text-xs text-gray-400 mb-2">Video:</p>
-                              <div className="rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
-                                <video
-                                  src={report.videoUrl}
-                                  controls
-                                  className="w-full max-h-96"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLVideoElement;
-                                    target.style.display = "none";
-                                    const errorDiv = document.createElement("div");
-                                    errorDiv.className = "p-4 text-center";
-                                    errorDiv.innerHTML = `
-                                      <p class="text-gray-400 text-sm mb-2">Failed to load video. URL may be invalid or expired.</p>
-                                      <a href="${report.videoUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
-                                        ${report.videoUrl}
-                                      </a>
-                                    `;
-                                    target.parentElement?.appendChild(errorDiv);
-                                  }}
-                                >
-                                  Your browser does not support the video tag.
-                                </video>
-                                <div className="p-2 bg-[#1A1D1E] border-t border-[#4A5A70]">
-                                  <a
-                                    href={report.videoUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-400 hover:underline text-sm flex items-center gap-1"
-                                  >
-                                    Open Video in New Tab →
-                                  </a>
-                                </div>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1 break-all">
-                                URL: <a href={report.videoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.videoUrl}</a>
-                              </p>
-                            </div>
-                          )}
-
-                          <div className="flex gap-2 mt-4">
-                            {report.status === "OPEN" && (
-                              <button
-                                onClick={() => {
-                                  updateBugStatusMutation.mutate({
-                                    id: report.id,
-                                    status: "IN_PROGRESS",
-                                  });
-                                }}
-                                disabled={updateBugStatusMutation.isPending}
-                                className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
-                              >
-                                Mark In Progress
-                              </button>
-                            )}
-                            {report.status === "IN_PROGRESS" && (
-                              <button
-                                onClick={() => {
-                                  updateBugStatusMutation.mutate({
-                                    id: report.id,
-                                    status: "RESOLVED",
-                                  });
-                                }}
-                                disabled={updateBugStatusMutation.isPending}
-                                className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
-                              >
-                                Mark Resolved
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                updateBugStatusMutation.mutate({
-                                  id: report.id,
-                                  status: "CLOSED",
-                                });
-                              }}
-                              disabled={updateBugStatusMutation.isPending}
-                              className="px-3 py-1 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition-colors disabled:opacity-50"
-                            >
-                              Close
-                            </button>
-                            <button
-                              onClick={() => {
-                                archiveBugReportMutation.mutate({
-                                  id: report.id,
-                                  isArchived: true,
-                                });
-                              }}
-                              disabled={archiveBugReportMutation.isPending}
-                              className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
-                            >
-                              Archive
-                            </button>
-                            <button
-                              onClick={() => handleOpenEmailModal(report)}
-                              className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
-                              title={`Email ${report.user?.name || report.user?.email}`}
-                            >
-                              <Mail className="h-3 w-3" />
-                              Email
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Bug className="w-16 h-16 mx-auto mb-4 text-gray-500" />
-                    <p className="text-gray-400">No bug reports yet</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Archived Bug Reports Section */}
-            {showArchivedBugReports && (
-              <div className="bg-[#1A1D1E] rounded-xl border border-[#4A5A70] mt-6">
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-4 text-gray-400">Archived Bug Reports</h3>
-                  {archivedBugReportsData?.bugReports &&
-                  archivedBugReportsData.bugReports.filter((b: any) => b.isArchived).length > 0 ? (
-                    <div className="space-y-4">
-                      {archivedBugReportsData.bugReports.filter((b: any) => b.isArchived).map((report: any) => {
+                    {bugReportsData.bugReports
+                      .filter((b: any) => !b.isArchived)
+                      .map((report: any) => {
                         const priorityColors: Record<string, string> = {
                           CRITICAL: "bg-red-500",
                           HIGH: "bg-orange-500",
@@ -1638,7 +1715,7 @@ export default function AdminDashboard() {
                         return (
                           <div
                             key={report.id}
-                            className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70] opacity-75"
+                            className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70]"
                           >
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
@@ -1656,13 +1733,11 @@ export default function AdminDashboard() {
                                   </span>
                                   <span
                                     className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
-                                      statusColors[report.status] || "bg-gray-500"
+                                      statusColors[report.status] ||
+                                      "bg-gray-500"
                                     }`}
                                   >
                                     {report.status}
-                                  </span>
-                                  <span className="px-2 py-1 rounded-full text-xs font-medium text-white bg-purple-600">
-                                    ARCHIVED
                                   </span>
                                 </div>
                                 <p className="text-sm text-gray-400 mb-2">
@@ -1700,96 +1775,193 @@ export default function AdminDashboard() {
                               </p>
                             </div>
 
-                            {(report.imageUrl && report.imageUrl.trim() !== "") && (
-                              <div className="mb-3">
-                                <p className="text-xs text-gray-400 mb-2">Screenshot:</p>
-                                <div className="relative rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
-                                  <img
-                                    src={report.imageUrl}
-                                    alt="Bug screenshot"
-                                    className="max-w-full max-h-96 object-contain rounded-lg"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = "none";
-                                      const errorDiv = document.createElement("div");
-                                      errorDiv.className = "p-4 text-center";
-                                      errorDiv.innerHTML = `
-                                        <p class="text-gray-400 text-sm mb-2">Failed to load image. URL may be invalid or expired.</p>
-                                        <a href="${report.imageUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
-                                          ${report.imageUrl}
-                                        </a>
-                                      `;
-                                      target.parentElement?.appendChild(errorDiv);
-                                    }}
-                                  />
-                                  <a
-                                    href={report.imageUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="absolute top-2 right-2 px-2 py-1 bg-black hover:bg-gray-900 text-white text-xs rounded transition-colors"
-                                  >
-                                    Open Full Size
-                                  </a>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1 break-all">
-                                  URL: <a href={report.imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.imageUrl}</a>
+                            {/* Debug: Always show if URLs exist (even if empty) */}
+                            {(report.imageUrl !== null ||
+                              report.videoUrl !== null) && (
+                              <div className="mb-2 p-2 bg-yellow-900 rounded border border-yellow-700">
+                                <p className="text-xs text-yellow-200 mb-1 font-semibold">
+                                  Debug - Attachment Data:
+                                </p>
+                                <p className="text-xs text-yellow-100">
+                                  imageUrl:{" "}
+                                  {report.imageUrl === null
+                                    ? "null"
+                                    : report.imageUrl === ""
+                                      ? '"" (empty string)'
+                                      : `"${report.imageUrl}"`}
+                                </p>
+                                <p className="text-xs text-yellow-100">
+                                  videoUrl:{" "}
+                                  {report.videoUrl === null
+                                    ? "null"
+                                    : report.videoUrl === ""
+                                      ? '"" (empty string)'
+                                      : `"${report.videoUrl}"`}
                                 </p>
                               </div>
                             )}
 
-                            {(report.videoUrl && report.videoUrl.trim() !== "") && (
-                              <div className="mb-3">
-                                <p className="text-xs text-gray-400 mb-2">Video:</p>
-                                <div className="rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
-                                  <video
-                                    src={report.videoUrl}
-                                    controls
-                                    className="w-full max-h-96"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLVideoElement;
-                                      target.style.display = "none";
-                                      const errorDiv = document.createElement("div");
-                                      errorDiv.className = "p-4 text-center";
-                                      errorDiv.innerHTML = `
-                                        <p class="text-gray-400 text-sm mb-2">Failed to load video. URL may be invalid or expired.</p>
-                                        <a href="${report.videoUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
-                                          ${report.videoUrl}
-                                        </a>
-                                      `;
-                                      target.parentElement?.appendChild(errorDiv);
-                                    }}
-                                  >
-                                    Your browser does not support the video tag.
-                                  </video>
-                                  <div className="p-2 bg-[#1A1D1E] border-t border-[#4A5A70]">
+                            {report.imageUrl &&
+                              report.imageUrl.trim() !== "" && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-gray-400 mb-2">
+                                    Screenshot:
+                                  </p>
+                                  <div className="relative rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                    <img
+                                      src={report.imageUrl}
+                                      alt="Bug screenshot"
+                                      className="max-w-full max-h-96 object-contain rounded-lg"
+                                      onError={e => {
+                                        const target =
+                                          e.target as HTMLImageElement;
+                                        target.style.display = "none";
+                                        const errorDiv =
+                                          document.createElement("div");
+                                        errorDiv.className = "p-4 text-center";
+                                        errorDiv.innerHTML = `
+                                      <p class="text-gray-400 text-sm mb-2">Failed to load image. URL may be invalid or expired.</p>
+                                      <a href="${report.imageUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                        ${report.imageUrl}
+                                      </a>
+                                    `;
+                                        target.parentElement?.appendChild(
+                                          errorDiv
+                                        );
+                                      }}
+                                    />
+                                    <a
+                                      href={report.imageUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="absolute top-2 right-2 px-2 py-1 bg-black hover:bg-gray-900 text-white text-xs rounded transition-colors"
+                                    >
+                                      Open Full Size
+                                    </a>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1 break-all">
+                                    URL:{" "}
+                                    <a
+                                      href={report.imageUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-400 hover:underline"
+                                    >
+                                      {report.imageUrl}
+                                    </a>
+                                  </p>
+                                </div>
+                              )}
+
+                            {report.videoUrl &&
+                              report.videoUrl.trim() !== "" && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-gray-400 mb-2">
+                                    Video:
+                                  </p>
+                                  <div className="rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                    <video
+                                      src={report.videoUrl}
+                                      controls
+                                      className="w-full max-h-96"
+                                      onError={e => {
+                                        const target =
+                                          e.target as HTMLVideoElement;
+                                        target.style.display = "none";
+                                        const errorDiv =
+                                          document.createElement("div");
+                                        errorDiv.className = "p-4 text-center";
+                                        errorDiv.innerHTML = `
+                                      <p class="text-gray-400 text-sm mb-2">Failed to load video. URL may be invalid or expired.</p>
+                                      <a href="${report.videoUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                        ${report.videoUrl}
+                                      </a>
+                                    `;
+                                        target.parentElement?.appendChild(
+                                          errorDiv
+                                        );
+                                      }}
+                                    >
+                                      Your browser does not support the video
+                                      tag.
+                                    </video>
+                                    <div className="p-2 bg-[#1A1D1E] border-t border-[#4A5A70]">
+                                      <a
+                                        href={report.videoUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:underline text-sm flex items-center gap-1"
+                                      >
+                                        Open Video in New Tab →
+                                      </a>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1 break-all">
+                                    URL:{" "}
                                     <a
                                       href={report.videoUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-blue-400 hover:underline text-sm flex items-center gap-1"
+                                      className="text-blue-400 hover:underline"
                                     >
-                                      Open Video in New Tab →
+                                      {report.videoUrl}
                                     </a>
-                                  </div>
+                                  </p>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1 break-all">
-                                  URL: <a href={report.videoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{report.videoUrl}</a>
-                                </p>
-                              </div>
-                            )}
+                              )}
 
                             <div className="flex gap-2 mt-4">
+                              {report.status === "OPEN" && (
+                                <button
+                                  onClick={() => {
+                                    updateBugStatusMutation.mutate({
+                                      id: report.id,
+                                      status: "IN_PROGRESS",
+                                    });
+                                  }}
+                                  disabled={updateBugStatusMutation.isPending}
+                                  className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                >
+                                  Mark In Progress
+                                </button>
+                              )}
+                              {report.status === "IN_PROGRESS" && (
+                                <button
+                                  onClick={() => {
+                                    updateBugStatusMutation.mutate({
+                                      id: report.id,
+                                      status: "RESOLVED",
+                                    });
+                                  }}
+                                  disabled={updateBugStatusMutation.isPending}
+                                  className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+                                >
+                                  Mark Resolved
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  updateBugStatusMutation.mutate({
+                                    id: report.id,
+                                    status: "CLOSED",
+                                  });
+                                }}
+                                disabled={updateBugStatusMutation.isPending}
+                                className="px-3 py-1 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700 transition-colors disabled:opacity-50"
+                              >
+                                Close
+                              </button>
                               <button
                                 onClick={() => {
                                   archiveBugReportMutation.mutate({
                                     id: report.id,
-                                    isArchived: false,
+                                    isArchived: true,
                                   });
                                 }}
                                 disabled={archiveBugReportMutation.isPending}
-                                className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
                               >
-                                Unarchive
+                                Archive
                               </button>
                               <button
                                 onClick={() => handleOpenEmailModal(report)}
@@ -1803,6 +1975,247 @@ export default function AdminDashboard() {
                           </div>
                         );
                       })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Bug className="w-16 h-16 mx-auto mb-4 text-gray-500" />
+                    <p className="text-gray-400">No bug reports yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Archived Bug Reports Section */}
+            {showArchivedBugReports && (
+              <div className="bg-[#1A1D1E] rounded-xl border border-[#4A5A70] mt-6">
+                <div className="p-6">
+                  <h3 className="text-xl font-bold mb-4 text-gray-400">
+                    Archived Bug Reports
+                  </h3>
+                  {archivedBugReportsData?.bugReports &&
+                  archivedBugReportsData.bugReports.filter(
+                    (b: any) => b.isArchived
+                  ).length > 0 ? (
+                    <div className="space-y-4">
+                      {archivedBugReportsData.bugReports
+                        .filter((b: any) => b.isArchived)
+                        .map((report: any) => {
+                          const priorityColors: Record<string, string> = {
+                            CRITICAL: "bg-red-500",
+                            HIGH: "bg-orange-500",
+                            MEDIUM: "bg-yellow-500",
+                            LOW: "bg-green-500",
+                          };
+                          const statusColors: Record<string, string> = {
+                            OPEN: "bg-yellow-500",
+                            IN_PROGRESS: "bg-blue-500",
+                            RESOLVED: "bg-green-500",
+                            CLOSED: "bg-gray-500",
+                            DUPLICATE: "bg-purple-500",
+                          };
+
+                          return (
+                            <div
+                              key={report.id}
+                              className="bg-[#2A3133] rounded-lg p-4 border border-[#4A5A70] opacity-75"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <h4 className="text-lg font-bold text-white">
+                                      {report.title}
+                                    </h4>
+                                    <span
+                                      className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                                        priorityColors[report.priority] ||
+                                        "bg-gray-500"
+                                      }`}
+                                    >
+                                      {report.priority}
+                                    </span>
+                                    <span
+                                      className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                                        statusColors[report.status] ||
+                                        "bg-gray-500"
+                                      }`}
+                                    >
+                                      {report.status}
+                                    </span>
+                                    <span className="px-2 py-1 rounded-full text-xs font-medium text-white bg-purple-600">
+                                      ARCHIVED
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-400 mb-2">
+                                    Page:{" "}
+                                    <span className="text-white">
+                                      {report.page}
+                                    </span>
+                                  </p>
+                                  <p className="text-sm text-gray-400 mb-2">
+                                    Device:{" "}
+                                    <span className="text-white">
+                                      {report.device || "Not specified"}
+                                    </span>
+                                  </p>
+                                  <p className="text-sm text-gray-400">
+                                    Reported by:{" "}
+                                    <span className="text-white">
+                                      {report.user?.name || report.user?.email}{" "}
+                                      ({report.userRole})
+                                    </span>
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-gray-400">
+                                    {new Date(
+                                      report.createdAt
+                                    ).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mb-3">
+                                <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                                  {report.description}
+                                </p>
+                              </div>
+
+                              {report.imageUrl &&
+                                report.imageUrl.trim() !== "" && (
+                                  <div className="mb-3">
+                                    <p className="text-xs text-gray-400 mb-2">
+                                      Screenshot:
+                                    </p>
+                                    <div className="relative rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                      <img
+                                        src={report.imageUrl}
+                                        alt="Bug screenshot"
+                                        className="max-w-full max-h-96 object-contain rounded-lg"
+                                        onError={e => {
+                                          const target =
+                                            e.target as HTMLImageElement;
+                                          target.style.display = "none";
+                                          const errorDiv =
+                                            document.createElement("div");
+                                          errorDiv.className =
+                                            "p-4 text-center";
+                                          errorDiv.innerHTML = `
+                                        <p class="text-gray-400 text-sm mb-2">Failed to load image. URL may be invalid or expired.</p>
+                                        <a href="${report.imageUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                          ${report.imageUrl}
+                                        </a>
+                                      `;
+                                          target.parentElement?.appendChild(
+                                            errorDiv
+                                          );
+                                        }}
+                                      />
+                                      <a
+                                        href={report.imageUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="absolute top-2 right-2 px-2 py-1 bg-black hover:bg-gray-900 text-white text-xs rounded transition-colors"
+                                      >
+                                        Open Full Size
+                                      </a>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1 break-all">
+                                      URL:{" "}
+                                      <a
+                                        href={report.imageUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:underline"
+                                      >
+                                        {report.imageUrl}
+                                      </a>
+                                    </p>
+                                  </div>
+                                )}
+
+                              {report.videoUrl &&
+                                report.videoUrl.trim() !== "" && (
+                                  <div className="mb-3">
+                                    <p className="text-xs text-gray-400 mb-2">
+                                      Video:
+                                    </p>
+                                    <div className="rounded-lg border border-[#4A5A70] overflow-hidden bg-[#1A1D1E]">
+                                      <video
+                                        src={report.videoUrl}
+                                        controls
+                                        className="w-full max-h-96"
+                                        onError={e => {
+                                          const target =
+                                            e.target as HTMLVideoElement;
+                                          target.style.display = "none";
+                                          const errorDiv =
+                                            document.createElement("div");
+                                          errorDiv.className =
+                                            "p-4 text-center";
+                                          errorDiv.innerHTML = `
+                                        <p class="text-gray-400 text-sm mb-2">Failed to load video. URL may be invalid or expired.</p>
+                                        <a href="${report.videoUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-xs break-all">
+                                          ${report.videoUrl}
+                                        </a>
+                                      `;
+                                          target.parentElement?.appendChild(
+                                            errorDiv
+                                          );
+                                        }}
+                                      >
+                                        Your browser does not support the video
+                                        tag.
+                                      </video>
+                                      <div className="p-2 bg-[#1A1D1E] border-t border-[#4A5A70]">
+                                        <a
+                                          href={report.videoUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-400 hover:underline text-sm flex items-center gap-1"
+                                        >
+                                          Open Video in New Tab →
+                                        </a>
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1 break-all">
+                                      URL:{" "}
+                                      <a
+                                        href={report.videoUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:underline"
+                                      >
+                                        {report.videoUrl}
+                                      </a>
+                                    </p>
+                                  </div>
+                                )}
+
+                              <div className="flex gap-2 mt-4">
+                                <button
+                                  onClick={() => {
+                                    archiveBugReportMutation.mutate({
+                                      id: report.id,
+                                      isArchived: false,
+                                    });
+                                  }}
+                                  disabled={archiveBugReportMutation.isPending}
+                                  className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                >
+                                  Unarchive
+                                </button>
+                                <button
+                                  onClick={() => handleOpenEmailModal(report)}
+                                  className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                  title={`Email ${report.user?.name || report.user?.email}`}
+                                >
+                                  <Mail className="h-3 w-3" />
+                                  Email
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                     </div>
                   ) : (
                     <div className="text-center py-12">
@@ -1938,12 +2351,9 @@ export default function AdminDashboard() {
                     }
                     // Check if OnForm URL is provided
                     else if (newResource.onformUrl) {
-
                       // Import OnForm utilities
-                      const { extractOnFormId, isOnFormUrl } = await import(
-                        "@/lib/onform-utils"
-                      );
-
+                      const { extractOnFormId, isOnFormUrl } =
+                        await import("@/lib/onform-utils");
 
                       if (isOnFormUrl(newResource.onformUrl)) {
                         onformId = extractOnFormId(newResource.onformUrl) || "";
@@ -2174,7 +2584,6 @@ export default function AdminDashboard() {
                           </p>
                         </div>
                       )}
-                      {/* @ts-expect-error - effect version conflict workaround */}
                       <UploadButton<OurFileRouter, "videoUploader">
                         endpoint="videoUploader"
                         onClientUploadComplete={(res: any) => {
@@ -2495,57 +2904,95 @@ export default function AdminDashboard() {
 
       {/* Email Modal */}
       <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
-        <DialogContent className="max-w-2xl" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE, opacity: 1 }}>
+        <DialogContent
+          className="max-w-2xl"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+            opacity: 1,
+          }}
+        >
           <DialogHeader>
             <DialogTitle style={{ color: COLORS.TEXT_PRIMARY }}>
               Send Email to Bug Report Submitter
             </DialogTitle>
             <DialogDescription style={{ color: COLORS.TEXT_MUTED }}>
-              Compose an email to the bug report submitter with context about their report.
+              Compose an email to the bug report submitter with context about
+              their report.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedBugReport && (
-            <div className="mt-2 mb-4 p-3 rounded-lg" style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}>
+            <div
+              className="mt-2 mb-4 p-3 rounded-lg"
+              style={{
+                backgroundColor: "#1C2021",
+                borderColor: COLORS.BORDER_SUBTLE,
+                border: "1px solid",
+              }}
+            >
               <div className="text-sm" style={{ color: COLORS.TEXT_PRIMARY }}>
-                To: <span className="font-semibold">{selectedBugReport.user?.name || selectedBugReport.user?.email}</span>
+                To:{" "}
+                <span className="font-semibold">
+                  {selectedBugReport.user?.name ||
+                    selectedBugReport.user?.email}
+                </span>
               </div>
-              <div className="text-sm mt-1" style={{ color: COLORS.TEXT_PRIMARY }}>
-                Bug Report: <span className="font-semibold">{selectedBugReport.title}</span>
+              <div
+                className="text-sm mt-1"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Bug Report:{" "}
+                <span className="font-semibold">{selectedBugReport.title}</span>
               </div>
             </div>
           )}
-          
+
           <div className="space-y-4 mt-4">
             <div>
-              <Label htmlFor="email-subject" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <Label
+                htmlFor="email-subject"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Subject
               </Label>
               <Input
                 id="email-subject"
                 value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
+                onChange={e => setEmailSubject(e.target.value)}
                 placeholder="Email subject"
                 className="mt-1"
-                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                style={{
+                  backgroundColor: "#1C2021",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
               />
             </div>
-            
+
             <div>
-              <Label htmlFor="email-message" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <Label
+                htmlFor="email-message"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Message
               </Label>
               <Textarea
                 id="email-message"
                 value={emailMessage}
-                onChange={(e) => setEmailMessage(e.target.value)}
+                onChange={e => setEmailMessage(e.target.value)}
                 placeholder="Your message to the bug report submitter..."
                 rows={10}
                 className="mt-1"
-                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE, color: COLORS.TEXT_PRIMARY }}
+                style={{
+                  backgroundColor: "#1C2021",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
               />
               <p className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
-                The bug report details (title, description, page, status) will be automatically included in the email.
+                The bug report details (title, description, page, status) will
+                be automatically included in the email.
               </p>
             </div>
           </div>
@@ -2559,13 +3006,22 @@ export default function AdminDashboard() {
                 setEmailMessage("");
               }}
               className="px-4 py-2 rounded-lg text-sm transition-colors"
-              style={{ backgroundColor: "#1C2021", color: COLORS.TEXT_PRIMARY, borderColor: COLORS.BORDER_SUBTLE, border: "1px solid" }}
+              style={{
+                backgroundColor: "#1C2021",
+                color: COLORS.TEXT_PRIMARY,
+                borderColor: COLORS.BORDER_SUBTLE,
+                border: "1px solid",
+              }}
             >
               Cancel
             </button>
             <button
               onClick={() => {
-                if (!selectedBugReport || !emailSubject.trim() || !emailMessage.trim()) {
+                if (
+                  !selectedBugReport ||
+                  !emailSubject.trim() ||
+                  !emailMessage.trim()
+                ) {
                   alert("Please fill in both subject and message");
                   return;
                 }
@@ -2575,11 +3031,20 @@ export default function AdminDashboard() {
                   message: emailMessage,
                 });
               }}
-              disabled={sendEmailMutation.isPending || !emailSubject.trim() || !emailMessage.trim()}
+              disabled={
+                sendEmailMutation.isPending ||
+                !emailSubject.trim() ||
+                !emailMessage.trim()
+              }
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-gray-600 flex items-center gap-2"
-              style={{ 
-                backgroundColor: (sendEmailMutation.isPending || !emailSubject.trim() || !emailMessage.trim()) ? "#4B5563" : "#2563EB",
-                opacity: 1
+              style={{
+                backgroundColor:
+                  sendEmailMutation.isPending ||
+                  !emailSubject.trim() ||
+                  !emailMessage.trim()
+                    ? "#4B5563"
+                    : "#2563EB",
+                opacity: 1,
               }}
             >
               {sendEmailMutation.isPending ? (

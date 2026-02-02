@@ -266,7 +266,7 @@ export default function ConversationPage({
                 )} 100%)`,
               }}
             />
-            <div className="relative p-8 bg-black">
+            <div className="relative p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <button

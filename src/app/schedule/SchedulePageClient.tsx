@@ -43,15 +43,26 @@ import {
 import Sidebar from "@/components/Sidebar";
 import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileSchedulePage from "@/components/MobileSchedulePage";
-import { COLORS, getGoldenAccent, getRedAlert, getGreenPrimary } from "@/lib/colors";
+import {
+  COLORS,
+  getGoldenAccent,
+  getRedAlert,
+  getGreenPrimary,
+} from "@/lib/colors";
 
 // Lazy load modals - only loaded when user needs them
-const WorkingHoursModal = dynamic(() => import("@/components/WorkingHoursModal"), {
-  ssr: false,
-});
-const BlockedTimesModal = dynamic(() => import("@/components/BlockedTimesModal"), {
-  ssr: false,
-});
+const WorkingHoursModal = dynamic(
+  () => import("@/components/WorkingHoursModal"),
+  {
+    ssr: false,
+  }
+);
+const BlockedTimesModal = dynamic(
+  () => import("@/components/BlockedTimesModal"),
+  {
+    ssr: false,
+  }
+);
 const AddTimeModal = dynamic(() => import("@/components/AddTimeModal"), {
   ssr: false,
 });
@@ -83,7 +94,8 @@ function SchedulePageClient() {
     duration: 60,
   });
   const [addTimeClientSearch, setAddTimeClientSearch] = useState("");
-  const [showAddTimeClientDropdown, setShowAddTimeClientDropdown] = useState(false);
+  const [showAddTimeClientDropdown, setShowAddTimeClientDropdown] =
+    useState(false);
   const addTimeClientDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch coach's profile for working hours
@@ -179,10 +191,13 @@ function SchedulePageClient() {
 
   // Fetch coach's active clients for scheduling (exclude archived)
   // Include organization clients if coach is in an organization
-  const { data: clients = [] } = trpc.clients.list.useQuery({
+  const { data: clientsData = [] } = trpc.clients.list.useQuery({
     archived: false,
     scope: "organization", // Include organization clients if coach is in an organization
   });
+  // Typed list to avoid "type instantiation is excessively deep" from tRPC inference
+  type ScheduleClient = { id: string; name: string; email: string | null };
+  const clients: ScheduleClient[] = clientsData as ScheduleClient[];
 
   // Filter clients based on search term
   const filteredClients = useMemo(() => {
@@ -860,7 +875,10 @@ function SchedulePageClient() {
 
   return (
     <Sidebar>
-      <div className="min-h-screen p-6" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+      <div
+        className="min-h-screen p-6"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
         <div className="max-w-6xl mx-auto">
           {/* Compact Header */}
           <div className="flex items-center justify-between mb-6">
@@ -915,11 +933,13 @@ function SchedulePageClient() {
                   border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                   e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                   e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                 }}
               >
@@ -933,11 +953,20 @@ function SchedulePageClient() {
           {pendingRequests.length > 0 && (
             <div
               className="mb-6 p-4 rounded-lg border-2"
-              style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.GOLDEN_BORDER }}
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.GOLDEN_BORDER,
+              }}
             >
               <div className="flex items-center gap-3 mb-4">
-                <AlertCircle className="h-5 w-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
-                <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <AlertCircle
+                  className="h-5 w-5"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
+                <h2
+                  className="text-lg font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   Pending Schedule Requests ({pendingRequests.length})
                 </h2>
               </div>
@@ -952,59 +981,72 @@ function SchedulePageClient() {
                     }}
                   >
                     <div className="flex-1">
-                      <div className="font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
+                      <div
+                        className="font-medium"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                      >
                         {request.client?.name ||
                           request.client?.email ||
                           "Client"}
                       </div>
-                      <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                      <div
+                        className="text-sm"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         {format(
                           new Date(request.date),
                           "MMM d, yyyy 'at' h:mm a"
                         )}
                       </div>
-                      {request.description && (() => {
-                        // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
-                        let cleanDescription = request.description;
-                        let previousLength = 0;
-                        while (cleanDescription.length !== previousLength) {
-                          previousLength = cleanDescription.length;
+                      {request.description &&
+                        (() => {
+                          // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                          let cleanDescription = request.description;
+                          let previousLength = 0;
+                          while (cleanDescription.length !== previousLength) {
+                            previousLength = cleanDescription.length;
+                            cleanDescription = cleanDescription.replace(
+                              /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                              ""
+                            );
+                          }
+                          // Remove any leftover JSON fragments (including escaped quotes)
                           cleanDescription = cleanDescription.replace(
-                            /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                            /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
                             ""
                           );
-                        }
-                        // Remove any leftover JSON fragments (including escaped quotes)
-                        cleanDescription = cleanDescription.replace(
-                          /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
-                          ""
-                        );
-                        cleanDescription = cleanDescription.replace(
-                          /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
-                          ""
-                        );
-                        cleanDescription = cleanDescription.replace(
-                          /\[\/OLD_LESSON_DATA\]/g,
-                          ""
-                        );
-                        cleanDescription = cleanDescription.replace(
-                          /\\*["\s]*}$/g,
-                          ""
-                        );
-                        cleanDescription = cleanDescription.replace(
-                          /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
-                          ""
-                        );
-                        cleanDescription = cleanDescription.trim();
-                        if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
-                          return null;
-                        }
-                        return (
-                          <div className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
-                            Reason: {cleanDescription}
-                          </div>
-                        );
-                      })()}
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\[\/OLD_LESSON_DATA\]/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*}$/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.replace(
+                            /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
+                            ""
+                          );
+                          cleanDescription = cleanDescription.trim();
+                          if (
+                            !cleanDescription ||
+                            cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)
+                          ) {
+                            return null;
+                          }
+                          return (
+                            <div
+                              className="text-xs mt-1"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                            >
+                              Reason: {cleanDescription}
+                            </div>
+                          );
+                        })()}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1021,12 +1063,14 @@ function SchedulePageClient() {
                         }}
                         onMouseEnter={e => {
                           if (!e.currentTarget.disabled) {
-                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.GREEN_DARK;
                           }
                         }}
                         onMouseLeave={e => {
                           if (!e.currentTarget.disabled) {
-                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.GREEN_PRIMARY;
                           }
                         }}
                       >
@@ -1044,12 +1088,14 @@ function SchedulePageClient() {
                         }}
                         onMouseEnter={e => {
                           if (!e.currentTarget.disabled) {
-                            e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.RED_DARK;
                           }
                         }}
                         onMouseLeave={e => {
                           if (!e.currentTarget.disabled) {
-                            e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.RED_ALERT;
                           }
                         }}
                       >
@@ -1066,7 +1112,8 @@ function SchedulePageClient() {
 
           {/* Quick Actions & Today's Schedule */}
           <div className="mb-6">
-            <div className="flex items-center justify-between gap-4 rounded-xl p-3 border"
+            <div
+              className="flex items-center justify-between gap-4 rounded-xl p-3 border"
               style={{
                 backgroundColor: COLORS.BACKGROUND_CARD,
                 borderColor: COLORS.BORDER_SUBTLE,
@@ -1075,7 +1122,10 @@ function SchedulePageClient() {
               {/* Left: Today's Schedule */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" style={{ color: COLORS.GREEN_PRIMARY }} />
+                  <Calendar
+                    className="h-4 w-4"
+                    style={{ color: COLORS.GREEN_PRIMARY }}
+                  />
                   <span
                     className="text-sm font-medium"
                     style={{ color: COLORS.TEXT_PRIMARY }}
@@ -1088,7 +1138,10 @@ function SchedulePageClient() {
                   style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                  <Clock
+                    className="h-4 w-4"
+                    style={{ color: COLORS.GOLDEN_ACCENT }}
+                  />
                   <span
                     className="text-sm font-medium"
                     style={{ color: COLORS.TEXT_PRIMARY }}
@@ -1128,7 +1181,8 @@ function SchedulePageClient() {
                     e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.GREEN_PRIMARY;
                   }}
                 >
                   <Plus className="h-4 w-4" />
@@ -1143,11 +1197,13 @@ function SchedulePageClient() {
                     border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                     e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                   }}
                 >
@@ -1168,7 +1224,8 @@ function SchedulePageClient() {
                 color: COLORS.TEXT_SECONDARY,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
@@ -1178,7 +1235,10 @@ function SchedulePageClient() {
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-xl font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+            <h3
+              className="text-xl font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
               {format(currentMonth, "MMMM yyyy")}
             </h3>
             <button
@@ -1189,7 +1249,8 @@ function SchedulePageClient() {
                 color: COLORS.TEXT_SECONDARY,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
@@ -1204,41 +1265,116 @@ function SchedulePageClient() {
           {/* Calendar Legend */}
           <div className="flex items-center gap-6 mb-4 text-sm flex-wrap">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGreenPrimary(0.4), borderColor: COLORS.GREEN_PRIMARY }} />
-              <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Scheduled Lessons</span>
+              <div
+                className="w-4 h-4 rounded border-2"
+                style={{
+                  backgroundColor: getGreenPrimary(0.4),
+                  borderColor: COLORS.GREEN_PRIMARY,
+                }}
+              />
+              <span
+                className="font-medium"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Scheduled Lessons
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGoldenAccent(0.4), borderColor: COLORS.GOLDEN_ACCENT }} />
-              <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Pending Requests</span>
+              <div
+                className="w-4 h-4 rounded border-2"
+                style={{
+                  backgroundColor: getGoldenAccent(0.4),
+                  borderColor: COLORS.GOLDEN_ACCENT,
+                }}
+              />
+              <span
+                className="font-medium"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Pending Requests
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGreenPrimary(0.2), borderColor: COLORS.GREEN_PRIMARY }} />
-              <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>Today</span>
+              <div
+                className="w-4 h-4 rounded border-2"
+                style={{
+                  backgroundColor: getGreenPrimary(0.2),
+                  borderColor: COLORS.GREEN_PRIMARY,
+                }}
+              />
+              <span
+                className="font-medium"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Today
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getRedAlert(0.2), borderColor: COLORS.RED_ALERT }} />
-              <span className="font-medium" style={{ color: COLORS.RED_ALERT }}>Blocked Time</span>
+              <div
+                className="w-4 h-4 rounded border-2"
+                style={{
+                  backgroundColor: getRedAlert(0.2),
+                  borderColor: COLORS.RED_ALERT,
+                }}
+              />
+              <span className="font-medium" style={{ color: COLORS.RED_ALERT }}>
+                Blocked Time
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: getGoldenAccent(0.1), borderColor: COLORS.GOLDEN_BORDER }} />
-              <span className="font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
+              <div
+                className="w-4 h-4 rounded border-2"
+                style={{
+                  backgroundColor: getGoldenAccent(0.1),
+                  borderColor: COLORS.GOLDEN_BORDER,
+                }}
+              />
+              <span
+                className="font-medium"
+                style={{ color: COLORS.GOLDEN_ACCENT }}
+              >
                 Non-working Day
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }} />
-              <span className="font-medium" style={{ color: COLORS.TEXT_MUTED }}>Past Date</span>
+              <div
+                className="w-4 h-4 rounded border-2"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              />
+              <span
+                className="font-medium"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
+                Past Date
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded border-2" style={{ backgroundColor: COLORS.BACKGROUND_DARK, borderColor: COLORS.BORDER_SUBTLE }} />
-              <span className="font-medium" style={{ color: COLORS.TEXT_MUTED }}>Other Month</span>
+              <div
+                className="w-4 h-4 rounded border-2"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              />
+              <span
+                className="font-medium"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
+                Other Month
+              </span>
             </div>
           </div>
 
           {/* Calendar */}
           <div
             className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <div className="grid grid-cols-7 gap-1">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
@@ -1290,7 +1426,7 @@ function SchedulePageClient() {
                 let dayBgColor: string = COLORS.BACKGROUND_CARD;
                 let dayTextColor: string = COLORS.TEXT_PRIMARY;
                 let dayBorderColor: string = COLORS.BORDER_SUBTLE;
-                
+
                 if (isBlocked) {
                   dayBgColor = getRedAlert(0.2);
                   dayTextColor = COLORS.RED_ALERT;
@@ -1338,8 +1474,10 @@ function SchedulePageClient() {
                     }}
                     onMouseEnter={e => {
                       if (!isPast && !isBlocked) {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }
                     }}
                     onMouseLeave={e => {
@@ -1354,12 +1492,12 @@ function SchedulePageClient() {
                             .map(bt => bt.title)
                             .join(", ")}`
                         : !isPast && isCurrentMonth && isWorkingDay
-                        ? "Click to schedule lesson"
-                        : !isWorkingDay && isCurrentMonth && !isPast
-                        ? "Non-working day - Click to schedule anyway"
-                        : isPast
-                        ? "Past date"
-                        : ""
+                          ? "Click to schedule lesson"
+                          : !isWorkingDay && isCurrentMonth && !isPast
+                            ? "Non-working day - Click to schedule anyway"
+                            : isPast
+                              ? "Past date"
+                              : ""
                     }
                   >
                     <div className="font-bold text-sm md:text-lg mb-1 md:mb-2 flex items-center justify-between">
@@ -1367,39 +1505,51 @@ function SchedulePageClient() {
                       <div className="flex items-center gap-1">
                         {/* Lesson count badge for scheduled days */}
                         {hasLessons && (
-                          <div className="w-5 h-5 rounded-full border flex items-center justify-center"
+                          <div
+                            className="w-5 h-5 rounded-full border flex items-center justify-center"
                             style={{
                               backgroundColor: getGreenPrimary(0.2),
                               borderColor: COLORS.GREEN_PRIMARY,
                             }}
                           >
-                            <span className="text-xs font-bold" style={{ color: COLORS.GREEN_PRIMARY }}>
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: COLORS.GREEN_PRIMARY }}
+                            >
                               {lessonsForDay.length}
                             </span>
                           </div>
                         )}
                         {/* Pending requests badge */}
                         {hasPending && (
-                          <div className="w-5 h-5 rounded-full border flex items-center justify-center"
+                          <div
+                            className="w-5 h-5 rounded-full border flex items-center justify-center"
                             style={{
                               backgroundColor: getGoldenAccent(0.2),
                               borderColor: COLORS.GOLDEN_ACCENT,
                             }}
                           >
-                            <span className="text-xs font-bold" style={{ color: COLORS.GOLDEN_ACCENT }}>
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                            >
                               {pendingForDay.length}
                             </span>
                           </div>
                         )}
                         {/* Blocked time indicator */}
                         {hasBlockedTimes && (
-                          <div className="w-5 h-5 rounded-full border flex items-center justify-center"
+                          <div
+                            className="w-5 h-5 rounded-full border flex items-center justify-center"
                             style={{
                               backgroundColor: getRedAlert(0.2),
                               borderColor: COLORS.RED_ALERT,
                             }}
                           >
-                            <span className="text-xs font-bold" style={{ color: COLORS.RED_ALERT }}>
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: COLORS.RED_ALERT }}
+                            >
                               🚫
                             </span>
                           </div>
@@ -1458,12 +1608,14 @@ function SchedulePageClient() {
                                     style={{ color: COLORS.GREEN_PRIMARY }}
                                     onMouseEnter={e => {
                                       if (!e.currentTarget.disabled) {
-                                        e.currentTarget.style.backgroundColor = getGreenPrimary(0.3);
+                                        e.currentTarget.style.backgroundColor =
+                                          getGreenPrimary(0.3);
                                       }
                                     }}
                                     onMouseLeave={e => {
                                       if (!e.currentTarget.disabled) {
-                                        e.currentTarget.style.backgroundColor = "transparent";
+                                        e.currentTarget.style.backgroundColor =
+                                          "transparent";
                                       }
                                     }}
                                     title="Approve request"
@@ -1481,12 +1633,14 @@ function SchedulePageClient() {
                                     style={{ color: COLORS.RED_ALERT }}
                                     onMouseEnter={e => {
                                       if (!e.currentTarget.disabled) {
-                                        e.currentTarget.style.backgroundColor = getRedAlert(0.3);
+                                        e.currentTarget.style.backgroundColor =
+                                          getRedAlert(0.3);
                                       }
                                     }}
                                     onMouseLeave={e => {
                                       if (!e.currentTarget.disabled) {
-                                        e.currentTarget.style.backgroundColor = "transparent";
+                                        e.currentTarget.style.backgroundColor =
+                                          "transparent";
                                       }
                                     }}
                                     title="Reject request"
@@ -1498,7 +1652,10 @@ function SchedulePageClient() {
                             </div>
                           ))}
                         {pendingForDay.length > 2 && (
-                          <div className="text-xs text-center py-1" style={{ color: COLORS.GOLDEN_ACCENT }}>
+                          <div
+                            className="text-xs text-center py-1"
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
+                          >
                             +{pendingForDay.length - 2} more pending
                           </div>
                         )}
@@ -1539,10 +1696,12 @@ function SchedulePageClient() {
                                   className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded flex-shrink-0"
                                   style={{ color: COLORS.RED_ALERT }}
                                   onMouseEnter={e => {
-                                    e.currentTarget.style.backgroundColor = getRedAlert(0.3);
+                                    e.currentTarget.style.backgroundColor =
+                                      getRedAlert(0.3);
                                   }}
                                   onMouseLeave={e => {
-                                    e.currentTarget.style.backgroundColor = "transparent";
+                                    e.currentTarget.style.backgroundColor =
+                                      "transparent";
                                   }}
                                   title="Delete lesson"
                                 >
@@ -1552,7 +1711,10 @@ function SchedulePageClient() {
                             </div>
                           ))}
                         {lessonsForDay.length > 3 && (
-                          <div className="text-xs text-center py-1" style={{ color: COLORS.TEXT_MUTED }}>
+                          <div
+                            className="text-xs text-center py-1"
+                            style={{ color: COLORS.TEXT_MUTED }}
+                          >
                             +{lessonsForDay.length - 3} more lessons
                           </div>
                         )}
@@ -1565,13 +1727,17 @@ function SchedulePageClient() {
                       isCurrentMonth &&
                       !isPast && (
                         <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="w-4 h-4 rounded-full border flex items-center justify-center"
+                          <div
+                            className="w-4 h-4 rounded-full border flex items-center justify-center"
                             style={{
                               backgroundColor: getGreenPrimary(0.2),
                               borderColor: COLORS.GREEN_PRIMARY,
                             }}
                           >
-                            <Plus className="h-2.5 w-2.5" style={{ color: COLORS.GREEN_PRIMARY }} />
+                            <Plus
+                              className="h-2.5 w-2.5"
+                              style={{ color: COLORS.GREEN_PRIMARY }}
+                            />
                           </div>
                         </div>
                       )}
@@ -1599,10 +1765,12 @@ function SchedulePageClient() {
                             color: COLORS.BACKGROUND_DARK,
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.GREEN_DARK;
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.GREEN_PRIMARY;
                           }}
                           title="View Day Details"
                         >
@@ -1658,7 +1826,10 @@ function SchedulePageClient() {
                 }}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                  <h2
+                    className="text-xl font-bold"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     Schedule New Lesson
                   </h2>
                   <button
@@ -1682,7 +1853,10 @@ function SchedulePageClient() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Client
                     </label>
                     <select
@@ -1710,7 +1884,10 @@ function SchedulePageClient() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Date
                     </label>
                     <input
@@ -1732,7 +1909,10 @@ function SchedulePageClient() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <label
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Time
                     </label>
                     <select
@@ -1774,7 +1954,8 @@ function SchedulePageClient() {
                       color: COLORS.TEXT_SECONDARY,
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
                       e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                     }}
                     onMouseLeave={e => {
@@ -1794,12 +1975,14 @@ function SchedulePageClient() {
                     }}
                     onMouseEnter={e => {
                       if (!e.currentTarget.disabled) {
-                        e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.GREEN_DARK;
                       }
                     }}
                     onMouseLeave={e => {
                       if (!e.currentTarget.disabled) {
-                        e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.GREEN_PRIMARY;
                       }
                     }}
                   >
@@ -1832,10 +2015,16 @@ function SchedulePageClient() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <h2
+                      className="text-2xl font-bold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       {format(selectedDate, "EEEE, MMMM d, yyyy")}
                     </h2>
-                    <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                    <p
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       Working Hours:{" "}
                       {coachProfile?.workingHours?.startTime || "9:00 AM"} -{" "}
                       {coachProfile?.workingHours?.endTime || "6:00 PM"}
@@ -1855,7 +2044,12 @@ function SchedulePageClient() {
                       const isWorkingDay = workingDays.includes(dayName);
 
                       if (!isWorkingDay) {
-                        return <p className="text-sm mt-1" style={{ color: COLORS.GOLDEN_ACCENT }}></p>;
+                        return (
+                          <p
+                            className="text-sm mt-1"
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
+                          ></p>
+                        );
                       }
                       return null;
                     })()}
@@ -1873,11 +2067,13 @@ function SchedulePageClient() {
                         border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                       }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
                         e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                       }}
                       onMouseLeave={e => {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD;
                         e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                       }}
                     >
@@ -1890,7 +2086,11 @@ function SchedulePageClient() {
                         setSelectedDate(null);
                         setScheduleForm({ clientId: "", time: "", date: "" });
                         setShowAddTimeForm(false);
-                        setAddTimeForm({ clientId: "", time: "", duration: 60 });
+                        setAddTimeForm({
+                          clientId: "",
+                          time: "",
+                          duration: 60,
+                        });
                         setAddTimeClientSearch("");
                         setShowAddTimeClientDropdown(false);
                       }}
@@ -1911,7 +2111,10 @@ function SchedulePageClient() {
                 {/* Existing Lessons */}
                 <div className="mb-6">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <h3
+                      className="text-lg font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Scheduled Lessons
                     </h3>
                   </div>
@@ -1978,10 +2181,12 @@ function SchedulePageClient() {
                                   className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded"
                                   style={{ color: COLORS.RED_ALERT }}
                                   onMouseEnter={e => {
-                                    e.currentTarget.style.backgroundColor = getRedAlert(0.2);
+                                    e.currentTarget.style.backgroundColor =
+                                      getRedAlert(0.2);
                                   }}
                                   onMouseLeave={e => {
-                                    e.currentTarget.style.backgroundColor = "transparent";
+                                    e.currentTarget.style.backgroundColor =
+                                      "transparent";
                                   }}
                                   title="Delete lesson"
                                 >
@@ -1994,7 +2199,10 @@ function SchedulePageClient() {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <Calendar className="h-12 w-12 mx-auto mb-3" style={{ color: COLORS.TEXT_MUTED }} />
+                        <Calendar
+                          className="h-12 w-12 mx-auto mb-3"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        />
                         <p style={{ color: COLORS.TEXT_SECONDARY }}>
                           No lessons scheduled for this day
                         </p>
@@ -2015,8 +2223,14 @@ function SchedulePageClient() {
                   return dayPendingRequests.length > 0 ? (
                     <div className="mb-6">
                       <div className="mb-4 flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
-                        <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                        <AlertCircle
+                          className="h-5 w-5"
+                          style={{ color: COLORS.GOLDEN_ACCENT }}
+                        />
+                        <h3
+                          className="text-lg font-semibold"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
                           Pending Requests ({dayPendingRequests.length})
                         </h3>
                       </div>
@@ -2055,7 +2269,10 @@ function SchedulePageClient() {
                             ""
                           );
                           cleanDescription = cleanDescription.trim();
-                          if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
+                          if (
+                            !cleanDescription ||
+                            cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)
+                          ) {
                             cleanDescription = "";
                           }
 
@@ -2069,16 +2286,25 @@ function SchedulePageClient() {
                               }}
                             >
                               <div className="flex-1">
-                                <div className="font-medium" style={{ color: COLORS.GOLDEN_ACCENT }}>
+                                <div
+                                  className="font-medium"
+                                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                                >
                                   {format(requestDate, "h:mm a")}
                                 </div>
-                                <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                <div
+                                  className="text-sm"
+                                  style={{ color: COLORS.TEXT_SECONDARY }}
+                                >
                                   {request.client?.name ||
                                     request.client?.email ||
                                     "Client"}
                                 </div>
                                 {cleanDescription && (
-                                  <div className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
+                                  <div
+                                    className="text-xs mt-1"
+                                    style={{ color: COLORS.TEXT_MUTED }}
+                                  >
                                     Reason: {cleanDescription}
                                   </div>
                                 )}
@@ -2086,22 +2312,28 @@ function SchedulePageClient() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => {
-                                    approveScheduleRequestMutation.mutate({ eventId: request.id });
+                                    approveScheduleRequestMutation.mutate({
+                                      eventId: request.id,
+                                    });
                                   }}
-                                  disabled={approveScheduleRequestMutation.isPending}
+                                  disabled={
+                                    approveScheduleRequestMutation.isPending
+                                  }
                                   className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                   style={{
                                     backgroundColor: COLORS.GREEN_PRIMARY,
                                     color: COLORS.BACKGROUND_DARK,
                                   }}
-                                  onMouseEnter={(e) => {
+                                  onMouseEnter={e => {
                                     if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                                      e.currentTarget.style.backgroundColor =
+                                        COLORS.GREEN_DARK;
                                     }
                                   }}
-                                  onMouseLeave={(e) => {
+                                  onMouseLeave={e => {
                                     if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                                      e.currentTarget.style.backgroundColor =
+                                        COLORS.GREEN_PRIMARY;
                                     }
                                   }}
                                 >
@@ -2122,21 +2354,25 @@ function SchedulePageClient() {
                                     setSelectedRequestToReject(request);
                                     setShowRejectModal(true);
                                   }}
-                                  disabled={rejectScheduleRequestMutation.isPending}
+                                  disabled={
+                                    rejectScheduleRequestMutation.isPending
+                                  }
                                   className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                   style={{
                                     backgroundColor: COLORS.BACKGROUND_CARD,
                                     color: COLORS.RED_ALERT,
                                     border: `1px solid ${COLORS.RED_BORDER}`,
                                   }}
-                                  onMouseEnter={(e) => {
+                                  onMouseEnter={e => {
                                     if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.backgroundColor = getRedAlert(0.1);
+                                      e.currentTarget.style.backgroundColor =
+                                        getRedAlert(0.1);
                                     }
                                   }}
-                                  onMouseLeave={(e) => {
+                                  onMouseLeave={e => {
                                     if (!e.currentTarget.disabled) {
-                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                                      e.currentTarget.style.backgroundColor =
+                                        COLORS.BACKGROUND_CARD;
                                     }
                                   }}
                                 >
@@ -2155,24 +2391,31 @@ function SchedulePageClient() {
                 {/* Available Time Slots */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                    <h3
+                      className="text-lg font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Available Time Slots
                     </h3>
                     <button
                       onClick={() => setShowAddTimeForm(!showAddTimeForm)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
                       style={{
-                        backgroundColor: showAddTimeForm ? COLORS.GOLDEN_DARK : COLORS.GOLDEN_ACCENT,
+                        backgroundColor: showAddTimeForm
+                          ? COLORS.GOLDEN_DARK
+                          : COLORS.GOLDEN_ACCENT,
                         color: COLORS.BACKGROUND_DARK,
                       }}
                       onMouseEnter={e => {
                         if (!showAddTimeForm) {
-                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.GOLDEN_DARK;
                         }
                       }}
                       onMouseLeave={e => {
                         if (!showAddTimeForm) {
-                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.GOLDEN_ACCENT;
                         }
                       }}
                       title="Add a time slot outside working hours"
@@ -2321,8 +2564,8 @@ function SchedulePageClient() {
                           hour24 === 0
                             ? 12
                             : hour24 > 12
-                            ? hour24 - 12
-                            : hour24;
+                              ? hour24 - 12
+                              : hour24;
                         const period = hour24 >= 12 ? "PM" : "AM";
                         const minuteStr = minute.toString().padStart(2, "0");
 
@@ -2366,16 +2609,23 @@ function SchedulePageClient() {
                       // Show warning message but still display time slots
                       return (
                         <div>
-                          <div className="mb-4 p-4 rounded-lg border"
+                          <div
+                            className="mb-4 p-4 rounded-lg border"
                             style={{
                               backgroundColor: getGoldenAccent(0.1),
                               borderColor: COLORS.GOLDEN_BORDER,
                             }}
                           >
-                            <p className="text-sm mb-2" style={{ color: COLORS.GOLDEN_ACCENT }}>
+                            <p
+                              className="text-sm mb-2"
+                              style={{ color: COLORS.GOLDEN_ACCENT }}
+                            >
                               ⚠️ This isn't a normal working day for you
                             </p>
-                            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                            <p
+                              className="text-sm"
+                              style={{ color: COLORS.TEXT_SECONDARY }}
+                            >
                               You can still schedule lessons outside your
                               regular working hours if needed.
                             </p>
@@ -2398,24 +2648,34 @@ function SchedulePageClient() {
                                       borderColor: slot.isBlocked
                                         ? COLORS.RED_ALERT
                                         : selectedTimeSlot === slot.time
-                                        ? COLORS.GREEN_PRIMARY
-                                        : COLORS.BORDER_SUBTLE,
+                                          ? COLORS.GREEN_PRIMARY
+                                          : COLORS.BORDER_SUBTLE,
                                       color: slot.isBlocked
                                         ? COLORS.RED_ALERT
                                         : selectedTimeSlot === slot.time
-                                        ? COLORS.BACKGROUND_DARK
-                                        : COLORS.TEXT_PRIMARY,
+                                          ? COLORS.BACKGROUND_DARK
+                                          : COLORS.TEXT_PRIMARY,
                                     }}
                                     onMouseEnter={e => {
-                                      if (selectedTimeSlot !== slot.time && !slot.isBlocked) {
-                                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                                        e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+                                      if (
+                                        selectedTimeSlot !== slot.time &&
+                                        !slot.isBlocked
+                                      ) {
+                                        e.currentTarget.style.backgroundColor =
+                                          COLORS.BACKGROUND_CARD_HOVER;
+                                        e.currentTarget.style.borderColor =
+                                          COLORS.GREEN_PRIMARY;
                                       }
                                     }}
                                     onMouseLeave={e => {
-                                      if (selectedTimeSlot !== slot.time && !slot.isBlocked) {
-                                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
-                                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                      if (
+                                        selectedTimeSlot !== slot.time &&
+                                        !slot.isBlocked
+                                      ) {
+                                        e.currentTarget.style.backgroundColor =
+                                          COLORS.BACKGROUND_DARK;
+                                        e.currentTarget.style.borderColor =
+                                          COLORS.BORDER_SUBTLE;
                                       }
                                     }}
                                     title={
@@ -2436,13 +2696,22 @@ function SchedulePageClient() {
                                 >
                                   <div className="flex items-center justify-between">
                                     <div>
-                                      <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                      <p
+                                        className="text-sm"
+                                        style={{ color: COLORS.TEXT_SECONDARY }}
+                                      >
                                         Selected time:{" "}
-                                        <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
+                                        <span
+                                          className="font-medium"
+                                          style={{ color: COLORS.TEXT_PRIMARY }}
+                                        >
                                           {selectedTimeSlot}
                                         </span>
                                       </p>
-                                      <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+                                      <p
+                                        className="text-xs"
+                                        style={{ color: COLORS.TEXT_MUTED }}
+                                      >
                                         Choose a client to schedule the lesson
                                       </p>
                                     </div>
@@ -2461,14 +2730,17 @@ function SchedulePageClient() {
                                           }}
                                           onFocus={e => {
                                             setShowClientDropdown(true);
-                                            e.currentTarget.style.borderColor = COLORS.GREEN_PRIMARY;
+                                            e.currentTarget.style.borderColor =
+                                              COLORS.GREEN_PRIMARY;
                                           }}
                                           onBlur={e => {
-                                            e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                            e.currentTarget.style.borderColor =
+                                              COLORS.BORDER_SUBTLE;
                                           }}
                                           className="p-2 rounded-md text-sm focus:outline-none focus:ring-2 transition-all"
                                           style={{
-                                            backgroundColor: COLORS.BACKGROUND_DARK,
+                                            backgroundColor:
+                                              COLORS.BACKGROUND_DARK,
                                             borderColor: COLORS.BORDER_SUBTLE,
                                             color: COLORS.TEXT_PRIMARY,
                                             minWidth: "200px",
@@ -2481,7 +2753,8 @@ function SchedulePageClient() {
                                           <div
                                             className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
                                             style={{
-                                              backgroundColor: COLORS.BACKGROUND_CARD,
+                                              backgroundColor:
+                                                COLORS.BACKGROUND_CARD,
                                               borderColor: COLORS.BORDER_SUBTLE,
                                               minWidth: "200px",
                                             }}
@@ -2508,16 +2781,22 @@ function SchedulePageClient() {
                                                     }}
                                                     className="w-full px-3 py-2 text-left transition-colors flex items-center gap-3"
                                                     style={{
-                                                      color: COLORS.TEXT_SECONDARY,
-                                                      backgroundColor: "transparent",
+                                                      color:
+                                                        COLORS.TEXT_SECONDARY,
+                                                      backgroundColor:
+                                                        "transparent",
                                                     }}
                                                     onMouseEnter={e => {
-                                                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                                                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                                                      e.currentTarget.style.backgroundColor =
+                                                        COLORS.BACKGROUND_CARD_HOVER;
+                                                      e.currentTarget.style.color =
+                                                        COLORS.TEXT_PRIMARY;
                                                     }}
                                                     onMouseLeave={e => {
-                                                      e.currentTarget.style.backgroundColor = "transparent";
-                                                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                                                      e.currentTarget.style.backgroundColor =
+                                                        "transparent";
+                                                      e.currentTarget.style.color =
+                                                        COLORS.TEXT_SECONDARY;
                                                     }}
                                                   >
                                                     <div className="flex-1">
@@ -2526,7 +2805,13 @@ function SchedulePageClient() {
                                                           "Unnamed"}
                                                       </div>
                                                       {client.email && (
-                                                        <div className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+                                                        <div
+                                                          className="text-xs"
+                                                          style={{
+                                                            color:
+                                                              COLORS.TEXT_MUTED,
+                                                          }}
+                                                        >
                                                           {client.email}
                                                         </div>
                                                       )}
@@ -2537,7 +2822,9 @@ function SchedulePageClient() {
                                             ) : (
                                               <div
                                                 className="px-3 py-2 text-center text-sm"
-                                                style={{ color: COLORS.TEXT_MUTED }}
+                                                style={{
+                                                  color: COLORS.TEXT_MUTED,
+                                                }}
                                               >
                                                 No clients found
                                               </div>
@@ -2564,9 +2851,9 @@ function SchedulePageClient() {
                                               period === "PM" && hour !== "12"
                                                 ? parseInt(hour) + 12
                                                 : period === "AM" &&
-                                                  hour === "12"
-                                                ? 0
-                                                : parseInt(hour);
+                                                    hour === "12"
+                                                  ? 0
+                                                  : parseInt(hour);
 
                                             const fullDateStr = `${dateStr}T${hour24
                                               .toString()
@@ -2591,12 +2878,14 @@ function SchedulePageClient() {
                                         }}
                                         onMouseEnter={e => {
                                           if (!e.currentTarget.disabled) {
-                                            e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                                            e.currentTarget.style.backgroundColor =
+                                              COLORS.GREEN_DARK;
                                           }
                                         }}
                                         onMouseLeave={e => {
                                           if (!e.currentTarget.disabled) {
-                                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                                            e.currentTarget.style.backgroundColor =
+                                              COLORS.GREEN_PRIMARY;
                                           }
                                         }}
                                       >
@@ -2609,11 +2898,17 @@ function SchedulePageClient() {
                             </>
                           ) : (
                             <div className="text-center py-6">
-                              <Clock className="h-10 w-10 mx-auto mb-2" style={{ color: COLORS.TEXT_MUTED }} />
+                              <Clock
+                                className="h-10 w-10 mx-auto mb-2"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              />
                               <p style={{ color: COLORS.TEXT_SECONDARY }}>
                                 No available time slots
                               </p>
-                              <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
+                              <p
+                                className="text-sm"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              >
                                 All working hours are booked
                               </p>
                             </div>
@@ -2643,8 +2938,8 @@ function SchedulePageClient() {
                                 borderColor: slot.isBlocked
                                   ? "#EF4444"
                                   : selectedTimeSlot === slot.time
-                                  ? "#0EA5E9"
-                                  : "#606364",
+                                    ? "#0EA5E9"
+                                    : "#606364",
                                 color: slot.isBlocked ? "#EF4444" : "#FFFFFF",
                               }}
                               title={
@@ -2766,8 +3061,8 @@ function SchedulePageClient() {
                                         period === "PM" && hour !== "12"
                                           ? parseInt(hour) + 12
                                           : period === "AM" && hour === "12"
-                                          ? 0
-                                          : parseInt(hour);
+                                            ? 0
+                                            : parseInt(hour);
 
                                       const fullDateStr = `${dateStr}T${hour24
                                         .toString()
@@ -2807,42 +3102,76 @@ function SchedulePageClient() {
 
                 {/* Add Time Form */}
                 {showAddTimeForm && (
-                  <div className="mb-6 mt-6 pt-6 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
+                  <div
+                    className="mb-6 mt-6 pt-6 border-t"
+                    style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                  >
+                    <h3
+                      className="text-lg font-semibold mb-4"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       Add Custom Time
                     </h3>
                     <form onSubmit={handleAddTimeSubmit} className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Client Selection */}
                         <div>
-                          <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             Client *
                           </label>
-                          <div className="relative" ref={addTimeClientDropdownRef}>
+                          <div
+                            className="relative"
+                            ref={addTimeClientDropdownRef}
+                          >
                             <div className="relative">
-                              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
+                              <Search
+                                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              />
                               <input
                                 type="text"
-                                placeholder={addTimeForm.clientId ? "" : "Search for a client..."}
-                                value={addTimeForm.clientId 
-                                  ? (clients.find(c => c.id === addTimeForm.clientId)?.name || 
-                                     clients.find(c => c.id === addTimeForm.clientId)?.email || 
-                                     addTimeClientSearch)
-                                  : addTimeClientSearch}
+                                placeholder={
+                                  addTimeForm.clientId
+                                    ? ""
+                                    : "Search for a client..."
+                                }
+                                value={
+                                  addTimeForm.clientId
+                                    ? clients.find(
+                                        c => c.id === addTimeForm.clientId
+                                      )?.name ||
+                                      clients.find(
+                                        c => c.id === addTimeForm.clientId
+                                      )?.email ||
+                                      addTimeClientSearch
+                                    : addTimeClientSearch
+                                }
                                 onChange={e => {
                                   setAddTimeClientSearch(e.target.value);
                                   setShowAddTimeClientDropdown(true);
                                   // Clear client selection if user is typing
                                   if (addTimeForm.clientId) {
-                                    setAddTimeForm(prev => ({ ...prev, clientId: "" }));
+                                    setAddTimeForm(prev => ({
+                                      ...prev,
+                                      clientId: "",
+                                    }));
                                   }
                                 }}
                                 onFocus={() => {
                                   setShowAddTimeClientDropdown(true);
                                   // Show search text when focusing if client is selected
                                   if (addTimeForm.clientId) {
-                                    const selectedClient = clients.find(c => c.id === addTimeForm.clientId);
-                                    setAddTimeClientSearch(selectedClient?.name || selectedClient?.email || "");
+                                    const selectedClient = clients.find(
+                                      c => c.id === addTimeForm.clientId
+                                    );
+                                    setAddTimeClientSearch(
+                                      selectedClient?.name ||
+                                        selectedClient?.email ||
+                                        ""
+                                    );
                                   }
                                 }}
                                 className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all"
@@ -2857,52 +3186,61 @@ function SchedulePageClient() {
                             </div>
 
                             {/* Dropdown */}
-                            {showAddTimeClientDropdown && (
-                              filteredAddTimeClients.length > 0 ? (
-                              <div
-                                className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
-                                style={{
-                                  backgroundColor: "#2A2F2F",
-                                  borderColor: COLORS.BORDER_SUBTLE,
-                                  minWidth: "100%",
-                                }}
-                              >
-                                {filteredAddTimeClients.map((client: any) => (
-                                  <button
-                                    key={client.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setAddTimeForm(prev => ({ ...prev, clientId: client.id }));
-                                      setAddTimeClientSearch(client.name || client.email || "");
-                                      setShowAddTimeClientDropdown(false);
-                                    }}
-                                    className="w-full px-3 py-2 text-left transition-colors flex items-center gap-3"
-                                    style={{
-                                      color: COLORS.TEXT_PRIMARY,
-                                      backgroundColor: "#2A2F2F",
-                                    }}
-                                    onMouseEnter={e => {
-                                      e.currentTarget.style.backgroundColor = "#353A3A";
-                                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                                    }}
-                                    onMouseLeave={e => {
-                                      e.currentTarget.style.backgroundColor = "#2A2F2F";
-                                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                                    }}
-                                  >
-                                    <div className="flex-1">
-                                      <div className="font-medium text-sm">
-                                        {client.name || "Unnamed"}
-                                      </div>
-                                      {client.email && (
-                                        <div className="text-xs opacity-70">
-                                          {client.email}
+                            {showAddTimeClientDropdown &&
+                              (filteredAddTimeClients.length > 0 ? (
+                                <div
+                                  className="absolute z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border shadow-lg"
+                                  style={{
+                                    backgroundColor: "#2A2F2F",
+                                    borderColor: COLORS.BORDER_SUBTLE,
+                                    minWidth: "100%",
+                                  }}
+                                >
+                                  {filteredAddTimeClients.map((client: any) => (
+                                    <button
+                                      key={client.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setAddTimeForm(prev => ({
+                                          ...prev,
+                                          clientId: client.id,
+                                        }));
+                                        setAddTimeClientSearch(
+                                          client.name || client.email || ""
+                                        );
+                                        setShowAddTimeClientDropdown(false);
+                                      }}
+                                      className="w-full px-3 py-2 text-left transition-colors flex items-center gap-3"
+                                      style={{
+                                        color: COLORS.TEXT_PRIMARY,
+                                        backgroundColor: "#2A2F2F",
+                                      }}
+                                      onMouseEnter={e => {
+                                        e.currentTarget.style.backgroundColor =
+                                          "#353A3A";
+                                        e.currentTarget.style.color =
+                                          COLORS.TEXT_PRIMARY;
+                                      }}
+                                      onMouseLeave={e => {
+                                        e.currentTarget.style.backgroundColor =
+                                          "#2A2F2F";
+                                        e.currentTarget.style.color =
+                                          COLORS.TEXT_PRIMARY;
+                                      }}
+                                    >
+                                      <div className="flex-1">
+                                        <div className="font-medium text-sm">
+                                          {client.name || "Unnamed"}
                                         </div>
-                                      )}
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
+                                        {client.email && (
+                                          <div className="text-xs opacity-70">
+                                            {client.email}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
                               ) : (
                                 <div
                                   className="absolute z-50 mt-1 p-3 rounded-lg border shadow-lg"
@@ -2912,26 +3250,33 @@ function SchedulePageClient() {
                                     minWidth: "100%",
                                   }}
                                 >
-                                  <p className="text-sm text-center" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                  <p
+                                    className="text-sm text-center"
+                                    style={{ color: COLORS.TEXT_SECONDARY }}
+                                  >
                                     No clients found
                                   </p>
                                 </div>
-                              )
-                            )}
-
+                              ))}
                           </div>
                         </div>
 
                         {/* Time Selection */}
                         <div>
-                          <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             Time *
                           </label>
                           <input
                             type="time"
                             value={addTimeForm.time}
                             onChange={e =>
-                              setAddTimeForm(prev => ({ ...prev, time: e.target.value }))
+                              setAddTimeForm(prev => ({
+                                ...prev,
+                                time: e.target.value,
+                              }))
                             }
                             className="w-full p-2 rounded-lg border text-sm"
                             style={{
@@ -2946,7 +3291,10 @@ function SchedulePageClient() {
 
                       {/* Duration */}
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           Duration (minutes) *
                         </label>
                         <select
@@ -2979,12 +3327,22 @@ function SchedulePageClient() {
                       {/* Info Box */}
                       <div
                         className="p-3 rounded-lg"
-                        style={{ backgroundColor: getGoldenAccent(0.1), borderColor: COLORS.GOLDEN_BORDER }}
+                        style={{
+                          backgroundColor: getGoldenAccent(0.1),
+                          borderColor: COLORS.GOLDEN_BORDER,
+                        }}
                       >
                         <div className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 mt-0.5" style={{ color: COLORS.GOLDEN_ACCENT }} />
-                          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
-                            This lesson can be scheduled at any time, even outside your normal working hours.
+                          <AlertCircle
+                            className="h-4 w-4 mt-0.5"
+                            style={{ color: COLORS.GOLDEN_ACCENT }}
+                          />
+                          <p
+                            className="text-xs"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            This lesson can be scheduled at any time, even
+                            outside your normal working hours.
                           </p>
                         </div>
                       </div>
@@ -3009,7 +3367,11 @@ function SchedulePageClient() {
                           type="button"
                           onClick={() => {
                             setShowAddTimeForm(false);
-                            setAddTimeForm({ clientId: "", time: "", duration: 60 });
+                            setAddTimeForm({
+                              clientId: "",
+                              time: "",
+                              duration: 60,
+                            });
                             setAddTimeClientSearch("");
                             setShowAddTimeClientDropdown(false);
                           }}
@@ -3200,8 +3562,8 @@ function SchedulePageClient() {
                                       period === "PM" && hour !== "12"
                                         ? parseInt(hour) + 12
                                         : period === "AM" && hour === "12"
-                                        ? 0
-                                        : parseInt(hour);
+                                          ? 0
+                                          : parseInt(hour);
 
                                     // For recurring lessons, we need the full datetime to preserve the selected time
                                     const fullStartDateStr = `${dateStr}T${hour24
@@ -3282,52 +3644,57 @@ function SchedulePageClient() {
                       "MMM d, yyyy 'at' h:mm a"
                     )}
                   </div>
-                  {selectedRequestToReject.description && (() => {
-                    // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
-                    let cleanDescription = selectedRequestToReject.description;
-                    let previousLength = 0;
-                    // Keep removing until no more matches (handles nested patterns)
-                    while (cleanDescription.length !== previousLength) {
-                      previousLength = cleanDescription.length;
+                  {selectedRequestToReject.description &&
+                    (() => {
+                      // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                      let cleanDescription =
+                        selectedRequestToReject.description;
+                      let previousLength = 0;
+                      // Keep removing until no more matches (handles nested patterns)
+                      while (cleanDescription.length !== previousLength) {
+                        previousLength = cleanDescription.length;
+                        cleanDescription = cleanDescription.replace(
+                          /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                          ""
+                        );
+                      }
+                      // Remove any leftover JSON fragments (including escaped quotes)
                       cleanDescription = cleanDescription.replace(
-                        /\[OLD_LESSON_DATA\][\s\S]*?\[\/OLD_LESSON_DATA\]/g,
+                        /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
                         ""
                       );
-                    }
-                    // Remove any leftover JSON fragments (including escaped quotes)
-                    cleanDescription = cleanDescription.replace(
-                      /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"\s*}/g,
-                      ""
-                    );
-                    cleanDescription = cleanDescription.replace(
-                      /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
-                      ""
-                    );
-                    cleanDescription = cleanDescription.replace(
-                      /\[\/OLD_LESSON_DATA\]/g,
-                      ""
-                    );
-                    // Remove any trailing escaped quotes and JSON fragments
-                    cleanDescription = cleanDescription.replace(
-                      /\\*["\s]*}$/g,
-                      ""
-                    );
-                    cleanDescription = cleanDescription.replace(
-                      /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
-                      ""
-                    );
-                    cleanDescription = cleanDescription.trim();
-                    // If the description is just leftover JSON fragments or empty, don't show it
-                    if (!cleanDescription || cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)) {
-                      return null;
-                    }
-                    return (
-                      <div className="text-sm text-gray-300 mb-4">
-                        <strong>Client&apos;s Reason:</strong>{" "}
-                        {cleanDescription}
-                      </div>
-                    );
-                  })()}
+                      cleanDescription = cleanDescription.replace(
+                        /\\*["\s]*"status"\s*:\s*"[^"]*"\s*}/g,
+                        ""
+                      );
+                      cleanDescription = cleanDescription.replace(
+                        /\[\/OLD_LESSON_DATA\]/g,
+                        ""
+                      );
+                      // Remove any trailing escaped quotes and JSON fragments
+                      cleanDescription = cleanDescription.replace(
+                        /\\*["\s]*}$/g,
+                        ""
+                      );
+                      cleanDescription = cleanDescription.replace(
+                        /\\*["\s]*,\s*"status"\s*:\s*"[^"]*"$/g,
+                        ""
+                      );
+                      cleanDescription = cleanDescription.trim();
+                      // If the description is just leftover JSON fragments or empty, don't show it
+                      if (
+                        !cleanDescription ||
+                        cleanDescription.match(/^[,\s"{}:\[\]\\]*$/)
+                      ) {
+                        return null;
+                      }
+                      return (
+                        <div className="text-sm text-gray-300 mb-4">
+                          <strong>Client&apos;s Reason:</strong>{" "}
+                          {cleanDescription}
+                        </div>
+                      );
+                    })()}
                 </div>
 
                 <div className="space-y-4">
@@ -3461,18 +3828,21 @@ function SchedulePageClient() {
                                     request.client?.email ||
                                     "Client"}
                                 </div>
-                                {request.description && (() => {
-                                  // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
-                                  const cleanDescription = request.description.replace(
-                                    /\[OLD_LESSON_DATA\].*?\[\/OLD_LESSON_DATA\]/s,
-                                    ""
-                                  ).trim();
-                                  return cleanDescription ? (
-                                    <div className="text-xs text-orange-100 mt-1">
-                                      Reason: {cleanDescription}
-                                    </div>
-                                  ) : null;
-                                })()}
+                                {request.description &&
+                                  (() => {
+                                    // Remove [OLD_LESSON_DATA]...[/OLD_LESSON_DATA] section from description
+                                    const cleanDescription = request.description
+                                      .replace(
+                                        /\[OLD_LESSON_DATA\].*?\[\/OLD_LESSON_DATA\]/s,
+                                        ""
+                                      )
+                                      .trim();
+                                    return cleanDescription ? (
+                                      <div className="text-xs text-orange-100 mt-1">
+                                        Reason: {cleanDescription}
+                                      </div>
+                                    ) : null;
+                                  })()}
                               </div>
                               <div className="flex items-center gap-2">
                                 <button

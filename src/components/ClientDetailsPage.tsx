@@ -78,14 +78,14 @@ export default function ClientDetailsPage({
   });
 
   // TRPC mutation for updating client name
-  const updateClientMutation = trpc.clients.update.useMutation({
+  const updateClientMutation = (trpc.clients.update as any).useMutation({
     onSuccess: () => {
       setIsEditingName(false);
       setEditedName("");
       // Refetch client data to get updated name
       utils.clients.getById.invalidate({ id: clientId });
     },
-    onError: error => {
+    onError: (error: Error) => {
       console.error("Failed to update client name:", error);
       // Reset to original name on error
       setEditedName(client?.name || "");

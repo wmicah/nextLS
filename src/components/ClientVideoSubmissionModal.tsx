@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Upload, Check, AlertCircle } from "lucide-react";
 import { UploadButton } from "@uploadthing/react";
 import type { OurFileRouter } from "@/app/api/uploadthing/core";
-import { COLORS } from "@/lib/colors";
 
 interface ClientVideoSubmissionModalProps {
   isOpen: boolean;
@@ -26,13 +25,6 @@ export default function ClientVideoSubmissionModal({
   const [videoUrl, setVideoUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const uploadStartTimeRef = useRef<number | null>(null);
-  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const uploadFileRef = useRef<any>(null); // Store uploaded file data
 
   const utils = trpc.useUtils();
 
@@ -51,116 +43,12 @@ export default function ClientVideoSubmissionModal({
     },
   });
 
-  const stopProgressSimulation = useCallback(() => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-    if (completionTimeoutRef.current) {
-      clearTimeout(completionTimeoutRef.current);
-      completionTimeoutRef.current = null;
-    }
-    uploadStartTimeRef.current = null;
-  }, []);
-
-  const startProgressSimulation = useCallback(() => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
-    
-    uploadStartTimeRef.current = Date.now();
-    setUploadProgress(0);
-    
-    // Simulate progress: start fast, slow down near the end
-    let currentProgress = 0;
-    progressIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - (uploadStartTimeRef.current || Date.now());
-      const estimatedDuration = 30000; // 30 seconds estimate for large videos
-      const progressRatio = Math.min(elapsed / estimatedDuration, 0.95); // Cap at 95% to wait for real completion
-      
-      // Use easing function for smooth progress
-      const easedProgress = 1 - Math.pow(1 - progressRatio, 3); // Cubic ease-out
-      currentProgress = Math.min(Math.floor(easedProgress * 95), 95);
-      
-      // Only update if we haven't received real progress that's higher
-      setUploadProgress(prev => Math.max(prev, currentProgress));
-      
-      // If we've been simulating for a very long time, stop and show warning
-      if (elapsed > 120000) { // After 2 minutes
-        console.warn("⚠️ Progress simulation has been running for over 2 minutes. Upload may be stuck or very large.");
-        // Don't stop - let the timeout handlers deal with it
-      }
-    }, 100); // Update every 100ms for smoother performance
-  }, []);
-
   const resetForm = () => {
     setMessage("");
     setVideoUrl("");
     setError("");
     setIsSubmitting(false);
-    setIsUploading(false);
-    setUploadProgress(0);
-    uploadFileRef.current = null;
-    stopProgressSimulation();
-    if (uploadTimeoutRef.current) {
-      clearTimeout(uploadTimeoutRef.current);
-      uploadTimeoutRef.current = null;
-    }
-    if (completionTimeoutRef.current) {
-      clearTimeout(completionTimeoutRef.current);
-      completionTimeoutRef.current = null;
-    }
   };
-
-  // Add timeout to detect stuck uploads
-  useEffect(() => {
-    if (isUploading) {
-      if (uploadProgress === 0) {
-        // If upload starts but progress stays at 0% for more than 15 seconds, show error
-        uploadTimeoutRef.current = setTimeout(() => {
-          if (uploadProgress === 0 && isUploading) {
-            console.error("⏱️ Upload timeout - no progress detected after 15 seconds");
-            setError("Upload appears to be stuck. This might be due to:\n- Missing UploadThing credentials\n- Network connectivity issues\n- Server configuration problems\n\nPlease check the browser console for more details.");
-            stopProgressSimulation();
-            setIsUploading(false);
-          }
-        }, 15000); // 15 second timeout for large video files
-      } else if (uploadProgress >= 94) {
-        // If progress is stuck at 94-95% for more than 30 seconds, the upload might have completed but callback didn't fire
-        uploadTimeoutRef.current = setTimeout(() => {
-          if (uploadProgress >= 94 && uploadProgress < 100 && isUploading) {
-            console.warn("⚠️ Upload appears complete but callback didn't fire. Upload may have succeeded.");
-            setError("Upload appears to have completed but didn't finish properly. Please try refreshing and checking if the video was uploaded, or try uploading again.");
-            stopProgressSimulation();
-            setIsUploading(false);
-            setUploadProgress(0);
-          }
-        }, 30000); // 30 second timeout when stuck near completion
-      }
-    }
-    
-    return () => {
-      if (uploadTimeoutRef.current) {
-        clearTimeout(uploadTimeoutRef.current);
-        uploadTimeoutRef.current = null;
-      }
-    };
-  }, [isUploading, uploadProgress, stopProgressSimulation]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopProgressSimulation();
-      if (uploadTimeoutRef.current) {
-        clearTimeout(uploadTimeoutRef.current);
-        uploadTimeoutRef.current = null;
-      }
-      if (completionTimeoutRef.current) {
-        clearTimeout(completionTimeoutRef.current);
-        completionTimeoutRef.current = null;
-      }
-    };
-  }, [stopProgressSimulation]);
 
   const handleClose = () => {
     resetForm();
@@ -210,28 +98,19 @@ export default function ClientVideoSubmissionModal({
       <div
         className="rounded-2xl border w-[500px] max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50"
         style={{
-          backgroundColor: COLORS.BACKGROUND_DARK,
-          borderColor: COLORS.BORDER_SUBTLE,
+          backgroundColor: "#353A3A",
+          borderColor: "#606364",
         }}
       >
         {/* Header */}
-        <div 
-          className="p-6 border-b" 
-          style={{ borderColor: COLORS.BORDER_SUBTLE }}
-        >
+        <div className="p-6 border-b" style={{ borderColor: "#606364" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 
-                className="text-xl font-bold" 
-                style={{ color: COLORS.TEXT_PRIMARY }}
-              >
+              <h2 className="text-xl font-bold" style={{ color: "#C3BCC2" }}>
                 Record Video
               </h2>
               {drillTitle && (
-                <p 
-                  className="text-sm mt-1" 
-                  style={{ color: COLORS.TEXT_SECONDARY }}
-                >
+                <p className="text-sm mt-1" style={{ color: "#ABA4AA" }}>
                   For: {drillTitle}
                 </p>
               )}
@@ -239,14 +118,14 @@ export default function ClientVideoSubmissionModal({
             <button
               onClick={handleClose}
               className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
-              style={{ color: COLORS.TEXT_SECONDARY }}
+              style={{ color: "#ABA4AA" }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                e.currentTarget.style.backgroundColor = "#606364";
+                e.currentTarget.style.color = "#C3BCC2";
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = "transparent";
-                e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                e.currentTarget.style.color = "#ABA4AA";
               }}
             >
               <X className="h-5 w-5" />
@@ -259,20 +138,15 @@ export default function ClientVideoSubmissionModal({
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div
-                className="flex items-center gap-2 p-3 rounded-lg border"
+                className="flex items-center gap-2 p-3 rounded-lg"
                 style={{
-                  backgroundColor: COLORS.BACKGROUND_CARD,
-                  borderColor: COLORS.RED_BORDER,
+                  backgroundColor: "rgba(239, 68, 68, 0.1)",
+                  borderColor: "rgba(239, 68, 68, 0.3)",
+                  border: "1px solid",
                 }}
               >
-                <AlertCircle 
-                  className="h-4 w-4" 
-                  style={{ color: COLORS.RED_ALERT }} 
-                />
-                <span 
-                  className="text-sm" 
-                  style={{ color: COLORS.RED_ALERT }}
-                >
+                <AlertCircle className="h-4 w-4" style={{ color: "#EF4444" }} />
+                <span className="text-sm" style={{ color: "#EF4444" }}>
                   {error}
                 </span>
               </div>
@@ -282,272 +156,58 @@ export default function ClientVideoSubmissionModal({
             <div className="space-y-3">
               <label
                 className="text-sm font-medium"
-                style={{ color: COLORS.TEXT_PRIMARY }}
+                style={{ color: "#C3BCC2" }}
               >
                 Upload Video *
               </label>
-              {error && error.includes("Upload may have completed") && (
-                <div className="p-3 rounded-lg border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
-                  <p className="text-sm mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
-                    If the upload completed in UploadThing but the callback failed, you can manually enter the video URL:
-                  </p>
-                  <input
-                    type="text"
-                    placeholder="Paste UploadThing video URL here"
-                    className="w-full px-3 py-2 rounded-lg text-sm border"
-                    style={{
-                      backgroundColor: COLORS.BACKGROUND_DARK,
-                      borderColor: COLORS.BORDER_SUBTLE,
-                      color: COLORS.TEXT_PRIMARY,
-                    }}
-                    onPaste={(e) => {
-                      const pastedUrl = e.clipboardData.getData('text');
-                      if (pastedUrl && pastedUrl.includes('utfs.io')) {
-                        try {
-                          new URL(pastedUrl);
-                          setVideoUrl(pastedUrl);
-                          setError("");
-                        } catch {
-                          // Invalid URL, ignore
-                        }
-                      }
-                    }}
-                  />
-                </div>
-              )}
               {!videoUrl ? (
                 <div
                   className="border-2 border-dashed rounded-lg p-8 text-center"
-                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                  style={{ borderColor: "#606364" }}
                 >
-                  {!isUploading ? (
-                    <>
-                      {/* @ts-expect-error - effect version conflict workaround */}
-                      <UploadButton<OurFileRouter, "videoUploader">
-                        endpoint="videoUploader"
-                      onClientUploadComplete={(res: any) => {
-                        console.log("✅ Upload complete callback fired:", res);
-                        
-                        // Clear any timeouts
-                        if (uploadTimeoutRef.current) {
-                          clearTimeout(uploadTimeoutRef.current);
-                          uploadTimeoutRef.current = null;
-                        }
-                        if (completionTimeoutRef.current) {
-                          clearTimeout(completionTimeoutRef.current);
-                          completionTimeoutRef.current = null;
-                        }
-                        
-                        // Complete the progress bar
-                        setUploadProgress(100);
-                        stopProgressSimulation();
-                        
-                        // Process the uploaded file immediately
-                        if (res && res.length > 0) {
-                          const file = res[0];
-                          uploadFileRef.current = file;
-                          console.log("📁 File details:", {
-                            name: file.name,
-                            url: file.url,
-                            size: file.size,
-                            type: file.type,
-                            key: file.key,
-                          });
-                          
-                          if (file?.url) {
-                            // Validate URL format
-                            try {
-                              new URL(file.url);
-                              setVideoUrl(file.url);
-                              setError("");
-                              setIsUploading(false);
-                              setUploadProgress(0);
-                              console.log("✅ Video URL set successfully:", file.url);
-                            } catch (urlError) {
-                              console.error("❌ Invalid URL format:", file.url, urlError);
-                              setError("Upload completed but received invalid URL. Please try again.");
-                              setIsUploading(false);
-                              setUploadProgress(0);
-                            }
-                          } else {
-                            console.error("❌ No URL in file object:", file);
-                            setError("Upload completed but no file URL received. Please try again.");
-                            setIsUploading(false);
-                            setUploadProgress(0);
-                          }
+                  <UploadButton<OurFileRouter, "videoUploader">
+                    endpoint="videoUploader"
+                    onClientUploadComplete={res => {
+                      if (res && res.length > 0) {
+                        const file = res[0];
+                        if (file?.url) {
+                          setVideoUrl(file.url);
+                          setError("");
                         } else {
-                          console.error("❌ No files in response:", res);
-                          setError("Upload completed but no file received. Please try again.");
-                          setIsUploading(false);
-                          setUploadProgress(0);
+                          setError("Upload completed but no file URL received. Please try again.");
                         }
-                      }}
-                      onUploadError={(error: Error) => {
-                        console.error("❌ Upload error:", error);
-                        console.error("Error details:", {
-                          message: error.message,
-                          name: error.name,
-                          stack: error.stack,
-                          // Check if error has additional properties
-                          ...(error as any).data && { data: (error as any).data },
-                        });
-                        
-                        // Check for network errors specifically
-                        const isNetworkError = 
-                          error.message.includes("ERR_FAILED") ||
-                          error.message.includes("Failed to fetch") ||
-                          error.message.includes("NetworkError") ||
-                          error.message.includes("network");
-                        
-                        // Extract more detailed error message
-                        let errorMessage = error.message || "Unknown upload error";
-                        
-                        // Handle UploadThing specific errors
-                        if (errorMessage.includes("UPLOAD_FAILED") || errorMessage === "UPLOAD_FAILED") {
-                          if (isNetworkError) {
-                            errorMessage = "Network error during upload. This could be due to:\n- Poor internet connection\n- Firewall or antivirus blocking the upload\n- UploadThing server temporarily unavailable\n- File corruption\n\nPlease try:\n1. Check your internet connection\n2. Try a smaller file first\n3. Disable VPN if active\n4. Try again in a few moments";
-                          } else {
-                            errorMessage = "Upload failed. This could be due to:\n- File size exceeds 1GB limit\n- Invalid file format\n- Network connectivity issues\n- Server configuration problems\n\nPlease check the browser console for more details.";
-                          }
-                        } else if (errorMessage.includes("Unauthorized")) {
-                          errorMessage = "You are not logged in. Please refresh the page and try again.";
-                        } else if (errorMessage.includes("Rate limit")) {
-                          errorMessage = "Too many uploads. Please wait a moment and try again.";
-                        } else if (errorMessage.includes("validation failed")) {
-                          errorMessage = errorMessage; // Keep the detailed validation message
-                        } else if (isNetworkError) {
-                          errorMessage = "Network error: Unable to connect to upload server. Please check your internet connection and try again.";
-                        }
-                        
-                        setError(`Upload failed: ${errorMessage}`);
-                        stopProgressSimulation();
-                        setIsUploading(false);
-                        setUploadProgress(0);
-                        if (uploadTimeoutRef.current) {
-                          clearTimeout(uploadTimeoutRef.current);
-                          uploadTimeoutRef.current = null;
-                        }
-                      }}
-                      onUploadBegin={(name: string) => {
-                        console.log("📤 Upload started:", name);
-                        setError("");
-                        setIsUploading(true);
-                        uploadFileRef.current = null; // Reset file reference
-                        startProgressSimulation();
-                        // Clear any existing timeouts
-                        if (uploadTimeoutRef.current) {
-                          clearTimeout(uploadTimeoutRef.current);
-                          uploadTimeoutRef.current = null;
-                        }
-                        if (completionTimeoutRef.current) {
-                          clearTimeout(completionTimeoutRef.current);
-                          completionTimeoutRef.current = null;
-                        }
-                      }}
-                      onUploadProgress={(progress: number) => {
-                        console.log("📊 Real upload progress from UploadThing:", progress);
-                        // If we get real progress, update it and stop simulation
-                        if (progress > 0) {
-                          // Stop simulation immediately when we get real progress
-                          stopProgressSimulation();
-                          setUploadProgress(Math.min(progress, 99)); // Allow up to 99% from real progress
-                        }
-                        
-                        // If progress reaches 100%, the upload file transfer is complete
-                        // We still need to wait for onClientUploadComplete to get the file metadata
-                        if (progress >= 100) {
-                          console.log("📊 Upload progress reached 100%, waiting for completion callback...");
-                          setUploadProgress(100); // Show 100% immediately
-                          
-                          // Clear any existing completion timeout
-                          if (completionTimeoutRef.current) {
-                            clearTimeout(completionTimeoutRef.current);
-                          }
-                          
-                          // Set a timeout to detect if callback doesn't fire (more generous timeout for large files)
-                          completionTimeoutRef.current = setTimeout(() => {
-                            if (isUploading && !videoUrl && !uploadFileRef.current) {
-                              console.warn("⚠️ Upload reached 100% but completion callback hasn't fired after 10 seconds.");
-                              console.warn("💡 The file was likely uploaded successfully to UploadThing, but the completion callback failed.");
-                              console.warn("💡 This can happen due to network issues or timeout during metadata processing.");
-                              
-                              // The upload likely succeeded but callback failed
-                              // Show a helpful message and allow manual URL entry
-                              setError("Upload appears to have completed but didn't finish properly. The file was likely uploaded successfully. Please:\n1. Check UploadThing dashboard to verify the upload\n2. Copy the video URL from UploadThing\n3. Paste it in the manual URL field below (if shown)\n\nOr try uploading again.");
-                              setIsUploading(false);
-                              setUploadProgress(0);
-                              stopProgressSimulation();
-                            }
-                          }, 10000); // 10 second timeout - generous for large files and network delays
-                        }
-                      }}
-                    />
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <div
-                          className="animate-spin rounded-full h-4 w-4 border-b-2"
-                          style={{
-                            borderColor: `${COLORS.GOLDEN_ACCENT}40`,
-                            borderTopColor: COLORS.GOLDEN_ACCENT,
-                          }}
-                        />
-                        <span style={{ color: COLORS.TEXT_SECONDARY }}>
-                          {uploadProgress > 0
-                            ? `Uploading... ${uploadProgress}%`
-                            : "Starting upload..."}
-                        </span>
-                      </div>
-                      <div
-                        className="w-full rounded-full h-2.5 overflow-hidden mx-auto max-w-xs"
-                        style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
-                      >
-                        <div
-                          className="h-2.5 rounded-full transition-all duration-300 ease-out"
-                          style={{
-                            width: `${uploadProgress}%`,
-                            backgroundColor: COLORS.GOLDEN_ACCENT,
-                            minWidth: uploadProgress > 0 ? "4px" : "0",
-                          }}
-                        />
-                      </div>
-                      {uploadProgress > 0 && (
-                        <div className="text-center">
-                          <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
-                            {uploadProgress < 100 ? `${uploadProgress}% complete` : "Finalizing..."}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      } else {
+                        setError("Upload completed but no file received. Please try again.");
+                      }
+                    }}
+                    onUploadError={(error: Error) => {
+                      console.error("Upload error:", error);
+                      const errorMessage = error.message || "Unknown upload error";
+                      setError(`Upload failed: ${errorMessage}. Please check your file size (max 1GB) and try again.`);
+                    }}
+                    onUploadBegin={(name) => {
+                      setError("");
+                      console.log("Upload started:", name);
+                    }}
+                  />
                 </div>
               ) : (
                 <div
                   className="rounded-lg p-4"
-                  style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
+                  style={{ backgroundColor: "#2A3133" }}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className="w-12 h-12 rounded flex items-center justify-center"
-                      style={{ backgroundColor: COLORS.BACKGROUND_CARD }}
+                      style={{ backgroundColor: "rgba(16, 185, 129, 0.2)" }}
                     >
-                      <Check 
-                        className="h-6 w-6" 
-                        style={{ color: COLORS.GREEN_PRIMARY }} 
-                      />
+                      <Check className="h-6 w-6" style={{ color: "#10B981" }} />
                     </div>
                     <div className="flex-1">
-                      <p 
-                        className="font-medium" 
-                        style={{ color: COLORS.TEXT_PRIMARY }}
-                      >
+                      <p className="font-medium" style={{ color: "#C3BCC2" }}>
                         Video uploaded successfully
                       </p>
-                      <p 
-                        className="text-sm" 
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      >
+                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
                         Ready to send
                       </p>
                     </div>
@@ -555,9 +215,9 @@ export default function ClientVideoSubmissionModal({
                       type="button"
                       onClick={() => setVideoUrl("")}
                       className="p-2 rounded-lg transition-colors"
-                      style={{ color: COLORS.RED_ALERT }}
+                      style={{ color: "#EF4444" }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.backgroundColor = "#606364";
                       }}
                       onMouseLeave={e => {
                         e.currentTarget.style.backgroundColor = "transparent";
@@ -574,7 +234,7 @@ export default function ClientVideoSubmissionModal({
             <div className="space-y-3">
               <label
                 className="text-sm font-medium"
-                style={{ color: COLORS.TEXT_PRIMARY }}
+                style={{ color: "#C3BCC2" }}
               >
                 Message (Optional)
               </label>
@@ -584,9 +244,9 @@ export default function ClientVideoSubmissionModal({
                 placeholder="Add any notes or questions for your coach..."
                 className="border rounded-lg resize-none"
                 style={{
-                  backgroundColor: COLORS.BACKGROUND_CARD,
-                  borderColor: COLORS.BORDER_SUBTLE,
-                  color: COLORS.TEXT_PRIMARY,
+                  backgroundColor: "#2A3133",
+                  borderColor: "#606364",
+                  color: "#C3BCC2",
                 }}
                 rows={4}
               />
@@ -597,7 +257,7 @@ export default function ClientVideoSubmissionModal({
               type="submit"
               className="w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{
-                background: `linear-gradient(135deg, ${COLORS.GOLDEN_DARK} 0%, ${COLORS.GOLDEN_ACCENT} 100%)`,
+                background: "linear-gradient(135deg, #4A5A70 0%, #606364 100%)",
                 color: "#FFFFFF",
               }}
               disabled={isSubmitting || !videoUrl}

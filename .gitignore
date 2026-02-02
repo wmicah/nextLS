@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# backup from console-log cleanup script
+.backup-console-logs/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

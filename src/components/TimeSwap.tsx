@@ -30,8 +30,17 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
   >("select-client");
 
   // Queries
-  const { data: availableClients = [], isLoading: clientsLoading } =
+  const { data: availableClientsData = [], isLoading: clientsLoading } =
     trpc.timeSwap.getAvailableClients.useQuery();
+  // Typed list to avoid "type instantiation is excessively deep" from tRPC inference
+  type TimeSwapClient = {
+    id: string;
+    name: string;
+    email?: string | null;
+    coach?: { name?: string };
+  };
+  const availableClients: TimeSwapClient[] =
+    (availableClientsData as TimeSwapClient[]) ?? [];
 
   const { data: targetEvents = [], isLoading: eventsLoading } =
     trpc.timeSwap.getClientEvents.useQuery(

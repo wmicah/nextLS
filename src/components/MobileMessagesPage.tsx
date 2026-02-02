@@ -21,7 +21,13 @@ import {
 } from "lucide-react";
 import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
-import { format, isSameDay, isToday, isYesterday, differenceInDays } from "date-fns";
+import {
+  format,
+  isSameDay,
+  isToday,
+  isYesterday,
+  differenceInDays,
+} from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import ProfilePictureUploader from "./ProfilePictureUploader";
 import RichMessageInput from "./RichMessageInput";
@@ -31,7 +37,9 @@ import { downloadVideoFromMessage } from "@/lib/download-utils";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 // Lazy load heavy modal
-const MassMessageModal = dynamic(() => import("./MassMessageModal"), { ssr: false });
+const MassMessageModal = dynamic(() => import("./MassMessageModal"), {
+  ssr: false,
+});
 
 interface MobileMessagesPageProps {
   // Add props here if needed in the future
@@ -105,7 +113,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   const formatMessageTime = (date: Date, showDate: boolean = false) => {
     const messageDate = new Date(date);
     const now = new Date();
-    
+
     if (showDate) {
       if (isToday(messageDate)) {
         return format(messageDate, "h:mm a 'Today'");
@@ -191,7 +199,8 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
       onError: error => {
         console.error("Failed to get or create conversation:", error);
         // Show user-friendly error message
-        const errorMessage = error.message || "Failed to open conversation. Please try again.";
+        const errorMessage =
+          error.message || "Failed to open conversation. Please try again.";
         // Use window.alert as fallback if toast system not available
         alert(errorMessage);
         // Remove clientId from URL to prevent retry loop
@@ -235,7 +244,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
     });
 
   // Get messages for selected conversation
-  const { data: messages = [], refetch: refetchMessages } =
+  const { data: messagesData = [], refetch: refetchMessages } =
     trpc.messaging.getMessages.useQuery(
       { conversationId: selectedConversation! },
       {
@@ -246,6 +255,14 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
         staleTime: 2 * 60 * 1000, // Cache for 2 minutes
       }
     );
+  // Typed list to avoid "type instantiation is excessively deep" from tRPC inference
+  type MessageItem = {
+    id: string;
+    content: string | null;
+    createdAt: Date | string;
+    sender: { id: string };
+  };
+  const messages: MessageItem[] = (messagesData as MessageItem[]) ?? [];
 
   // Optimized unread count with smart caching
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(
@@ -948,21 +965,24 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                 const showDateSeparator =
                   !previousMessageDate ||
                   !isSameDay(currentMessageDate, previousMessageDate);
-                
+
                 // Check if all messages are on the same day
-                const allMessagesSameDay = messages.length > 0 && 
-                  messages.every((msg: any) => 
+                const allMessagesSameDay =
+                  messages.length > 0 &&
+                  messages.every((msg: any) =>
                     isSameDay(new Date(msg.createdAt), currentMessageDate)
                   );
                 // Show date on first message timestamp if all messages are same day
-                const showDateOnFirstMessage = allMessagesSameDay && index === 0;
+                const showDateOnFirstMessage =
+                  allMessagesSameDay && index === 0;
                 // Show date separator at top if all messages are same day and this is first message
                 const showTopDateSeparator = allMessagesSameDay && index === 0;
 
                 return (
                   <div key={message.id} className="space-y-2">
                     {/* Date Separator - show at top if all messages same day, or between different days */}
-                    {(showTopDateSeparator || (showDateSeparator && !allMessagesSameDay)) && (
+                    {(showTopDateSeparator ||
+                      (showDateSeparator && !allMessagesSameDay)) && (
                       <div className="flex items-center justify-center py-2">
                         <div
                           className="px-3 py-1 rounded-full text-xs font-medium"
@@ -975,8 +995,11 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                           {isToday(currentMessageDate)
                             ? "Today"
                             : isYesterday(currentMessageDate)
-                            ? "Yesterday"
-                            : format(currentMessageDate, "EEEE, MMMM d, yyyy")}
+                              ? "Yesterday"
+                              : format(
+                                  currentMessageDate,
+                                  "EEEE, MMMM d, yyyy"
+                                )}
                         </div>
                       </div>
                     )}
@@ -1017,8 +1040,8 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
                           isCurrentUser
                             ? "rounded-br-md"
                             : isWorkoutNote && isFromClient
-                            ? "rounded-bl-md border"
-                            : "rounded-bl-md"
+                              ? "rounded-bl-md border"
+                              : "rounded-bl-md"
                         }`}
                         style={{
                           backgroundColor: isCurrentUser
