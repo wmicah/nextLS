@@ -176,7 +176,7 @@ const visibleItems = useMemo(() => {
 
 - `src/components/LibraryPageOptimized.tsx` - Optimized library component
 - `src/components/LibraryPerformanceMonitor.tsx` - Performance monitoring
-- Manual testing of library page load and search/filter performance
+- `scripts/test-library-performance.js` - Performance testing script
 - `LIBRARY_OPTIMIZATION_GUIDE.md` - Detailed optimization guide
 
 #### **Modified Files**
@@ -251,9 +251,11 @@ const CONTAINER_HEIGHT = 600; // Height of the scrollable container
 
 ## 🔧 **Testing & Validation**
 
-### **Validation**
+### **Performance Test Script**
 
-Run the app and verify library load, search, and filter performance in the browser.
+```bash
+node scripts/test-library-performance.js
+```
 
 ### **Expected Results**
 
@@ -343,7 +345,7 @@ Run the app and verify library load, search, and filter performance in the brows
 ## 📚 **Documentation**
 
 - **Optimization Guide**: `LIBRARY_OPTIMIZATION_GUIDE.md`
-- **Performance Testing**: Manual validation of library page
+- **Performance Testing**: `scripts/test-library-performance.js`
 - **Implementation Summary**: This document
 - **Code Comments**: Inline documentation in components
 

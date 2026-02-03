@@ -7,12 +7,12 @@ import { useRouter } from "next/navigation";
 
 /**
  * Subscription Enforcement Component
- * 
+ *
  * Blocks coaches who are at or over their client limit from using the service
  * until they either:
  * 1. Upgrade their subscription (preferred)
  * 2. Remove/archive clients to get below their limit
- * 
+ *
  * This component should be placed in the main layout or dashboard to enforce
  * subscription limits across the application.
  */
@@ -25,11 +25,14 @@ export default function SubscriptionEnforcement({
   const [showClientManagement, setShowClientManagement] = useState(false);
 
   // Get subscription restrictions for the current user
-  const { data: restrictions, isLoading, error } =
-    trpc.settings.getSubscriptionRestrictions.useQuery(undefined, {
-      retry: false,
-      refetchOnWindowFocus: true,
-    });
+  const {
+    data: restrictions,
+    isLoading,
+    error,
+  } = trpc.settings.getSubscriptionRestrictions.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: true,
+  });
 
   // If loading or error (e.g., not a coach), allow access
   if (isLoading) {
@@ -202,9 +205,10 @@ function ClientManagementModal({
   // Get current restrictions to check if we're below limit after archiving
   const { data: restrictions } =
     trpc.settings.getSubscriptionRestrictions.useQuery(undefined, {
-      refetchInterval: (query) => {
+      refetchInterval: query => {
         // Only poll while modal is open and we're still over limit
-        const count = query.state.data?.restrictions.currentClientCount ?? currentCount;
+        const count =
+          query.state.data?.restrictions.currentClientCount ?? currentCount;
         const max = query.state.data?.restrictions.maxClients ?? limit;
         return count >= max ? 2000 : false; // Poll every 2s if still over limit, stop if below
       },
@@ -272,11 +276,15 @@ function ClientManagementModal({
             <div className="space-y-3">
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>You need to remove {clientsToRemove} client{clientsToRemove === 1 ? "" : "s"}</strong> to get below your limit.
+                  <strong>
+                    You need to remove {clientsToRemove} client
+                    {clientsToRemove === 1 ? "" : "s"}
+                  </strong>{" "}
+                  to get below your limit.
                 </p>
               </div>
 
-              {clients.map((client) => (
+              {clients.map(client => (
                 <div
                   key={client.id}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -334,4 +342,3 @@ function ClientManagementModal({
     </div>
   );
 }
-

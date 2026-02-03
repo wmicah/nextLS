@@ -486,7 +486,12 @@ export default function Sidebar({ user, children }: SidebarProps) {
   // Debug: Log when sidebar data changes
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.log("📊 Sidebar unreadCount updated:", unreadCount, "from sidebarData:", sidebarData);
+      console.log(
+        "📊 Sidebar unreadCount updated:",
+        unreadCount,
+        "from sidebarData:",
+        sidebarData
+      );
     }
   }, [unreadCount, sidebarData]);
 
@@ -525,7 +530,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
       utils.messaging.getConversationUnreadCounts.invalidate();
       utils.sidebar.getSidebarData.invalidate(); // This updates the Sidebar badge!
       utils.sidebar.getRecentConversations.invalidate();
-      
+
       // Force immediate refetch
       utils.messaging.getConversationUnreadCounts.refetch();
       utils.messaging.getUnreadCount.refetch();
@@ -848,7 +853,7 @@ export default function Sidebar({ user, children }: SidebarProps) {
       {/* Mobile hamburger button - improved positioning and design */}
       <button
         onClick={toggleMobileSidebar}
-        className={`fixed top-4 left-4 ${showRecentMessages ? 'z-40' : 'z-50'} md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl bg-gradient-to-br from-[#4A5A70] to-[#353A3A] text-white border border-[#606364] backdrop-blur-sm`}
+        className={`fixed top-4 left-4 ${showRecentMessages ? "z-40" : "z-50"} md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl bg-gradient-to-br from-[#4A5A70] to-[#353A3A] text-white border border-[#606364] backdrop-blur-sm`}
         aria-label={isMobileOpen ? "Close sidebar" : "Open sidebar"}
         style={{
           boxShadow:
@@ -1210,8 +1215,8 @@ export default function Sidebar({ user, children }: SidebarProps) {
                     isAnimating && !showRecentMessages
                       ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
                       : isAnimating
-                      ? "animate-[slideInUp_0.3s_ease-out_forwards]"
-                      : "transform scale-100 opacity-100"
+                        ? "animate-[slideInUp_0.3s_ease-out_forwards]"
+                        : "transform scale-100 opacity-100"
                   }`}
                   style={{
                     backgroundColor: COLORS.BACKGROUND_DARK,
@@ -1594,7 +1599,9 @@ export default function Sidebar({ user, children }: SidebarProps) {
                                         conversation.id
                                       );
                                       // Mark messages as read when conversation is opened
-                                      markAsReadMutation.mutate({ conversationId: conversation.id });
+                                      markAsReadMutation.mutate({
+                                        conversationId: conversation.id,
+                                      });
                                     }}
                                     type="button"
                                     className="flex items-center gap-3 px-4 py-3 border-b transition-all duration-200 relative animate-[messageSlideIn_0.3s_ease-out] w-full text-left"

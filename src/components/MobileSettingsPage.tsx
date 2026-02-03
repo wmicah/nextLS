@@ -283,7 +283,7 @@ export default function MobileSettingsPage() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Mobile Header */}
-      <div 
+      <div
         className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 px-4 pb-4"
         style={{ paddingTop: `calc(1rem + env(safe-area-inset-top))` }}
       >
@@ -531,9 +531,8 @@ export default function MobileSettingsPage() {
                   <span className="text-white font-medium">{label}</span>
                   <button
                     onClick={async () => {
-                      const newValue = !notificationData[
-                        key as keyof typeof notificationData
-                      ];
+                      const newValue =
+                        !notificationData[key as keyof typeof notificationData];
 
                       // Special handling for push notifications
                       if (key === "pushNotifications" && newValue) {

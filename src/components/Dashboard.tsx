@@ -41,8 +41,15 @@ const WeekAtAGlance = dynamic(() => import("@/components/WeekAtAGlance"), {
   ssr: false, // Disable SSR for this heavy component
 });
 
-export default function Dashboard() {
+interface DashboardProps {
+  noSidebar?: boolean;
+}
+
+export default function Dashboard({ noSidebar = false }: DashboardProps) {
   const router = useRouter();
+
+  const wrap = (content: React.ReactNode) =>
+    noSidebar ? content : <Sidebar>{content}</Sidebar>;
 
   // Get user profile to check role - with aggressive caching since roles don't change
   // Roles only change if account is deleted or manually changed by admin
@@ -64,159 +71,150 @@ export default function Dashboard() {
 
   // Show loading state while fetching user profile - use skeleton instead of blocking
   if (profileLoading) {
-    return (
-      <Sidebar>
-        <div
-          className="min-h-screen bg-[#15191a] p-6"
-          style={{ minHeight: "600px" }}
-        >
-          <div style={{ minHeight: "400px" }}>
-            <SkeletonStats />
-          </div>
+    return wrap(
+      <div
+        className="min-h-screen bg-[#15191a] p-6"
+        style={{ minHeight: "600px" }}
+      >
+        <div style={{ minHeight: "400px" }}>
+          <SkeletonStats />
         </div>
-      </Sidebar>
+      </div>
     );
   }
 
   // If user is not a coach, show minimal content while redirect happens
-  // (returning null could prevent useEffect from running properly)
   if (userProfile?.role === "CLIENT") {
-    return (
-      <Sidebar>
-        <div className="min-h-screen bg-[#15191a]" />
-      </Sidebar>
-    );
+    return wrap(<div className="min-h-screen bg-[#15191a]" />);
   }
 
-  return (
-    <Sidebar>
-      <div className="min-h-screen bg-[#15191a] p-6">
-        {/* Defer push notification prompt - not critical for initial render */}
-        <Suspense fallback={null}>
-          <PushNotificationPrompt />
-        </Suspense>
+  return wrap(
+    <div className="min-h-screen bg-[#15191a] p-6">
+      {/* Defer push notification prompt - not critical for initial render */}
+      <Suspense fallback={null}>
+        <PushNotificationPrompt />
+      </Suspense>
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold mb-2 text-white">
-            Welcome back
-            {userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
-          </h1>
-          <p className="text-sm text-zinc-400">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        </div>
-
-        {/* TOP ROW: Week at a Glance + Today's Schedule */}
-        <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
-          <Suspense
-            fallback={
-              <div
-                className="rounded-lg border border-white/10 bg-white/[0.02] p-5"
-                style={{ minHeight: "280px" }}
-              >
-                <div className="animate-pulse">
-                  <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {Array.from({ length: 7 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-24 bg-white/10 rounded"
-                        style={{ minHeight: "96px" }}
-                      ></div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <WeekAtAGlanceCompact />
-          </Suspense>
-          <Suspense
-            fallback={
-              <div
-                className="rounded-lg border border-white/10 bg-white/[0.02] p-4"
-                style={{ minHeight: "200px" }}
-              >
-                <div className="animate-pulse">
-                  <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
-                  <div className="space-y-2">
-                    <div
-                      className="h-3 w-full bg-white/10 rounded"
-                      style={{ minHeight: "12px" }}
-                    ></div>
-                    <div
-                      className="h-3 w-3/4 bg-white/10 rounded"
-                      style={{ minHeight: "12px" }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <TodaysSchedulePanel />
-          </Suspense>
-        </div>
-
-        {/* MIDDLE ROW: Needs Attention + Recent Activity */}
-        <div className="grid grid-cols-[60%_40%] gap-4 mb-6">
-          <Suspense
-            fallback={
-              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-                <div className="animate-pulse">
-                  <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
-                  <div className="space-y-3">
-                    <div className="h-16 w-full bg-white/10 rounded"></div>
-                    <div className="h-16 w-full bg-white/10 rounded"></div>
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <NeedsAttentionPanel />
-          </Suspense>
-          <Suspense
-            fallback={
-              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-                <div className="animate-pulse">
-                  <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
-                  <div className="space-y-3">
-                    <div className="h-12 w-full bg-white/10 rounded"></div>
-                    <div className="h-12 w-full bg-white/10 rounded"></div>
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <ClientActivityFeed />
-          </Suspense>
-        </div>
-
-        {/* BOTTOM ROW: Quick Stats */}
-        <div className="mb-6">
-          <Suspense
-            fallback={
-              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
-                <div className="animate-pulse">
-                  <div className="h-5 w-32 bg-white/10 rounded mb-4"></div>
-                  <div className="grid grid-cols-4 gap-3">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="h-20 bg-white/10 rounded"></div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <QuickStatsPanel />
-          </Suspense>
-        </div>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold mb-2 text-white">
+          Welcome back
+          {userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
+        </h1>
+        <p className="text-sm text-zinc-400">
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
+        </p>
       </div>
-    </Sidebar>
+
+      {/* TOP ROW: Week at a Glance + Today's Schedule */}
+      <div className="grid grid-cols-[70%_30%] gap-4 mb-6">
+        <Suspense
+          fallback={
+            <div
+              className="rounded-lg border border-white/10 bg-white/[0.02] p-5"
+              style={{ minHeight: "280px" }}
+            >
+              <div className="animate-pulse">
+                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                <div className="grid grid-cols-7 gap-2">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-24 bg-white/10 rounded"
+                      style={{ minHeight: "96px" }}
+                    ></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <WeekAtAGlanceCompact />
+        </Suspense>
+        <Suspense
+          fallback={
+            <div
+              className="rounded-lg border border-white/10 bg-white/[0.02] p-4"
+              style={{ minHeight: "200px" }}
+            >
+              <div className="animate-pulse">
+                <div className="h-4 w-32 bg-white/10 rounded mb-4"></div>
+                <div className="space-y-2">
+                  <div
+                    className="h-3 w-full bg-white/10 rounded"
+                    style={{ minHeight: "12px" }}
+                  ></div>
+                  <div
+                    className="h-3 w-3/4 bg-white/10 rounded"
+                    style={{ minHeight: "12px" }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <TodaysSchedulePanel />
+        </Suspense>
+      </div>
+
+      {/* MIDDLE ROW: Needs Attention + Recent Activity */}
+      <div className="grid grid-cols-[60%_40%] gap-4 mb-6">
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+              <div className="animate-pulse">
+                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-16 w-full bg-white/10 rounded"></div>
+                  <div className="h-16 w-full bg-white/10 rounded"></div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <NeedsAttentionPanel />
+        </Suspense>
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+              <div className="animate-pulse">
+                <div className="h-5 w-40 bg-white/10 rounded mb-4"></div>
+                <div className="space-y-3">
+                  <div className="h-12 w-full bg-white/10 rounded"></div>
+                  <div className="h-12 w-full bg-white/10 rounded"></div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <ClientActivityFeed />
+        </Suspense>
+      </div>
+
+      {/* BOTTOM ROW: Quick Stats */}
+      <div className="mb-6">
+        <Suspense
+          fallback={
+            <div className="rounded-lg border border-white/10 bg-white/[0.02] p-6">
+              <div className="animate-pulse">
+                <div className="h-5 w-32 bg-white/10 rounded mb-4"></div>
+                <div className="grid grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="h-20 bg-white/10 rounded"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <QuickStatsPanel />
+        </Suspense>
+      </div>
+    </div>
   );
 }
 

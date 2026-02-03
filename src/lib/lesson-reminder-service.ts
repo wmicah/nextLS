@@ -5,11 +5,7 @@ import { format } from "date-fns";
 import { randomBytes } from "crypto";
 import { CompleteEmailService } from "./complete-email-service";
 import dailyDigestService from "./daily-digest-service";
-import {
-  getUserTimezoneFromDB,
-  formatTimeInTimezone,
-  formatDateInTimezone,
-} from "./timezone-utils";
+import { getUserTimezoneFromDB, formatTimeInTimezone, formatDateInTimezone } from "./timezone-utils";
 
 // In-memory tracking to prevent duplicate reminders
 const sentReminders = new Set<string>();
@@ -37,22 +33,17 @@ class LessonReminderService {
     this.checkAndSendReminders();
 
     // Then run every hour
-    this.intervalId = setInterval(
-      () => {
-        this.checkAndSendReminders();
-      },
-      60 * 60 * 1000
-    ); // Every hour (60 minutes * 60 seconds * 1000 milliseconds)
+    this.intervalId = setInterval(() => {
+      this.checkAndSendReminders();
+    }, 60 * 60 * 1000); // Every hour (60 minutes * 60 seconds * 1000 milliseconds)
 
     // Also run every 15 minutes as a backup for production reliability
-    setInterval(
-      () => {
-        if (this.isRunning) {
-          this.checkAndSendReminders();
-        }
-      },
-      15 * 60 * 1000
-    ); // Every 15 minutes
+    setInterval(() => {
+      if (this.isRunning) {
+        this.checkAndSendReminders();
+      }
+    }, 15 * 60 * 1000); // Every 15 minutes
+
   }
 
   /**
@@ -75,10 +66,12 @@ class LessonReminderService {
       this.lastCheckTime = now;
       this.checkCount++;
 
+
       // Find lessons for day after tomorrow (48-hour confirmations only)
       const dayAfterTomorrow = addDays(now, 2);
       const dayAfterTomorrowStart = startOfDay(dayAfterTomorrow);
       const dayAfterTomorrowEnd = endOfDay(dayAfterTomorrow);
+
 
       // Get lessons for 48-hour confirmations only
       const lessonsToRemind = await db.event.findMany({
@@ -121,6 +114,7 @@ class LessonReminderService {
           },
         },
       });
+
 
       let sentCount = 0;
       let skippedCount = 0;
@@ -216,20 +210,10 @@ class LessonReminderService {
 
           // Format the lesson time using client's timezone from settings
           // lesson.date is stored in UTC, so we format it in the client's timezone
-          const clientTimezone = await getUserTimezoneFromDB(
-            lesson.client.user.id
-          );
-
-          const lessonTime = formatTimeInTimezone(
-            lesson.date,
-            clientTimezone,
-            "h:mm a"
-          );
-          const lessonDate = formatDateInTimezone(
-            lesson.date,
-            clientTimezone,
-            "EEEE, MMMM d"
-          );
+          const clientTimezone = await getUserTimezoneFromDB(lesson.client.user.id);
+          
+          const lessonTime = formatTimeInTimezone(lesson.date, clientTimezone, "h:mm a");
+          const lessonDate = formatDateInTimezone(lesson.date, clientTimezone, "EEEE, MMMM d");
 
           // 48-hour confirmation reminder
           const confirmationToken = randomBytes(32).toString("hex");
@@ -273,6 +257,7 @@ If you can't make it, please let me know as soon as possible so I can offer the 
               confirmationDeadline,
             },
           });
+
 
           // Send email notification for 48-hour confirmation reminder
           if (lesson.client?.user?.email && lesson.client?.user?.id) {
@@ -321,8 +306,9 @@ If you can't make it, please let me know as soon as possible so I can offer the 
           if (lesson.client?.user?.id) {
             try {
               // Send push notification for lesson reminder
-              const { sendLessonReminderNotification } =
-                await import("@/lib/pushNotificationService");
+              const { sendLessonReminderNotification } = await import(
+                "@/lib/pushNotificationService"
+              );
               await sendLessonReminderNotification(
                 lesson.client.user.id,
                 lesson.date,
@@ -361,6 +347,7 @@ If you can't make it, please let me know as soon as possible so I can offer the 
           sentReminders.add(reminderKey);
 
           sentCount++;
+
         } catch (error) {
           console.error(
             `❌ Error sending reminder for lesson ${lesson.id}:`,
@@ -369,6 +356,7 @@ If you can't make it, please let me know as soon as possible so I can offer the 
           errorCount++;
         }
       }
+
 
       // Also process expired confirmations
       await this.processExpiredConfirmations();
@@ -445,6 +433,7 @@ If you can't make it, please let me know as soon as possible so I can offer the 
         },
       });
 
+
       for (const lesson of expiredLessons) {
         try {
           // Cancel the lesson
@@ -487,9 +476,7 @@ If you can't make it, please let me know as soon as possible so I can offer the 
             }
 
             // Format the lesson date/time in the client's timezone
-            const clientTimezone = await getUserTimezoneFromDB(
-              lesson.client.user.id
-            );
+            const clientTimezone = await getUserTimezoneFromDB(lesson.client.user.id);
             const cancelledLessonDate = formatDateInTimezone(
               lesson.date,
               clientTimezone,
@@ -529,6 +516,7 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
               data: { updatedAt: new Date() },
             });
 
+
             // Send email notification for the cancellation message (in addition to the auto-cancellation email)
             // This ensures users get notified about the message in their inbox
             if (lesson.client?.user?.email && lesson.client?.user?.id) {
@@ -564,7 +552,7 @@ If you'd like to reschedule, please let me know and I'll help you find a new tim
                   clientTimezone,
                   "EEEE, MMMM d 'at' h:mm a"
                 );
-
+                
                 await emailService.sendLessonAutoCancelled(
                   lesson.client.user.email,
                   lesson.client.name || "Client",

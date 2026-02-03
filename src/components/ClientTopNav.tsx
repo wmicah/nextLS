@@ -88,9 +88,9 @@ function ClientTopNav({ children }: ClientTopNavProps) {
   };
 
   return (
-    <div 
-      className="flex flex-col" 
-      style={{ 
+    <div
+      className="flex flex-col"
+      style={{
         backgroundColor: COLORS.BACKGROUND_DARK,
         height: "100vh",
         maxHeight: "100vh",
@@ -116,15 +116,15 @@ function ClientTopNav({ children }: ClientTopNavProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo/Brand */}
             <div className="flex items-baseline gap-2">
-              <h1 
+              <h1
                 className="text-xl font-bold"
-                style={{ 
+                style={{
                   color: COLORS.GOLDEN_ACCENT,
                 }}
               >
                 NextLevel
               </h1>
-              <span 
+              <span
                 className="text-xs font-normal"
                 style={{
                   color: COLORS.TEXT_MUTED,
@@ -142,16 +142,17 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 <button
                   onClick={handleDashboard}
                   className="p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
-                  style={{ 
-                    minWidth: "40px", 
+                  style={{
+                    minWidth: "40px",
                     minHeight: "40px",
                     color: COLORS.TEXT_SECONDARY,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.color = COLORS.GREEN_PRIMARY;
-                    e.currentTarget.style.backgroundColor = "rgba(109, 196, 109, 0.1)";
+                    e.currentTarget.style.backgroundColor =
+                      "rgba(109, 196, 109, 0.1)";
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
@@ -164,16 +165,17 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 <button
                   onClick={handleSchedule}
                   className="p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
-                  style={{ 
-                    minWidth: "40px", 
+                  style={{
+                    minWidth: "40px",
                     minHeight: "40px",
                     color: COLORS.TEXT_SECONDARY,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.color = COLORS.BLUE_PRIMARY;
-                    e.currentTarget.style.backgroundColor = "rgba(74, 144, 226, 0.1)";
+                    e.currentTarget.style.backgroundColor =
+                      "rgba(74, 144, 226, 0.1)";
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
@@ -187,16 +189,17 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   ref={messagesButtonRef}
                   onClick={handleMessages}
                   className="relative p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
-                  style={{ 
-                    minWidth: "40px", 
+                  style={{
+                    minWidth: "40px",
                     minHeight: "40px",
                     color: COLORS.TEXT_SECONDARY,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.color = COLORS.BLUE_PRIMARY;
-                    e.currentTarget.style.backgroundColor = "rgba(74, 144, 226, 0.1)";
+                    e.currentTarget.style.backgroundColor =
+                      "rgba(74, 144, 226, 0.1)";
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
@@ -204,7 +207,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 >
                   <MessageSquare className="h-5 w-5" />
                   {unreadMessages > 0 && (
-                    <Badge 
+                    <Badge
                       className="absolute -top-0.5 -right-0.5 h-4 w-4 flex items-center justify-center p-0 text-[10px] font-bold"
                       style={{ backgroundColor: COLORS.RED_ALERT }}
                     >
@@ -218,16 +221,17 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   ref={notificationsButtonRef}
                   onClick={handleNotifications}
                   className="relative p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
-                  style={{ 
-                    minWidth: "40px", 
+                  style={{
+                    minWidth: "40px",
                     minHeight: "40px",
                     color: COLORS.TEXT_SECONDARY,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                    e.currentTarget.style.backgroundColor = "rgba(229, 178, 50, 0.1)";
+                    e.currentTarget.style.backgroundColor =
+                      "rgba(229, 178, 50, 0.1)";
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
@@ -235,7 +239,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 >
                   <Bell className="h-5 w-5" />
                   {unreadNotifications > 0 && (
-                    <Badge 
+                    <Badge
                       className="absolute -top-0.5 -right-0.5 h-4 w-4 flex items-center justify-center p-0 text-[10px] font-bold"
                       style={{ backgroundColor: COLORS.RED_ALERT }}
                     >
@@ -248,16 +252,17 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 <button
                   onClick={handleSettings}
                   className="p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
-                  style={{ 
-                    minWidth: "40px", 
+                  style={{
+                    minWidth: "40px",
                     minHeight: "40px",
                     color: COLORS.TEXT_SECONDARY,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
@@ -267,7 +272,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 </button>
 
                 {/* Divider */}
-                <div 
+                <div
                   className="h-8 w-px mx-1"
                   style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
@@ -275,13 +280,14 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 {/* User Menu */}
                 <button
                   className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 touch-manipulation"
-                  style={{ 
+                  style={{
                     color: COLORS.TEXT_PRIMARY,
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
@@ -307,16 +313,17 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                 <button
                   onClick={handleLogout}
                   className="p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
-                  style={{ 
-                    minWidth: "40px", 
+                  style={{
+                    minWidth: "40px",
                     minHeight: "40px",
                     color: COLORS.TEXT_SECONDARY,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.color = COLORS.RED_ALERT;
-                    e.currentTarget.style.backgroundColor = "rgba(217, 83, 79, 0.1)";
+                    e.currentTarget.style.backgroundColor =
+                      "rgba(217, 83, 79, 0.1)";
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
@@ -336,11 +343,13 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                 }}
               >
                 {isMobileMenuOpen ? (
@@ -358,7 +367,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
           <div className="lg:hidden">
             <div
               className="px-2 pt-2 pb-3 space-y-1 border-t"
-              style={{ 
+              style={{
                 borderColor: COLORS.BORDER_SUBTLE,
                 backgroundColor: "#1F2426",
               }}
@@ -370,16 +379,18 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   setIsMobileMenuOpen(false);
                 }}
                 className="flex items-center space-x-3 w-full px-3 py-3 rounded-xl transition-all duration-200 touch-manipulation"
-                style={{ 
+                style={{
                   minHeight: "44px",
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                 }}
               >
                 <Home className="h-5 w-5" />
@@ -397,17 +408,19 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                 }}
               >
                 <MessageSquare className="h-5 w-5" />
                 <span>Messages</span>
                 {unreadMessages > 0 && (
-                  <Badge 
+                  <Badge
                     className="text-white text-xs animate-pulse ml-auto"
                     style={{ backgroundColor: COLORS.RED_ALERT }}
                   >
@@ -427,17 +440,19 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                 }}
               >
                 <Bell className="h-5 w-5" />
                 <span>Notifications</span>
                 {unreadNotifications > 0 && (
-                  <Badge 
+                  <Badge
                     className="text-white text-xs animate-pulse ml-auto"
                     style={{ backgroundColor: COLORS.RED_ALERT }}
                   >
@@ -457,11 +472,13 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                 }}
               >
                 <Settings className="h-5 w-5" />
@@ -469,7 +486,7 @@ function ClientTopNav({ children }: ClientTopNavProps) {
               </button>
 
               {/* User Info */}
-              <div 
+              <div
                 className="flex items-center space-x-3 w-full px-3 py-2 rounded-xl"
                 style={{
                   backgroundColor: COLORS.BACKGROUND_CARD,
@@ -505,11 +522,12 @@ function ClientTopNav({ children }: ClientTopNavProps) {
                   backgroundColor: COLORS.BACKGROUND_CARD,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                 }}
               >
                 <LogOut className="h-5 w-5" />
@@ -521,9 +539,9 @@ function ClientTopNav({ children }: ClientTopNavProps) {
       </nav>
 
       {/* Main Content - Scrollable area */}
-      <main 
-        className="flex-1 w-full" 
-        style={{ 
+      <main
+        className="flex-1 w-full"
+        style={{
           minHeight: 0,
           overflowY: "auto",
           overflowX: "hidden",

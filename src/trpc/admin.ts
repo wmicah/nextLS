@@ -54,7 +54,6 @@ export const adminRouter = {
         throw new TRPCError({ code: "UNAUTHORIZED" });
       }
 
-
       // Get user from database to check role and admin status
       const dbUser = await db.user.findUnique({
         where: { id: user.id },
@@ -117,7 +116,6 @@ export const adminRouter = {
 
       const totalPages = Math.ceil(totalCount / input.limit);
 
-
       return {
         items: resources,
         pagination: {
@@ -176,24 +174,37 @@ export const adminRouter = {
     // Check if user is admin
     await requireAdmin(user.id);
 
-    const [totalResources, masterLibraryCount, activeUsers, totalViews] =
-      await Promise.all([
-        db.libraryResource.count(),
-        db.libraryResource.count({
-          where: { isMasterLibrary: true, isActive: true },
-        }),
-        db.user.count({
-          where: { role: { in: ["COACH", "CLIENT"] } },
-        }),
-        db.libraryResource.aggregate({
-          _sum: { views: true },
-        }),
-      ]);
+    const [
+      totalResources,
+      masterLibraryCount,
+      totalUsers,
+      coachCount,
+      clientCount,
+      noRoleCount,
+      adminCount,
+      totalViews,
+    ] = await Promise.all([
+      db.libraryResource.count(),
+      db.libraryResource.count({
+        where: { isMasterLibrary: true, isActive: true },
+      }),
+      db.user.count(),
+      db.user.count({ where: { role: "COACH" } }),
+      db.user.count({ where: { role: "CLIENT" } }),
+      db.user.count({ where: { role: null } }),
+      db.user.count({ where: { isAdmin: true } }),
+      db.libraryResource.aggregate({ _sum: { views: true } }),
+    ]);
 
     return {
       totalResources,
       masterLibraryCount,
-      activeUsers,
+      totalUsers,
+      coachCount,
+      clientCount,
+      noRoleCount,
+      adminCount,
+      activeUsers: totalUsers,
       totalViews: totalViews._sum.views || 0,
     };
   }),
@@ -471,6 +482,7 @@ export const adminRouter = {
         email: true,
         name: true,
         role: true,
+        isAdmin: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -602,7 +614,7 @@ export const adminRouter = {
   }),
 
   // ============ MASTER LIBRARY PROGRAMS MANAGEMENT ============
-  
+
   // Get admin coaches for filtering
   getAdminCoaches: publicProcedure.query(async () => {
     const { getUser } = getKindeServerSession();
@@ -641,101 +653,110 @@ export const adminRouter = {
       })
     )
     .query(async ({ input }) => {
-    try {
-      const { getUser } = getKindeServerSession();
-      const user = await getUser();
+      try {
+        const { getUser } = getKindeServerSession();
+        const user = await getUser();
 
-      if (!user?.id) {
-        throw new TRPCError({ code: "UNAUTHORIZED" });
-      }
+        if (!user?.id) {
+          throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
 
-      // Check if user is admin
-      await requireAdmin(user.id, "get_all_programs_for_admin");
+        // Check if user is admin
+        await requireAdmin(user.id, "get_all_programs_for_admin");
 
-      // Get all programs created by admins only
-      // Exclude temporary programs (those with [TEMP] in the title)
-      const whereClause: any = {
-        // Only programs created by admins
-        coach: {
-          isAdmin: true,
-        },
+        // Get all programs created by admins only
         // Exclude temporary programs (those with [TEMP] in the title)
-        title: {
-          not: {
-            startsWith: "[TEMP]",
-          },
-        },
-      };
-
-      // Add search filter
-      if (input.search) {
-        whereClause.AND = [
-          ...(whereClause.AND || []),
-          {
-            OR: [
-              { title: { contains: input.search, mode: "insensitive" } },
-              { description: { contains: input.search, mode: "insensitive" } },
-              { level: { contains: input.search, mode: "insensitive" } },
-              { sport: { contains: input.search, mode: "insensitive" } },
-            ],
-          },
-        ];
-      }
-
-      // Add coach filter
-      if (input.coachId) {
-        whereClause.coachId = input.coachId;
-      }
-
-      // Get all programs created by admins (show all, let mutation validate when adding)
-      const allAdminPrograms = await db.program.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          level: true,
-          sport: true,
-          duration: true,
-          status: true,
-          isMasterLibrary: true,
-          createdAt: true,
+        const whereClause: any = {
+          // Only programs created by admins
           coach: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              isAdmin: true,
+            isAdmin: true,
+          },
+          // Exclude temporary programs (those with [TEMP] in the title)
+          title: {
+            not: {
+              startsWith: "[TEMP]",
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+        };
 
-      return allAdminPrograms;
-    } catch (error) {
-      // Log error but don't spam the console
-      if (error instanceof TRPCError) {
-        throw error;
-      }
-      
-      // Handle database connection errors gracefully
-      if (error instanceof Error && error.message.includes("Can't reach database")) {
-        console.error("Database connection error in getAllProgramsForAdmin:", error.message);
+        // Add search filter
+        if (input.search) {
+          whereClause.AND = [
+            ...(whereClause.AND || []),
+            {
+              OR: [
+                { title: { contains: input.search, mode: "insensitive" } },
+                {
+                  description: { contains: input.search, mode: "insensitive" },
+                },
+                { level: { contains: input.search, mode: "insensitive" } },
+                { sport: { contains: input.search, mode: "insensitive" } },
+              ],
+            },
+          ];
+        }
+
+        // Add coach filter
+        if (input.coachId) {
+          whereClause.coachId = input.coachId;
+        }
+
+        // Get all programs created by admins (show all, let mutation validate when adding)
+        const allAdminPrograms = await db.program.findMany({
+          where: whereClause,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            level: true,
+            sport: true,
+            duration: true,
+            status: true,
+            isMasterLibrary: true,
+            createdAt: true,
+            coach: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                isAdmin: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+        return allAdminPrograms;
+      } catch (error) {
+        // Log error but don't spam the console
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        // Handle database connection errors gracefully
+        if (
+          error instanceof Error &&
+          error.message.includes("Can't reach database")
+        ) {
+          console.error(
+            "Database connection error in getAllProgramsForAdmin:",
+            error.message
+          );
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Database connection temporarily unavailable. Please try again in a moment.",
+          });
+        }
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Database connection temporarily unavailable. Please try again in a moment.",
+          message: "Failed to fetch programs",
         });
       }
-      
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to fetch programs",
-      });
-    }
-  }),
+    }),
 
   // Get master library programs for admin
   getMasterLibraryProgramsForAdmin: publicProcedure
@@ -802,42 +823,42 @@ export const adminRouter = {
       // Get all master library programs (exclude temp programs)
       const programs = await db.program.findMany({
         where: whereClause,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        level: true,
-        sport: true,
-        duration: true,
-        status: true,
-        createdAt: true,
-        coachId: true,
-        supersededByProgramId: true,
-        coach: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            isAdmin: true,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          level: true,
+          sport: true,
+          duration: true,
+          status: true,
+          createdAt: true,
+          coachId: true,
+          supersededByProgramId: true,
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              isAdmin: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
 
-    // Log admin action
-    await logAdminAction(
-      "viewed_master_library_programs_admin",
-      {
-        programCount: programs.length,
-      },
-      user.id
-    );
+      // Log admin action
+      await logAdminAction(
+        "viewed_master_library_programs_admin",
+        {
+          programCount: programs.length,
+        },
+        user.id
+      );
 
-    return programs;
-  }),
+      return programs;
+    }),
 
   // Add program to master library
   addProgramToMasterLibrary: publicProcedure
@@ -889,14 +910,17 @@ export const adminRouter = {
       if (!program.coach.isAdmin) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Only programs created by admins can be added to master library",
+          message:
+            "Only programs created by admins can be added to master library",
         });
       }
 
       // Get all videoIds from all drills
-      const videoIds = program.weeks.flatMap((week) =>
-        week.days.flatMap((day) =>
-          day.drills.map((drill) => drill.videoId).filter((id): id is string => !!id)
+      const videoIds = program.weeks.flatMap(week =>
+        week.days.flatMap(day =>
+          day.drills
+            .map(drill => drill.videoId)
+            .filter((id): id is string => !!id)
         )
       );
 
@@ -912,7 +936,8 @@ export const adminRouter = {
         if (masterLibraryVideoCount !== videoIds.length) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Program must only use master library videos to be added to master library",
+            message:
+              "Program must only use master library videos to be added to master library",
           });
         }
       }
@@ -998,7 +1023,7 @@ export const adminRouter = {
     }),
 
   // ============ MASTER LIBRARY ROUTINES MANAGEMENT ============
-  
+
   // Get all routines for admin to select which ones to add to master library
   getAllRoutinesForAdmin: publicProcedure
     .input(
@@ -1047,72 +1072,72 @@ export const adminRouter = {
       // Only include routines that use master library videos exclusively
       const allAdminRoutines = await db.routine.findMany({
         where: whereClause,
-      include: {
-        coach: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            isAdmin: true,
+        include: {
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              isAdmin: true,
+            },
+          },
+          exercises: {
+            select: {
+              id: true,
+              videoId: true,
+            },
           },
         },
-        exercises: {
-          select: {
-            id: true,
-            videoId: true,
-          },
+        orderBy: {
+          createdAt: "desc",
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+      });
 
-    // Filter to only include routines that use master library videos exclusively
-    const routinesWithMasterLibraryVideos = await Promise.all(
-      allAdminRoutines.map(async (routine) => {
-        // Get all videoIds from all exercises in this routine
-        const videoIds = routine.exercises
-          .map((ex) => ex.videoId)
-          .filter((id): id is string => !!id);
+      // Filter to only include routines that use master library videos exclusively
+      const routinesWithMasterLibraryVideos = await Promise.all(
+        allAdminRoutines.map(async routine => {
+          // Get all videoIds from all exercises in this routine
+          const videoIds = routine.exercises
+            .map(ex => ex.videoId)
+            .filter((id): id is string => !!id);
 
-        // If routine has no videos, skip it (can't be added to master library)
-        if (videoIds.length === 0) {
-          return null;
-        }
+          // If routine has no videos, skip it (can't be added to master library)
+          if (videoIds.length === 0) {
+            return null;
+          }
 
-        // Check if all videos are from master library
-        const masterLibraryVideoCount = await db.libraryResource.count({
-          where: {
-            id: { in: videoIds },
-            isMasterLibrary: true,
-          },
-        });
+          // Check if all videos are from master library
+          const masterLibraryVideoCount = await db.libraryResource.count({
+            where: {
+              id: { in: videoIds },
+              isMasterLibrary: true,
+            },
+          });
 
-        // Only include if ALL videos are from master library
-        if (masterLibraryVideoCount !== videoIds.length) {
-          return null;
-        }
+          // Only include if ALL videos are from master library
+          if (masterLibraryVideoCount !== videoIds.length) {
+            return null;
+          }
 
-        // Return routine with minimal data for display
-        return {
-          id: routine.id,
-          name: routine.name,
-          description: routine.description,
-          isMasterLibrary: routine.isMasterLibrary,
-          createdAt: routine.createdAt,
-          coach: routine.coach,
-        };
-      })
-    );
+          // Return routine with minimal data for display
+          return {
+            id: routine.id,
+            name: routine.name,
+            description: routine.description,
+            isMasterLibrary: routine.isMasterLibrary,
+            createdAt: routine.createdAt,
+            coach: routine.coach,
+          };
+        })
+      );
 
-    // Filter out nulls
-    const validRoutines = routinesWithMasterLibraryVideos.filter(
-      (r): r is NonNullable<typeof r> => r !== null
-    );
+      // Filter out nulls
+      const validRoutines = routinesWithMasterLibraryVideos.filter(
+        (r): r is NonNullable<typeof r> => r !== null
+      );
 
-    return validRoutines;
-  }),
+      return validRoutines;
+    }),
 
   // Get master library routines for admin
   getMasterLibraryRoutinesForAdmin: publicProcedure
@@ -1167,36 +1192,36 @@ export const adminRouter = {
       // Get all master library routines
       const routines = await db.routine.findMany({
         where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        createdAt: true,
-        coachId: true,
-        coach: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          createdAt: true,
+          coachId: true,
+          coach: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
 
-    // Log admin action
-    await logAdminAction(
-      "viewed_master_library_routines_admin",
-      {
-        routineCount: routines.length,
-      },
-      user.id
-    );
+      // Log admin action
+      await logAdminAction(
+        "viewed_master_library_routines_admin",
+        {
+          routineCount: routines.length,
+        },
+        user.id
+      );
 
-    return routines;
-  }),
+      return routines;
+    }),
 
   // Add routine to master library
   addRoutineToMasterLibrary: publicProcedure
@@ -1240,13 +1265,14 @@ export const adminRouter = {
       if (!routine.coach.isAdmin) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Only routines created by admins can be added to master library",
+          message:
+            "Only routines created by admins can be added to master library",
         });
       }
 
       // Get all videoIds from all exercises
       const videoIds = routine.exercises
-        .map((ex) => ex.videoId)
+        .map(ex => ex.videoId)
         .filter((id): id is string => !!id);
 
       // If routine has videos, verify they're all from master library
@@ -1261,7 +1287,8 @@ export const adminRouter = {
         if (masterLibraryVideoCount !== videoIds.length) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Routine must only use master library videos to be added to master library",
+            message:
+              "Routine must only use master library videos to be added to master library",
           });
         }
       }

@@ -15,8 +15,8 @@ const isPgBouncer = connectionUrl.includes("pgbouncer=true");
 const enhancedConnectionUrl = isPgBouncer
   ? connectionUrl // Use as-is for pgbouncer (Vercel)
   : connectionUrl.includes("?")
-  ? connectionUrl
-  : `${connectionUrl}?connection_limit=20&pool_timeout=30&connect_timeout=15`;
+    ? connectionUrl
+    : `${connectionUrl}?connection_limit=20&pool_timeout=30&connect_timeout=15`;
 
 if (process.env.NODE_ENV === "production") {
   prisma = new PrismaClient({

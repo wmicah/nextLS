@@ -16,7 +16,6 @@ import {
   X,
   Users,
 } from "lucide-react";
-import Sidebar from "./Sidebar";
 import {
   format,
   isSameDay,
@@ -557,853 +556,828 @@ function MessagesPage({}: MessagesPageProps) {
   });
 
   return (
-    <Sidebar>
+    <div
+      className="h-screen flex flex-col overflow-hidden"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
+      {/* Simple Header */}
       <div
-        className="h-screen flex flex-col overflow-hidden"
-        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+        className="px-3 py-0 border-b flex-shrink-0"
+        style={{ borderColor: COLORS.BORDER_SUBTLE }}
       >
-        {/* Simple Header */}
-        <div
-          className="px-3 py-0 border-b flex-shrink-0"
-          style={{ borderColor: COLORS.BORDER_SUBTLE }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h1
-                className="text-lg font-bold"
-                style={{ color: COLORS.TEXT_PRIMARY }}
-              >
-                Messages
-              </h1>
-              <div
-                className="flex items-center gap-2 text-xs"
-                style={{ color: COLORS.TEXT_MUTED }}
-              >
-                <span>
-                  {conversations.length > 0
-                    ? `${conversations.length} ${
-                        conversations.length === 1
-                          ? "conversation"
-                          : "conversations"
-                      }`
-                    : "No conversations yet"}
-                </span>
-                {unreadCount > 0 && (
-                  <>
-                    <span>•</span>
-                    <span
-                      className="font-medium"
-                      style={{ color: COLORS.GOLDEN_ACCENT }}
-                    >
-                      {unreadCount} unread
-                    </span>
-                  </>
-                )}
-              </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1
+              className="text-lg font-bold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Messages
+            </h1>
+            <div
+              className="flex items-center gap-2 text-xs"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
+              <span>
+                {conversations.length > 0
+                  ? `${conversations.length} ${
+                      conversations.length === 1
+                        ? "conversation"
+                        : "conversations"
+                    }`
+                  : "No conversations yet"}
+              </span>
+              {unreadCount > 0 && (
+                <>
+                  <span>•</span>
+                  <span
+                    className="font-medium"
+                    style={{ color: COLORS.GOLDEN_ACCENT }}
+                  >
+                    {unreadCount} unread
+                  </span>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowMassMessageModal(true)}
-                className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
-                style={{
-                  backgroundColor: COLORS.BLUE_PRIMARY,
-                  color: "#ffffff",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.BLUE_DARK;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.BLUE_PRIMARY;
-                }}
-              >
-                <Users className="h-3 w-3 inline mr-1" />
-                Mass Message
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
-                style={{
-                  backgroundColor: COLORS.GOLDEN_ACCENT,
-                  color: "#ffffff",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
-                }}
-              >
-                <Plus className="h-3 w-3 inline mr-1" />
-                New Message
-              </button>
-            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMassMessageModal(true)}
+              className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
+              style={{
+                backgroundColor: COLORS.BLUE_PRIMARY,
+                color: "#ffffff",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BLUE_DARK;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.BLUE_PRIMARY;
+              }}
+            >
+              <Users className="h-3 w-3 inline mr-1" />
+              Mass Message
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 hover:scale-105"
+              style={{
+                backgroundColor: COLORS.GOLDEN_ACCENT,
+                color: "#ffffff",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+              }}
+            >
+              <Plus className="h-3 w-3 inline mr-1" />
+              New Message
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Messages Interface */}
+      {/* Messages Interface */}
+      <div
+        className="flex flex-1 rounded-lg border overflow-hidden shadow-lg m-2"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+          boxShadow: `0 4px 12px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px ${getGoldenAccent(
+            0.1
+          )}`,
+        }}
+      >
+        {/* Conversations Sidebar */}
         <div
-          className="flex flex-1 rounded-lg border overflow-hidden shadow-lg m-2"
+          className="w-80 border-r flex flex-col min-h-0"
           style={{
-            backgroundColor: COLORS.BACKGROUND_CARD,
             borderColor: COLORS.BORDER_SUBTLE,
-            boxShadow: `0 4px 12px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px ${getGoldenAccent(
-              0.1
-            )}`,
+            backgroundColor: COLORS.BACKGROUND_DARK,
           }}
         >
-          {/* Conversations Sidebar */}
+          {/* Compact Header with Search */}
           <div
-            className="w-80 border-r flex flex-col min-h-0"
-            style={{
-              borderColor: COLORS.BORDER_SUBTLE,
-              backgroundColor: COLORS.BACKGROUND_DARK,
-            }}
+            className="p-2 border-b"
+            style={{ borderColor: COLORS.BORDER_SUBTLE }}
           >
-            {/* Compact Header with Search */}
-            <div
-              className="p-2 border-b"
-              style={{ borderColor: COLORS.BORDER_SUBTLE }}
-            >
-              <div className="mb-2">
-                <h2
-                  className="text-sm font-semibold"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  Conversations
-                </h2>
-              </div>
-              <div className="relative">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                  style={{ color: COLORS.TEXT_MUTED }}
-                />
-                <input
-                  type="text"
-                  placeholder="Search conversations..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 rounded-md text-xs transition-all duration-200"
-                  style={{
-                    backgroundColor: COLORS.BACKGROUND_DARK,
-                    borderColor: COLORS.BORDER_SUBTLE,
-                    color: COLORS.TEXT_PRIMARY,
-                    border: "1px solid",
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                    e.currentTarget.style.backgroundColor =
-                      COLORS.BACKGROUND_CARD;
-                    e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
-                      0.2
-                    )}`;
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                    e.currentTarget.style.backgroundColor =
-                      COLORS.BACKGROUND_DARK;
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Conversations List - With Internal Scroll */}
-            <div
-              className="flex-1 overflow-y-auto"
-              ref={conversationsListRef}
-              onScroll={handleScroll}
-            >
-              <DataLoadingState
-                isLoading={conversationsLoading}
-                data={filteredConversations}
-                emptyState={
-                  <div className="p-4 text-center">
-                    <div
-                      className="h-8 w-8 mx-auto mb-2 rounded-full flex items-center justify-center"
-                      style={{
-                        backgroundColor: getGoldenAccent(0.1),
-                        color: COLORS.GOLDEN_ACCENT,
-                      }}
-                    >
-                      <File className="h-4 w-4" />
-                    </div>
-                    <p
-                      className="text-xs"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
-                      {searchTerm
-                        ? "No conversations found"
-                        : "No conversations yet"}
-                    </p>
-                  </div>
-                }
+            <div className="mb-2">
+              <h2
+                className="text-sm font-semibold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
               >
-                <div className="space-y-1">
-                  {filteredConversations.map(conversation => {
-                    const otherUser = getOtherUser(conversation);
-                    const lastMessage = conversation.messages[0];
-                    const unreadCount = unreadCountsObj[conversation.id] || 0;
-                    const isSelected = selectedConversation === conversation.id;
-
-                    return (
-                      <div
-                        key={conversation.id}
-                        onClick={() =>
-                          handleConversationSelect(conversation.id)
-                        }
-                        className={`p-3 cursor-pointer transition-all duration-200 ${
-                          isSelected ? getGoldenAccent(0.1) : ""
-                        }`}
-                        style={{
-                          backgroundColor: isSelected
-                            ? getGoldenAccent(0.1)
-                            : "transparent",
-                        }}
-                        onMouseEnter={e => {
-                          if (!isSelected) {
-                            e.currentTarget.style.backgroundColor =
-                              COLORS.BACKGROUND_CARD_HOVER;
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (!isSelected) {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="relative">
-                            <ProfilePictureUploader
-                              currentAvatarUrl={
-                                otherUser?.settings?.avatarUrl ||
-                                otherUser?.avatar ||
-                                null
-                              }
-                              userName={
-                                otherUser?.name || otherUser?.email || "User"
-                              }
-                              onAvatarChange={() => {}}
-                              size="sm"
-                              readOnly={true}
-                              className="flex-shrink-0"
-                            />
-                            {unreadCount > 0 && (
-                              <div
-                                className="absolute -top-1 -right-1 h-4 w-4 rounded-full flex items-center justify-center text-xs font-bold"
-                                style={{
-                                  backgroundColor: COLORS.GOLDEN_ACCENT,
-                                  color: "#ffffff",
-                                }}
-                              >
-                                {unreadCount > 9 ? "9+" : unreadCount}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p
-                                className={`text-sm font-medium truncate ${
-                                  unreadCount > 0 ? "font-semibold" : ""
-                                }`}
-                                style={{
-                                  color: isSelected
-                                    ? COLORS.GOLDEN_ACCENT
-                                    : COLORS.TEXT_PRIMARY,
-                                }}
-                              >
-                                {otherUser?.name ||
-                                  otherUser?.email?.split("@")[0] ||
-                                  "Unknown"}
-                              </p>
-                              {lastMessage && (
-                                <span
-                                  className="text-xs flex-shrink-0 ml-2"
-                                  style={{ color: COLORS.TEXT_MUTED }}
-                                >
-                                  {formatLastMessageTime(lastMessage.createdAt)}
-                                </span>
-                              )}
-                            </div>
-                            <div
-                              className={`text-xs truncate ${
-                                unreadCount > 0 ? "font-medium" : ""
-                              }`}
-                              style={{
-                                color:
-                                  unreadCount > 0
-                                    ? COLORS.GOLDEN_ACCENT
-                                    : COLORS.TEXT_SECONDARY,
-                              }}
-                            >
-                              {lastMessage?.content ? (
-                                <FormattedMessage
-                                  content={
-                                    lastMessage.content.length > 40
-                                      ? `${lastMessage.content.substring(
-                                          0,
-                                          40
-                                        )}...`
-                                      : lastMessage.content
-                                  }
-                                />
-                              ) : (
-                                "No messages yet"
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {hasMoreConversations && (
-                    <div className="p-3 text-center">
-                      <button
-                        onClick={loadMoreConversations}
-                        disabled={isLoadingMore}
-                        className="text-xs hover:underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ color: COLORS.TEXT_MUTED }}
-                        onMouseEnter={e => {
-                          if (!isLoadingMore) {
-                            e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = COLORS.TEXT_MUTED;
-                        }}
-                      >
-                        {isLoadingMore
-                          ? "Loading..."
-                          : "Load more conversations"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </DataLoadingState>
+                Conversations
+              </h2>
+            </div>
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                style={{ color: COLORS.TEXT_MUTED }}
+              />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 rounded-md text-xs transition-all duration-200"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  color: COLORS.TEXT_PRIMARY,
+                  border: "1px solid",
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                    0.2
+                  )}`;
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_DARK;
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
             </div>
           </div>
 
-          {/* Chat Area */}
+          {/* Conversations List - With Internal Scroll */}
           <div
-            className="flex-1 flex flex-col overflow-hidden"
-            style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+            className="flex-1 overflow-y-auto"
+            ref={conversationsListRef}
+            onScroll={handleScroll}
           >
-            {selectedConversation ? (
-              <>
-                {/* Chat Header */}
-                <div
-                  className="p-6 border-b flex items-center justify-between"
-                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
-                >
-                  <div className="flex items-center gap-4">
-                    {currentConversation && (
-                      <>
-                        <ProfilePictureUploader
-                          currentAvatarUrl={
-                            getOtherUser(currentConversation)?.settings
-                              ?.avatarUrl ||
-                            getOtherUser(currentConversation)?.avatar
-                          }
-                          userName={
-                            getOtherUser(currentConversation)?.name ||
-                            getOtherUser(currentConversation)?.email ||
-                            "User"
-                          }
-                          onAvatarChange={() => {}}
-                          size="md"
-                          readOnly={true}
-                          className="flex-shrink-0"
-                        />
-                        <div>
-                          <p
-                            className="font-bold text-lg tracking-tight"
-                            style={{ color: COLORS.TEXT_PRIMARY }}
-                          >
-                            {getOtherUser(currentConversation)?.name ||
-                              getOtherUser(currentConversation)?.email?.split(
-                                "@"
-                              )[0] ||
-                              "Unknown"}
-                          </p>
-                          <p
-                            className="text-sm font-medium"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          >
-                            {getOtherUser(currentConversation)?.email ||
-                              "No email"}
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  <DataLoadingState
-                    isLoading={messagesLoading}
-                    data={messages}
-                    emptyState={
-                      <div className="text-center py-8">
-                        <div
-                          className="h-8 w-8 mx-auto mb-3 opacity-50"
-                          style={{ color: COLORS.GOLDEN_ACCENT }}
-                        >
-                          <File className="h-8 w-8" />
-                        </div>
-                        <p
-                          className="text-sm"
-                          style={{ color: COLORS.TEXT_SECONDARY }}
-                        >
-                          No messages yet. Start the conversation!
-                        </p>
-                      </div>
-                    }
-                  >
-                    <>
-                      {messages.map((message: any, index: number) => {
-                        // Check if this is a workout note message
-                        const isWorkoutNote =
-                          message.content?.includes("📝 **Workout Note**") ||
-                          message.content?.includes(
-                            "📝 **Daily Workout Note**"
-                          );
-                        const isFromClient =
-                          message.sender.id !== currentUser?.id;
-
-                        // Debug logging for workout notes
-                        if (isWorkoutNote) {
-                          console.log("🔍 Workout Note Debug:", {
-                            messageId: message.id,
-                            senderId: message.sender.id,
-                            currentUserId: currentUser?.id,
-                            isFromClient,
-                            senderName: message.sender.name,
-                            currentUserName: currentUser?.name,
-                            content: message.content?.substring(0, 100),
-                          });
-                        }
-
-                        // Check if we need to show a date separator
-                        const currentMessageDate = new Date(message.createdAt);
-                        const previousMessage =
-                          index > 0 ? messages[index - 1] : null;
-                        const previousMessageDate = previousMessage
-                          ? new Date(previousMessage.createdAt)
-                          : null;
-                        const showDateSeparator =
-                          !previousMessageDate ||
-                          !isSameDay(currentMessageDate, previousMessageDate);
-
-                        // Check if all messages are on the same day
-                        const allMessagesSameDay =
-                          messages.length > 0 &&
-                          messages.every((msg: any) =>
-                            isSameDay(
-                              new Date(msg.createdAt),
-                              currentMessageDate
-                            )
-                          );
-                        // Show date on first message timestamp if all messages are same day
-                        const showDateOnFirstMessage =
-                          allMessagesSameDay && index === 0;
-                        // Show date separator at top if all messages are same day and this is first message
-                        const showTopDateSeparator =
-                          allMessagesSameDay && index === 0;
-
-                        return (
-                          <div key={message.id} className="space-y-2">
-                            {/* Date Separator - show at top if all messages same day, or between different days */}
-                            {(showTopDateSeparator ||
-                              (showDateSeparator && !allMessagesSameDay)) && (
-                              <div className="flex items-center justify-center py-2">
-                                <div
-                                  className="px-3 py-1 rounded-full text-xs font-medium"
-                                  style={{
-                                    backgroundColor: COLORS.BACKGROUND_CARD,
-                                    color: COLORS.TEXT_SECONDARY,
-                                    border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-                                  }}
-                                >
-                                  {isToday(currentMessageDate)
-                                    ? "Today"
-                                    : isYesterday(currentMessageDate)
-                                      ? "Yesterday"
-                                      : format(
-                                          currentMessageDate,
-                                          "EEEE, MMMM d, yyyy"
-                                        )}
-                                </div>
-                              </div>
-                            )}
-
-                            <div
-                              className={`flex ${
-                                isWorkoutNote && isFromClient
-                                  ? "justify-start"
-                                  : message.sender.id === currentUser?.id
-                                    ? "justify-end"
-                                    : "justify-start"
-                              }`}
-                            >
-                              <div
-                                className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
-                                  message.sender.id === currentUser?.id
-                                    ? "rounded-br-sm"
-                                    : "rounded-bl-sm"
-                                } ${
-                                  isWorkoutNote && isFromClient
-                                    ? "border border-blue-400/30"
-                                    : ""
-                                }`}
-                                style={{
-                                  backgroundColor:
-                                    message.sender.id === currentUser?.id
-                                      ? COLORS.GOLDEN_ACCENT
-                                      : isWorkoutNote && isFromClient
-                                        ? COLORS.BACKGROUND_CARD
-                                        : COLORS.BACKGROUND_CARD,
-                                  color:
-                                    message.sender.id === currentUser?.id
-                                      ? "#000000"
-                                      : COLORS.TEXT_PRIMARY,
-                                  border:
-                                    isWorkoutNote && isFromClient
-                                      ? `1px solid ${COLORS.GOLDEN_ACCENT}`
-                                      : message.sender.id === currentUser?.id
-                                        ? `1px solid ${COLORS.GOLDEN_BORDER}`
-                                        : `1px solid ${COLORS.BORDER_SUBTLE}`,
-                                }}
-                              >
-                                {/* Workout Note Header */}
-                                {isWorkoutNote && isFromClient && (
-                                  <div className="mb-3">
-                                    <div className="text-blue-400 font-medium text-sm mb-1">
-                                      📝 Feedback for program day
-                                    </div>
-                                    <div className="text-xs text-gray-400 mb-2">
-                                      {new Date(
-                                        message.createdAt
-                                      ).toLocaleDateString()}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {message.content && (
-                                  <div className="text-sm mb-2">
-                                    <FormattedMessage
-                                      content={message.content}
-                                    />
-                                  </div>
-                                )}
-
-                                {/* Message Acknowledgment */}
-                                <MessageAcknowledgment
-                                  messageId={message.id}
-                                  requiresAcknowledgment={
-                                    message.requiresAcknowledgment || false
-                                  }
-                                  isAcknowledged={
-                                    message.isAcknowledged || false
-                                  }
-                                  acknowledgedAt={
-                                    message.acknowledgedAt
-                                      ? new Date(message.acknowledgedAt)
-                                      : null
-                                  }
-                                  isOwnMessage={
-                                    message.sender.id === currentUser?.id
-                                  }
-                                  messageData={
-                                    message.data as
-                                      | {
-                                          type?: string;
-                                          swapRequestId?: string;
-                                        }
-                                      | undefined
-                                  }
-                                />
-
-                                {/* File Attachment */}
-                                {message.attachmentUrl && (
-                                  <div className="mb-2">
-                                    {message.attachmentType?.startsWith(
-                                      "image/"
-                                    ) ? (
-                                      <img
-                                        src={message.attachmentUrl}
-                                        alt={message.attachmentName || "Image"}
-                                        className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
-                                        style={{ maxHeight: "300px" }}
-                                        onClick={() =>
-                                          message.attachmentUrl &&
-                                          window.open(
-                                            message.attachmentUrl,
-                                            "_blank"
-                                          )
-                                        }
-                                      />
-                                    ) : message.attachmentType?.startsWith(
-                                        "video/"
-                                      ) ? (
-                                      <div className="space-y-2">
-                                        <video
-                                          src={message.attachmentUrl}
-                                          controls
-                                          className="max-w-full rounded-lg"
-                                          style={{ maxHeight: "300px" }}
-                                          preload="metadata"
-                                        >
-                                          Your browser does not support the
-                                          video tag.
-                                        </video>
-                                        <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={() => {
-                                              // Create video record from message attachment
-                                              createVideoMutation.mutate({
-                                                title:
-                                                  message.attachmentName ||
-                                                  "Video from Message",
-                                                description: `Video attachment from message`,
-                                                url: message.attachmentUrl,
-                                                duration: 0, // Will be updated when video loads
-                                                fileSize:
-                                                  message.attachmentSize || 0,
-                                              });
-                                            }}
-                                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
-                                          >
-                                            <svg
-                                              className="w-3 h-3"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                              />
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                              />
-                                            </svg>
-                                            Annotate Video
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <a
-                                        href={message.attachmentUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 p-2 rounded-lg transition-all duration-200 hover:scale-105"
-                                        style={{
-                                          backgroundColor: "#2A3133",
-                                          color: "#C3BCC2",
-                                          border: "1px solid #606364",
-                                        }}
-                                      >
-                                        {message.attachmentType?.startsWith(
-                                          "audio/"
-                                        ) ? (
-                                          <File className="h-4 w-4" />
-                                        ) : (
-                                          <File className="h-4 w-4" />
-                                        )}
-                                        <span className="text-sm">
-                                          {message.attachmentName}
-                                        </span>
-                                      </a>
-                                    )}
-                                  </div>
-                                )}
-
-                                <div className="flex items-center justify-end gap-1 mt-1">
-                                  <span
-                                    className="text-xs"
-                                    style={{
-                                      color:
-                                        message.sender.id === currentUser?.id
-                                          ? "rgba(0, 0, 0, 0.6)"
-                                          : COLORS.TEXT_MUTED,
-                                    }}
-                                  >
-                                    {formatMessageTime(
-                                      new Date(message.createdAt),
-                                      showDateOnFirstMessage
-                                    )}
-                                  </span>
-                                  {message.sender.id === currentUser?.id && (
-                                    <CheckCheck
-                                      className="h-3 w-3"
-                                      style={{ color: "rgba(0, 0, 0, 0.6)" }}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Pending Messages */}
-                      {pendingMessages.map(pendingMessage => (
-                        <div
-                          key={pendingMessage.id}
-                          className="flex justify-end"
-                        >
-                          <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg rounded-br-none ${
-                              pendingMessage.status === "failed"
-                                ? "opacity-60"
-                                : ""
-                            }`}
-                            style={{
-                              backgroundColor: COLORS.BACKGROUND_CARD,
-                              color: COLORS.TEXT_PRIMARY,
-                              border: `1px solid ${COLORS.BORDER_SUBTLE}`,
-                            }}
-                          >
-                            {pendingMessage.content && (
-                              <div className="text-sm mb-2">
-                                <FormattedMessage
-                                  content={pendingMessage.content}
-                                />
-                              </div>
-                            )}
-
-                            {/* Pending File Attachment */}
-                            {pendingMessage.attachmentUrl && (
-                              <div className="mb-2">
-                                {pendingMessage.attachmentType?.startsWith(
-                                  "image/"
-                                ) ? (
-                                  <img
-                                    src={pendingMessage.attachmentUrl}
-                                    alt={
-                                      pendingMessage.attachmentName || "Image"
-                                    }
-                                    className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
-                                    style={{ maxHeight: "300px" }}
-                                  />
-                                ) : (
-                                  <div
-                                    className="flex items-center gap-2 p-2 rounded-lg"
-                                    style={{
-                                      backgroundColor: "#2A3133",
-                                      color: "#C3BCC2",
-                                      border: "1px solid #606364",
-                                    }}
-                                  >
-                                    <File className="h-4 w-4" />
-                                    <span className="text-sm">
-                                      {pendingMessage.attachmentName}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-end gap-1 mt-1">
-                              <span
-                                className="text-xs"
-                                style={{ color: COLORS.TEXT_MUTED }}
-                              >
-                                {format(pendingMessage.timestamp, "h:mm a")}
-                              </span>
-                              <div className="flex items-center">
-                                {pendingMessage.status === "sending" && (
-                                  <div className="flex items-center gap-1">
-                                    <div className="w-1 h-1 bg-blue-200 rounded-full animate-pulse" />
-                                    <div
-                                      className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
-                                      style={{ animationDelay: "0.2s" }}
-                                    />
-                                    <div
-                                      className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
-                                      style={{ animationDelay: "0.4s" }}
-                                    />
-                                  </div>
-                                )}
-                                {pendingMessage.status === "sent" && (
-                                  <CheckCheck
-                                    className="h-3 w-3"
-                                    style={{ color: COLORS.TEXT_MUTED }}
-                                  />
-                                )}
-                                {pendingMessage.status === "failed" && (
-                                  <div className="w-3 h-3 bg-red-400 rounded-full flex items-center justify-center">
-                                    <span className="text-xs text-red-800 font-bold">
-                                      !
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  </DataLoadingState>
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Message Input */}
-                <div
-                  className="p-6 border-t"
-                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
-                >
-                  <RichMessageInput
-                    value={messageText}
-                    onChange={setMessageText}
-                    onSend={() => handleSendMessage()}
-                    onFileUpload={() => setShowFileUpload(true)}
-                    placeholder="Type a message..."
-                    disabled={false}
-                    isPending={sendMessageMutation.isPending}
-                    selectedFile={selectedFile}
-                    onRemoveFile={() => setSelectedFile(null)}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
+            <DataLoadingState
+              isLoading={conversationsLoading}
+              data={filteredConversations}
+              emptyState={
+                <div className="p-4 text-center">
                   <div
-                    className="h-12 w-12 mx-auto mb-4 rounded-full flex items-center justify-center"
+                    className="h-8 w-8 mx-auto mb-2 rounded-full flex items-center justify-center"
                     style={{
                       backgroundColor: getGoldenAccent(0.1),
                       color: COLORS.GOLDEN_ACCENT,
                     }}
                   >
-                    <File className="h-6 w-6" />
+                    <File className="h-4 w-4" />
                   </div>
-                  <h3
-                    className="text-lg font-semibold mb-2"
-                    style={{ color: COLORS.TEXT_PRIMARY }}
-                  >
-                    Select a conversation
-                  </h3>
                   <p
-                    className="text-sm"
+                    className="text-xs"
                     style={{ color: COLORS.TEXT_SECONDARY }}
                   >
-                    Choose a conversation from the sidebar to start messaging
+                    {searchTerm
+                      ? "No conversations found"
+                      : "No conversations yet"}
                   </p>
                 </div>
+              }
+            >
+              <div className="space-y-1">
+                {filteredConversations.map(conversation => {
+                  const otherUser = getOtherUser(conversation);
+                  const lastMessage = conversation.messages[0];
+                  const unreadCount = unreadCountsObj[conversation.id] || 0;
+                  const isSelected = selectedConversation === conversation.id;
+
+                  return (
+                    <div
+                      key={conversation.id}
+                      onClick={() => handleConversationSelect(conversation.id)}
+                      className={`p-3 cursor-pointer transition-all duration-200 ${
+                        isSelected ? getGoldenAccent(0.1) : ""
+                      }`}
+                      style={{
+                        backgroundColor: isSelected
+                          ? getGoldenAccent(0.1)
+                          : "transparent",
+                      }}
+                      onMouseEnter={e => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.BACKGROUND_CARD_HOVER;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isSelected) {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <ProfilePictureUploader
+                            currentAvatarUrl={
+                              otherUser?.settings?.avatarUrl ||
+                              otherUser?.avatar ||
+                              null
+                            }
+                            userName={
+                              otherUser?.name || otherUser?.email || "User"
+                            }
+                            onAvatarChange={() => {}}
+                            size="sm"
+                            readOnly={true}
+                            className="flex-shrink-0"
+                          />
+                          {unreadCount > 0 && (
+                            <div
+                              className="absolute -top-1 -right-1 h-4 w-4 rounded-full flex items-center justify-center text-xs font-bold"
+                              style={{
+                                backgroundColor: COLORS.GOLDEN_ACCENT,
+                                color: "#ffffff",
+                              }}
+                            >
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p
+                              className={`text-sm font-medium truncate ${
+                                unreadCount > 0 ? "font-semibold" : ""
+                              }`}
+                              style={{
+                                color: isSelected
+                                  ? COLORS.GOLDEN_ACCENT
+                                  : COLORS.TEXT_PRIMARY,
+                              }}
+                            >
+                              {otherUser?.name ||
+                                otherUser?.email?.split("@")[0] ||
+                                "Unknown"}
+                            </p>
+                            {lastMessage && (
+                              <span
+                                className="text-xs flex-shrink-0 ml-2"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              >
+                                {formatLastMessageTime(lastMessage.createdAt)}
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            className={`text-xs truncate ${
+                              unreadCount > 0 ? "font-medium" : ""
+                            }`}
+                            style={{
+                              color:
+                                unreadCount > 0
+                                  ? COLORS.GOLDEN_ACCENT
+                                  : COLORS.TEXT_SECONDARY,
+                            }}
+                          >
+                            {lastMessage?.content ? (
+                              <FormattedMessage
+                                content={
+                                  lastMessage.content.length > 40
+                                    ? `${lastMessage.content.substring(
+                                        0,
+                                        40
+                                      )}...`
+                                    : lastMessage.content
+                                }
+                              />
+                            ) : (
+                              "No messages yet"
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {hasMoreConversations && (
+                  <div className="p-3 text-center">
+                    <button
+                      onClick={loadMoreConversations}
+                      disabled={isLoadingMore}
+                      className="text-xs hover:underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                      onMouseEnter={e => {
+                        if (!isLoadingMore) {
+                          e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                      }}
+                    >
+                      {isLoadingMore ? "Loading..." : "Load more conversations"}
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+            </DataLoadingState>
           </div>
+        </div>
+
+        {/* Chat Area */}
+        <div
+          className="flex-1 flex flex-col overflow-hidden"
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+        >
+          {selectedConversation ? (
+            <>
+              {/* Chat Header */}
+              <div
+                className="p-6 border-b flex items-center justify-between"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <div className="flex items-center gap-4">
+                  {currentConversation && (
+                    <>
+                      <ProfilePictureUploader
+                        currentAvatarUrl={
+                          getOtherUser(currentConversation)?.settings
+                            ?.avatarUrl ||
+                          getOtherUser(currentConversation)?.avatar
+                        }
+                        userName={
+                          getOtherUser(currentConversation)?.name ||
+                          getOtherUser(currentConversation)?.email ||
+                          "User"
+                        }
+                        onAvatarChange={() => {}}
+                        size="md"
+                        readOnly={true}
+                        className="flex-shrink-0"
+                      />
+                      <div>
+                        <p
+                          className="font-bold text-lg tracking-tight"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
+                          {getOtherUser(currentConversation)?.name ||
+                            getOtherUser(currentConversation)?.email?.split(
+                              "@"
+                            )[0] ||
+                            "Unknown"}
+                        </p>
+                        <p
+                          className="text-sm font-medium"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
+                          {getOtherUser(currentConversation)?.email ||
+                            "No email"}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <DataLoadingState
+                  isLoading={messagesLoading}
+                  data={messages}
+                  emptyState={
+                    <div className="text-center py-8">
+                      <div
+                        className="h-8 w-8 mx-auto mb-3 opacity-50"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                      >
+                        <File className="h-8 w-8" />
+                      </div>
+                      <p
+                        className="text-sm"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        No messages yet. Start the conversation!
+                      </p>
+                    </div>
+                  }
+                >
+                  <>
+                    {messages.map((message: any, index: number) => {
+                      // Check if this is a workout note message
+                      const isWorkoutNote =
+                        message.content?.includes("📝 **Workout Note**") ||
+                        message.content?.includes("📝 **Daily Workout Note**");
+                      const isFromClient =
+                        message.sender.id !== currentUser?.id;
+
+                      // Debug logging for workout notes
+                      if (isWorkoutNote) {
+                        console.log("🔍 Workout Note Debug:", {
+                          messageId: message.id,
+                          senderId: message.sender.id,
+                          currentUserId: currentUser?.id,
+                          isFromClient,
+                          senderName: message.sender.name,
+                          currentUserName: currentUser?.name,
+                          content: message.content?.substring(0, 100),
+                        });
+                      }
+
+                      // Check if we need to show a date separator
+                      const currentMessageDate = new Date(message.createdAt);
+                      const previousMessage =
+                        index > 0 ? messages[index - 1] : null;
+                      const previousMessageDate = previousMessage
+                        ? new Date(previousMessage.createdAt)
+                        : null;
+                      const showDateSeparator =
+                        !previousMessageDate ||
+                        !isSameDay(currentMessageDate, previousMessageDate);
+
+                      // Check if all messages are on the same day
+                      const allMessagesSameDay =
+                        messages.length > 0 &&
+                        messages.every((msg: any) =>
+                          isSameDay(new Date(msg.createdAt), currentMessageDate)
+                        );
+                      // Show date on first message timestamp if all messages are same day
+                      const showDateOnFirstMessage =
+                        allMessagesSameDay && index === 0;
+                      // Show date separator at top if all messages are same day and this is first message
+                      const showTopDateSeparator =
+                        allMessagesSameDay && index === 0;
+
+                      return (
+                        <div key={message.id} className="space-y-2">
+                          {/* Date Separator - show at top if all messages same day, or between different days */}
+                          {(showTopDateSeparator ||
+                            (showDateSeparator && !allMessagesSameDay)) && (
+                            <div className="flex items-center justify-center py-2">
+                              <div
+                                className="px-3 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_CARD,
+                                  color: COLORS.TEXT_SECONDARY,
+                                  border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                                }}
+                              >
+                                {isToday(currentMessageDate)
+                                  ? "Today"
+                                  : isYesterday(currentMessageDate)
+                                    ? "Yesterday"
+                                    : format(
+                                        currentMessageDate,
+                                        "EEEE, MMMM d, yyyy"
+                                      )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div
+                            className={`flex ${
+                              isWorkoutNote && isFromClient
+                                ? "justify-start"
+                                : message.sender.id === currentUser?.id
+                                  ? "justify-end"
+                                  : "justify-start"
+                            }`}
+                          >
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                                message.sender.id === currentUser?.id
+                                  ? "rounded-br-sm"
+                                  : "rounded-bl-sm"
+                              } ${
+                                isWorkoutNote && isFromClient
+                                  ? "border border-blue-400/30"
+                                  : ""
+                              }`}
+                              style={{
+                                backgroundColor:
+                                  message.sender.id === currentUser?.id
+                                    ? COLORS.GOLDEN_ACCENT
+                                    : isWorkoutNote && isFromClient
+                                      ? COLORS.BACKGROUND_CARD
+                                      : COLORS.BACKGROUND_CARD,
+                                color:
+                                  message.sender.id === currentUser?.id
+                                    ? "#000000"
+                                    : COLORS.TEXT_PRIMARY,
+                                border:
+                                  isWorkoutNote && isFromClient
+                                    ? `1px solid ${COLORS.GOLDEN_ACCENT}`
+                                    : message.sender.id === currentUser?.id
+                                      ? `1px solid ${COLORS.GOLDEN_BORDER}`
+                                      : `1px solid ${COLORS.BORDER_SUBTLE}`,
+                              }}
+                            >
+                              {/* Workout Note Header */}
+                              {isWorkoutNote && isFromClient && (
+                                <div className="mb-3">
+                                  <div className="text-blue-400 font-medium text-sm mb-1">
+                                    📝 Feedback for program day
+                                  </div>
+                                  <div className="text-xs text-gray-400 mb-2">
+                                    {new Date(
+                                      message.createdAt
+                                    ).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              )}
+
+                              {message.content && (
+                                <div className="text-sm mb-2">
+                                  <FormattedMessage content={message.content} />
+                                </div>
+                              )}
+
+                              {/* Message Acknowledgment */}
+                              <MessageAcknowledgment
+                                messageId={message.id}
+                                requiresAcknowledgment={
+                                  message.requiresAcknowledgment || false
+                                }
+                                isAcknowledged={message.isAcknowledged || false}
+                                acknowledgedAt={
+                                  message.acknowledgedAt
+                                    ? new Date(message.acknowledgedAt)
+                                    : null
+                                }
+                                isOwnMessage={
+                                  message.sender.id === currentUser?.id
+                                }
+                                messageData={
+                                  message.data as
+                                    | {
+                                        type?: string;
+                                        swapRequestId?: string;
+                                      }
+                                    | undefined
+                                }
+                              />
+
+                              {/* File Attachment */}
+                              {message.attachmentUrl && (
+                                <div className="mb-2">
+                                  {message.attachmentType?.startsWith(
+                                    "image/"
+                                  ) ? (
+                                    <img
+                                      src={message.attachmentUrl}
+                                      alt={message.attachmentName || "Image"}
+                                      className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
+                                      style={{ maxHeight: "300px" }}
+                                      onClick={() =>
+                                        message.attachmentUrl &&
+                                        window.open(
+                                          message.attachmentUrl,
+                                          "_blank"
+                                        )
+                                      }
+                                    />
+                                  ) : message.attachmentType?.startsWith(
+                                      "video/"
+                                    ) ? (
+                                    <div className="space-y-2">
+                                      <video
+                                        src={message.attachmentUrl}
+                                        controls
+                                        className="max-w-full rounded-lg"
+                                        style={{ maxHeight: "300px" }}
+                                        preload="metadata"
+                                      >
+                                        Your browser does not support the video
+                                        tag.
+                                      </video>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => {
+                                            // Create video record from message attachment
+                                            createVideoMutation.mutate({
+                                              title:
+                                                message.attachmentName ||
+                                                "Video from Message",
+                                              description: `Video attachment from message`,
+                                              url: message.attachmentUrl,
+                                              duration: 0, // Will be updated when video loads
+                                              fileSize:
+                                                message.attachmentSize || 0,
+                                            });
+                                          }}
+                                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1"
+                                        >
+                                          <svg
+                                            className="w-3 h-3"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            />
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                            />
+                                          </svg>
+                                          Annotate Video
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <a
+                                      href={message.attachmentUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 p-2 rounded-lg transition-all duration-200 hover:scale-105"
+                                      style={{
+                                        backgroundColor: "#2A3133",
+                                        color: "#C3BCC2",
+                                        border: "1px solid #606364",
+                                      }}
+                                    >
+                                      {message.attachmentType?.startsWith(
+                                        "audio/"
+                                      ) ? (
+                                        <File className="h-4 w-4" />
+                                      ) : (
+                                        <File className="h-4 w-4" />
+                                      )}
+                                      <span className="text-sm">
+                                        {message.attachmentName}
+                                      </span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-end gap-1 mt-1">
+                                <span
+                                  className="text-xs"
+                                  style={{
+                                    color:
+                                      message.sender.id === currentUser?.id
+                                        ? "rgba(0, 0, 0, 0.6)"
+                                        : COLORS.TEXT_MUTED,
+                                  }}
+                                >
+                                  {formatMessageTime(
+                                    new Date(message.createdAt),
+                                    showDateOnFirstMessage
+                                  )}
+                                </span>
+                                {message.sender.id === currentUser?.id && (
+                                  <CheckCheck
+                                    className="h-3 w-3"
+                                    style={{ color: "rgba(0, 0, 0, 0.6)" }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Pending Messages */}
+                    {pendingMessages.map(pendingMessage => (
+                      <div key={pendingMessage.id} className="flex justify-end">
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg rounded-br-none ${
+                            pendingMessage.status === "failed"
+                              ? "opacity-60"
+                              : ""
+                          }`}
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            color: COLORS.TEXT_PRIMARY,
+                            border: `1px solid ${COLORS.BORDER_SUBTLE}`,
+                          }}
+                        >
+                          {pendingMessage.content && (
+                            <div className="text-sm mb-2">
+                              <FormattedMessage
+                                content={pendingMessage.content}
+                              />
+                            </div>
+                          )}
+
+                          {/* Pending File Attachment */}
+                          {pendingMessage.attachmentUrl && (
+                            <div className="mb-2">
+                              {pendingMessage.attachmentType?.startsWith(
+                                "image/"
+                              ) ? (
+                                <img
+                                  src={pendingMessage.attachmentUrl}
+                                  alt={pendingMessage.attachmentName || "Image"}
+                                  className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
+                                  style={{ maxHeight: "300px" }}
+                                />
+                              ) : (
+                                <div
+                                  className="flex items-center gap-2 p-2 rounded-lg"
+                                  style={{
+                                    backgroundColor: "#2A3133",
+                                    color: "#C3BCC2",
+                                    border: "1px solid #606364",
+                                  }}
+                                >
+                                  <File className="h-4 w-4" />
+                                  <span className="text-sm">
+                                    {pendingMessage.attachmentName}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-end gap-1 mt-1">
+                            <span
+                              className="text-xs"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                            >
+                              {format(pendingMessage.timestamp, "h:mm a")}
+                            </span>
+                            <div className="flex items-center">
+                              {pendingMessage.status === "sending" && (
+                                <div className="flex items-center gap-1">
+                                  <div className="w-1 h-1 bg-blue-200 rounded-full animate-pulse" />
+                                  <div
+                                    className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
+                                    style={{ animationDelay: "0.2s" }}
+                                  />
+                                  <div
+                                    className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
+                                    style={{ animationDelay: "0.4s" }}
+                                  />
+                                </div>
+                              )}
+                              {pendingMessage.status === "sent" && (
+                                <CheckCheck
+                                  className="h-3 w-3"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                />
+                              )}
+                              {pendingMessage.status === "failed" && (
+                                <div className="w-3 h-3 bg-red-400 rounded-full flex items-center justify-center">
+                                  <span className="text-xs text-red-800 font-bold">
+                                    !
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                </DataLoadingState>
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input */}
+              <div
+                className="p-6 border-t"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <RichMessageInput
+                  value={messageText}
+                  onChange={setMessageText}
+                  onSend={() => handleSendMessage()}
+                  onFileUpload={() => setShowFileUpload(true)}
+                  placeholder="Type a message..."
+                  disabled={false}
+                  isPending={sendMessageMutation.isPending}
+                  selectedFile={selectedFile}
+                  onRemoveFile={() => setSelectedFile(null)}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div
+                  className="h-12 w-12 mx-auto mb-4 rounded-full flex items-center justify-center"
+                  style={{
+                    backgroundColor: getGoldenAccent(0.1),
+                    color: COLORS.GOLDEN_ACCENT,
+                  }}
+                >
+                  <File className="h-6 w-6" />
+                </div>
+                <h3
+                  className="text-lg font-semibold mb-2"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Select a conversation
+                </h3>
+                <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  Choose a conversation from the sidebar to start messaging
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Create Conversation Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div
@@ -1599,7 +1573,7 @@ function MessagesPage({}: MessagesPageProps) {
           refetchConversations();
         }}
       />
-    </Sidebar>
+    </div>
   );
 }
 

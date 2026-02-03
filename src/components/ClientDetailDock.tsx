@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  useDraggable,
-} from "@dnd-kit/core";
+import { useDraggable } from "@dnd-kit/core";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
-import { GripVertical, ChevronDown } from "lucide-react";
+import { GripVertical, ChevronDown, HelpCircle } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
+import { CssTooltip } from "@/components/ui/CssTooltip";
 import { CSS } from "@dnd-kit/utilities";
 
 interface ClientDetailDockProps {
@@ -16,8 +15,14 @@ interface ClientDetailDockProps {
   onToggle: () => void;
   onTabChange?: (tab: "programs" | "routines") => void;
   onSearchChange?: (term: string) => void;
-  onDragStart?: (item: { type: "program" | "routine"; id: string; title: string }) => void;
-  onDragEnd?: (item: { type: "program" | "routine"; id: string; title: string } | null) => void;
+  onDragStart?: (item: {
+    type: "program" | "routine";
+    id: string;
+    title: string;
+  }) => void;
+  onDragEnd?: (
+    item: { type: "program" | "routine"; id: string; title: string } | null
+  ) => void;
 }
 
 interface DraggableItemProps {
@@ -27,14 +32,15 @@ interface DraggableItemProps {
 
 // Draggable item component using @dnd-kit
 function DraggableItem({ item, type }: DraggableItemProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `${type}-${item.id}`,
-    data: {
-      type,
-      id: item.id,
-      title: item.title,
-    },
-  });
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `${type}-${item.id}`,
+      data: {
+        type,
+        id: item.id,
+        title: item.title,
+      },
+    });
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -91,11 +97,13 @@ export default function ClientDetailDock({
 }: ClientDetailDockProps) {
   // Use controlled state if provided, otherwise use internal state
   const [internalSearchTerm, setInternalSearchTerm] = useState("");
-  const [internalActiveTab, setInternalActiveTab] = useState<"programs" | "routines">("programs");
-  
+  const [internalActiveTab, setInternalActiveTab] = useState<
+    "programs" | "routines"
+  >("programs");
+
   const activeTab = controlledActiveTab ?? internalActiveTab;
   const searchTerm = controlledSearchTerm ?? internalSearchTerm;
-  
+
   const setActiveTab = (tab: "programs" | "routines") => {
     if (onTabChange) {
       onTabChange(tab);
@@ -103,7 +111,7 @@ export default function ClientDetailDock({
       setInternalActiveTab(tab);
     }
   };
-  
+
   const setSearchTerm = (term: string) => {
     if (onSearchChange) {
       onSearchChange(term);
@@ -146,7 +154,7 @@ export default function ClientDetailDock({
           <ChevronDown className="h-5 w-5 -rotate-90" />
         </button>
       )}
-      
+
       {/* Dock container - only visible when open */}
       {isOpen && (
         <div
@@ -156,95 +164,196 @@ export default function ClientDetailDock({
             borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
-
-        {/* Expanded content */}
-        {isOpen && (
-          <>
-            {/* Header */}
-            <div
-              className="flex items-center justify-between px-4 py-3 border-b"
-              style={{
-                borderColor: COLORS.BORDER_SUBTLE,
-                backgroundColor: COLORS.BACKGROUND_CARD,
-              }}
-            >
-              <h3
-                className="text-lg font-semibold"
-                style={{ color: COLORS.TEXT_PRIMARY }}
-              >
-                Drag to Assign
-              </h3>
-              <button
-                onClick={onToggle}
-                className="p-1.5 rounded-lg transition-colors"
-                style={{ color: COLORS.TEXT_SECONDARY }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                }}
-                title="Collapse"
-              >
-                <ChevronDown className="h-5 w-5 rotate-90" />
-              </button>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-              <button
-                onClick={() => setActiveTab("programs")}
-                className="flex-1 px-4 py-2 text-sm font-medium transition-colors"
+          {/* Expanded content */}
+          {isOpen && (
+            <>
+              {/* Header */}
+              <div
+                className="flex items-center justify-between gap-2 px-4 py-3 border-b relative"
                 style={{
-                  backgroundColor:
-                    activeTab === "programs" ? getGoldenAccent(0.1) : "transparent",
-                  color:
-                    activeTab === "programs" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-                }}
-              >
-                Programs ({filteredPrograms.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("routines")}
-                className="flex-1 px-4 py-2 text-sm font-medium transition-colors"
-                style={{
-                  backgroundColor:
-                    activeTab === "routines" ? getGoldenAccent(0.1) : "transparent",
-                  color:
-                    activeTab === "routines" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
-                }}
-              >
-                Routines ({filteredRoutines.length})
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="p-3 border-b" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder={`Search ${activeTab}...`}
-                className="w-full px-3 py-2 rounded-lg border text-sm"
-                style={{
-                  backgroundColor: COLORS.BACKGROUND_CARD,
                   borderColor: COLORS.BORDER_SUBTLE,
-                  color: COLORS.TEXT_PRIMARY,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
                 }}
-              />
-            </div>
+              >
+                <h3
+                  className="text-lg font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Drag to Assign
+                </h3>
+                <div className="flex items-center gap-1">
+                  <CssTooltip
+                    placement="bottom"
+                    content={
+                      <div className="space-y-2">
+                        <p
+                          className="font-medium"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
+                          How to assign to the calendar
+                        </p>
+                        <ol className="list-decimal list-inside space-y-1 text-left">
+                          <li
+                            className="leading-snug"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            Use the{" "}
+                            <strong style={{ color: COLORS.TEXT_PRIMARY }}>
+                              Programs
+                            </strong>{" "}
+                            or{" "}
+                            <strong style={{ color: COLORS.TEXT_PRIMARY }}>
+                              Routines
+                            </strong>{" "}
+                            tab below.
+                          </li>
+                          <li
+                            className="leading-snug"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            <strong style={{ color: COLORS.TEXT_PRIMARY }}>
+                              Drag
+                            </strong>{" "}
+                            an item from the list (use the grip handle).
+                          </li>
+                          <li
+                            className="leading-snug"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            <strong style={{ color: COLORS.TEXT_PRIMARY }}>
+                              Drop
+                            </strong>{" "}
+                            it onto a day on the calendar to assign it.
+                          </li>
+                        </ol>
+                      </div>
+                    }
+                    contentClassName="max-w-[400px]"
+                  >
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-lg transition-colors"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_MUTED;
+                      }}
+                      title="How to drag & drop"
+                      aria-label="Show walkthrough"
+                    >
+                      <HelpCircle className="h-5 w-5" />
+                    </button>
+                  </CssTooltip>
+                  <button
+                    onClick={onToggle}
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
+                    title="Collapse"
+                  >
+                    <ChevronDown className="h-5 w-5 rotate-90" />
+                  </button>
+                </div>
+              </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {activeTab === "programs" ? (
-                filteredPrograms.length > 0 ? (
-                  filteredPrograms.map(program => (
+              {/* Tabs */}
+              <div
+                className="flex border-b"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <button
+                  onClick={() => setActiveTab("programs")}
+                  className="flex-1 px-4 py-2 text-sm font-medium transition-colors"
+                  style={{
+                    backgroundColor:
+                      activeTab === "programs"
+                        ? getGoldenAccent(0.1)
+                        : "transparent",
+                    color:
+                      activeTab === "programs"
+                        ? COLORS.TEXT_PRIMARY
+                        : COLORS.TEXT_SECONDARY,
+                  }}
+                >
+                  Programs ({filteredPrograms.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("routines")}
+                  className="flex-1 px-4 py-2 text-sm font-medium transition-colors"
+                  style={{
+                    backgroundColor:
+                      activeTab === "routines"
+                        ? getGoldenAccent(0.1)
+                        : "transparent",
+                    color:
+                      activeTab === "routines"
+                        ? COLORS.TEXT_PRIMARY
+                        : COLORS.TEXT_SECONDARY,
+                  }}
+                >
+                  Routines ({filteredRoutines.length})
+                </button>
+              </div>
+
+              {/* Search */}
+              <div
+                className="p-3 border-b"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  placeholder={`Search ${activeTab}...`}
+                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
+                />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {activeTab === "programs" ? (
+                  filteredPrograms.length > 0 ? (
+                    filteredPrograms.map(program => (
+                      <DraggableItem
+                        key={program.id}
+                        item={{ id: program.id, title: program.title }}
+                        type="program"
+                      />
+                    ))
+                  ) : (
+                    <div
+                      className="text-center py-8 text-sm"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    >
+                      {searchTerm
+                        ? "No programs found"
+                        : "No programs available"}
+                    </div>
+                  )
+                ) : filteredRoutines.length > 0 ? (
+                  filteredRoutines.map(routine => (
                     <DraggableItem
-                      key={program.id}
-                      item={{ id: program.id, title: program.title }}
-                      type="program"
+                      key={routine.id}
+                      item={{ id: routine.id, title: routine.name }}
+                      type="routine"
                     />
                   ))
                 ) : (
@@ -252,31 +361,14 @@ export default function ClientDetailDock({
                     className="text-center py-8 text-sm"
                     style={{ color: COLORS.TEXT_MUTED }}
                   >
-                    {searchTerm ? "No programs found" : "No programs available"}
+                    {searchTerm ? "No routines found" : "No routines available"}
                   </div>
-                )
-              ) : filteredRoutines.length > 0 ? (
-                filteredRoutines.map(routine => (
-                  <DraggableItem
-                    key={routine.id}
-                    item={{ id: routine.id, title: routine.name }}
-                    type="routine"
-                  />
-                ))
-              ) : (
-                <div
-                  className="text-center py-8 text-sm"
-                  style={{ color: COLORS.TEXT_MUTED }}
-                >
-                  {searchTerm ? "No routines found" : "No routines available"}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </>
   );
 }
-

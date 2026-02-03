@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
-import { extractNoteContent } from "@/lib/note-utils";
+import { extractNoteContent, type NoteContent } from "@/lib/note-utils";
 import {
   Calendar,
   Clock,
@@ -116,7 +116,7 @@ export default function MobileClientDetailPage({
 
   // Fetch client data
   const {
-    data: client,
+    data: clientData,
     isLoading: clientLoading,
     error: clientError,
   } = trpc.clients.getById.useQuery(
@@ -127,6 +127,26 @@ export default function MobileClientDetailPage({
       refetchOnMount: true,
     }
   );
+  // Typed to avoid "type instantiation is excessively deep" from tRPC inference
+  type MobileClientDetails = {
+    id: string;
+    name: string;
+    email: string | null;
+    phone?: string | null;
+    archived?: boolean;
+    userId?: string | null;
+    avatar?: string | null;
+    user?: { settings?: { avatarUrl?: string }; email?: string };
+    createdAt?: string | null;
+    age?: number | null;
+    height?: string | null;
+    customFields?: Record<string, string | number | boolean> | null;
+    notes?: NoteContent;
+    [key: string]: unknown;
+  };
+  const client: MobileClientDetails | undefined = clientData as
+    | MobileClientDetails
+    | undefined;
 
   // Redirect to clients page if client is archived or not found
   useEffect(() => {
@@ -179,10 +199,12 @@ export default function MobileClientDetailPage({
     });
 
   // Fetch temporary program day replacements for this client
-  const { data: temporaryReplacements = [], refetch: refetchTemporaryReplacements } =
-    trpc.programs.getTemporaryReplacements.useQuery({
-      clientId,
-    });
+  const {
+    data: temporaryReplacements = [],
+    refetch: refetchTemporaryReplacements,
+  } = trpc.programs.getTemporaryReplacements.useQuery({
+    clientId,
+  });
 
   // Fetch client compliance data
   const [compliancePeriod, setCompliancePeriod] = useState<
@@ -303,14 +325,14 @@ export default function MobileClientDetailPage({
           period: compliancePeriod,
         }),
       ]);
-      
+
       // Force immediate refetch of the queries that display program days
       // This ensures the UI updates immediately with the new replacement record
       await Promise.all([
         refetchAssignedPrograms(),
         refetchTemporaryReplacements(),
       ]);
-      
+
       // Small delay to ensure UI updates before closing modal
       setTimeout(() => {
         setShowDayOverviewModal(false);
@@ -324,7 +346,10 @@ export default function MobileClientDetailPage({
   // Loading state
   if (clientLoading || lessonsLoading) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
         <div
           className="min-h-screen flex items-center justify-center"
           style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
@@ -344,7 +369,10 @@ export default function MobileClientDetailPage({
   // Error state
   if (!client) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+      >
         <div
           className="min-h-screen flex items-center justify-center"
           style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
@@ -364,8 +392,12 @@ export default function MobileClientDetailPage({
               onClick={() => router.push(backPath)}
               className="px-6 py-3 rounded-lg text-white transition-all duration-200"
               style={{ backgroundColor: COLORS.GOLDEN_DARK }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK}
+              onMouseEnter={e =>
+                (e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT)
+              }
+              onMouseLeave={e =>
+                (e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK)
+              }
             >
               Back to Clients
             </button>
@@ -445,11 +477,15 @@ export default function MobileClientDetailPage({
         // Only show if the date is within the program duration
         if (daysSinceStart >= 0 && daysSinceStart < programDurationInDays) {
           // Check if this day has been replaced or deleted
-          const dayReplacement = assignment.replacements?.find((replacement: any) => {
-            const replacementDate = new Date(replacement.replacedDate);
-            const replacementDateStr = replacementDate.toISOString().split("T")[0];
-            return replacementDateStr === targetDateStr;
-          });
+          const dayReplacement = assignment.replacements?.find(
+            (replacement: any) => {
+              const replacementDate = new Date(replacement.replacedDate);
+              const replacementDateStr = replacementDate
+                .toISOString()
+                .split("T")[0];
+              return replacementDateStr === targetDateStr;
+            }
+          );
 
           // Skip this day if it has been replaced or deleted
           if (dayReplacement) {
@@ -474,7 +510,7 @@ export default function MobileClientDetailPage({
                 // Don't show rest days - just skip them
                 return;
               }
-              
+
               // Show workout day with program title and day info
               programsForDate.push({
                 id: `${assignment.id}-${weekNumber}-${dayNumber}`,
@@ -651,34 +687,46 @@ export default function MobileClientDetailPage({
   const displayUpcomingLessons = upcomingLessons.slice(0, 5);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
       {/* Mobile Header */}
       <div
         className="sticky top-0 z-40 px-4 pb-3 border-b"
-        style={{ 
-          backgroundColor: "#1F2426", 
+        style={{
+          backgroundColor: "#1F2426",
           borderColor: COLORS.BORDER_SUBTLE,
-          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`
+          paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
         }}
       >
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(backPath)}
             className="p-2 rounded-lg transition-colors"
-            style={{ 
+            style={{
               backgroundColor: "#2A2F2F",
-              color: COLORS.TEXT_PRIMARY
+              color: COLORS.TEXT_PRIMARY,
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+            onMouseEnter={e =>
+              (e.currentTarget.style.backgroundColor = "#353A3A")
+            }
+            onMouseLeave={e =>
+              (e.currentTarget.style.backgroundColor = "#2A2F2F")
+            }
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
+            <h1
+              className="text-lg font-bold truncate"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
               {client.name}
             </h1>
-            <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Client Details</p>
+            <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+              Client Details
+            </p>
           </div>
           <div className="flex items-center gap-1">
             {/* Primary action - Schedule Lesson */}
@@ -686,23 +734,34 @@ export default function MobileClientDetailPage({
               onClick={() => setShowScheduleModal(true)}
               className="p-2 rounded-lg transition-all duration-200"
               style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT}
+              onMouseEnter={e =>
+                (e.currentTarget.style.backgroundColor = COLORS.GOLDEN_HOVER)
+              }
+              onMouseLeave={e =>
+                (e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT)
+              }
               title="Schedule Lesson"
             >
-              <Calendar className="w-5 h-5" style={{ color: COLORS.BACKGROUND_DARK }} />
+              <Calendar
+                className="w-5 h-5"
+                style={{ color: COLORS.BACKGROUND_DARK }}
+              />
             </button>
             {/* Dropdown for other actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   className="p-2 rounded-lg transition-all duration-200"
-                  style={{ 
+                  style={{
                     backgroundColor: "#2A2F2F",
-                    color: COLORS.TEXT_PRIMARY
+                    color: COLORS.TEXT_PRIMARY,
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.backgroundColor = "#353A3A")
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.backgroundColor = "#2A2F2F")
+                  }
                   title="More actions"
                 >
                   <MoreVertical className="w-5 h-5" />
@@ -721,12 +780,16 @@ export default function MobileClientDetailPage({
                     setShowQuickAssignProgramModal(true);
                   }}
                   className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                  style={{ 
+                  style={{
                     color: COLORS.TEXT_PRIMARY,
-                    backgroundColor: "transparent"
+                    backgroundColor: "transparent",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.backgroundColor = "#2A2F2F")
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.backgroundColor = "transparent")
+                  }
                 >
                   Assign Program
                 </DropdownMenuItem>
@@ -735,12 +798,16 @@ export default function MobileClientDetailPage({
                     setShowAssignRoutineModal(true);
                   }}
                   className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                  style={{ 
+                  style={{
                     color: COLORS.TEXT_PRIMARY,
-                    backgroundColor: "transparent"
+                    backgroundColor: "transparent",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.backgroundColor = "#2A2F2F")
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.backgroundColor = "transparent")
+                  }
                 >
                   Assign Routine
                 </DropdownMenuItem>
@@ -749,12 +816,16 @@ export default function MobileClientDetailPage({
                     setShowAssignVideoModal(true);
                   }}
                   className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                  style={{ 
+                  style={{
                     color: COLORS.TEXT_PRIMARY,
-                    backgroundColor: "transparent"
+                    backgroundColor: "transparent",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.backgroundColor = "#2A2F2F")
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.backgroundColor = "transparent")
+                  }
                 >
                   Assign Video
                 </DropdownMenuItem>
@@ -763,23 +834,29 @@ export default function MobileClientDetailPage({
                   style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
                 />
                 <DropdownMenuItem
-                  onSelect={(e) => {
+                  onSelect={e => {
                     e.preventDefault();
                     // Use client record ID (not userId) to find/create conversation
                     if (client?.id) {
                       router.push(`/messages?clientId=${client.id}`);
                     } else {
                       console.error("Client ID is missing");
-                      alert("Unable to open conversation. Client information is missing.");
+                      alert(
+                        "Unable to open conversation. Client information is missing."
+                      );
                     }
                   }}
                   className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                  style={{ 
+                  style={{
                     color: COLORS.TEXT_PRIMARY,
-                    backgroundColor: "transparent"
+                    backgroundColor: "transparent",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.backgroundColor = "#2A2F2F")
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.backgroundColor = "transparent")
+                  }
                 >
                   Send Message
                 </DropdownMenuItem>
@@ -788,12 +865,16 @@ export default function MobileClientDetailPage({
                     setShowProfileModal(true);
                   }}
                   className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                  style={{ 
+                  style={{
                     color: COLORS.TEXT_PRIMARY,
-                    backgroundColor: "transparent"
+                    backgroundColor: "transparent",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.backgroundColor = "#2A2F2F")
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.backgroundColor = "transparent")
+                  }
                 >
                   Edit Client
                 </DropdownMenuItem>
@@ -807,7 +888,10 @@ export default function MobileClientDetailPage({
         {/* Client Info Card */}
         <div
           className="p-4 rounded-lg border-2"
-          style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+          style={{
+            backgroundColor: "#1C2021",
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
         >
           <div className="flex items-center gap-4 mb-4">
             <ProfilePictureUploader
@@ -820,14 +904,24 @@ export default function MobileClientDetailPage({
               readOnly={true}
             />
             <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <h2
+                className="text-xl font-bold mb-1"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 {client.name}
               </h2>
               {client.email && (
-                <p className="text-sm mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>{client.email}</p>
+                <p
+                  className="text-sm mb-1"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
+                  {client.email}
+                </p>
               )}
               {client.phone && (
-                <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>{client.phone}</p>
+                <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  {client.phone}
+                </p>
               )}
             </div>
           </div>
@@ -838,11 +932,17 @@ export default function MobileClientDetailPage({
         {/* Compliance Rate */}
         <div
           className="p-4 rounded-lg border-2"
-          style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+          style={{
+            backgroundColor: "#1C2021",
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Compliance Rate
               </h2>
             </div>
@@ -856,15 +956,20 @@ export default function MobileClientDetailPage({
                   className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200`}
                   style={{
                     backgroundColor:
-                      compliancePeriod === period ? COLORS.GOLDEN_DARK : "transparent",
-                    color: compliancePeriod === period ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                      compliancePeriod === period
+                        ? COLORS.GOLDEN_DARK
+                        : "transparent",
+                    color:
+                      compliancePeriod === period
+                        ? COLORS.TEXT_PRIMARY
+                        : COLORS.TEXT_SECONDARY,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     if (compliancePeriod !== period) {
                       e.currentTarget.style.backgroundColor = "#2A2F2F";
                     }
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     if (compliancePeriod !== period) {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }
@@ -878,10 +983,16 @@ export default function MobileClientDetailPage({
 
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-medium" style={{ color: COLORS.TEXT_SECONDARY }}>
+              <p
+                className="text-sm font-medium"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
                 Completion Rate
               </p>
-              <p className="text-2xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <p
+                className="text-2xl font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 {complianceLoading ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
@@ -904,8 +1015,8 @@ export default function MobileClientDetailPage({
                   Math.min(100, complianceData?.completionRate || 0) >= 80
                     ? COLORS.GREEN_PRIMARY
                     : Math.min(100, complianceData?.completionRate || 0) >= 60
-                    ? COLORS.GOLDEN_ACCENT
-                    : COLORS.RED_ALERT,
+                      ? COLORS.GOLDEN_ACCENT
+                      : COLORS.RED_ALERT,
               }}
             />
           </div>
@@ -932,10 +1043,16 @@ export default function MobileClientDetailPage({
         {displayUpcomingLessons.length > 0 && (
           <div
             className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+            style={{
+              backgroundColor: "#1C2021",
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <div className="flex items-center gap-3 mb-3">
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Upcoming Lessons ({displayUpcomingLessons.length})
               </h2>
             </div>
@@ -946,14 +1063,20 @@ export default function MobileClientDetailPage({
                   className="flex items-center justify-between p-3 rounded border"
                   style={{
                     backgroundColor: "#2A2F2F",
-                    borderColor: COLORS.GREEN_PRIMARY + "40"
+                    borderColor: COLORS.GREEN_PRIMARY + "40",
                   }}
                 >
                   <div className="flex-1">
-                    <div className="font-medium" style={{ color: COLORS.GREEN_PRIMARY }}>
+                    <div
+                      className="font-medium"
+                      style={{ color: COLORS.GREEN_PRIMARY }}
+                    >
                       {formatDateTimeInUserTimezone(lesson.date)}
                     </div>
-                    <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                    <div
+                      className="text-sm"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       {lesson.title}
                     </div>
                   </div>
@@ -966,10 +1089,18 @@ export default function MobileClientDetailPage({
         {/* View Mode Toggle */}
         <div
           className="p-4 rounded-lg border-2"
-          style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+          style={{
+            backgroundColor: "#1C2021",
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>Calendar View</h2>
+            <h2
+              className="text-lg font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Calendar View
+            </h2>
             <div
               className="flex rounded-lg border overflow-hidden"
               style={{ borderColor: COLORS.BORDER_SUBTLE }}
@@ -980,7 +1111,10 @@ export default function MobileClientDetailPage({
                 style={{
                   backgroundColor:
                     viewMode === "month" ? COLORS.GOLDEN_DARK : "transparent",
-                  color: viewMode === "month" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  color:
+                    viewMode === "month"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
                 }}
               >
                 Month
@@ -991,7 +1125,10 @@ export default function MobileClientDetailPage({
                 style={{
                   backgroundColor:
                     viewMode === "week" ? COLORS.GOLDEN_DARK : "transparent",
-                  color: viewMode === "week" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  color:
+                    viewMode === "week"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
                 }}
               >
                 Week
@@ -1004,16 +1141,23 @@ export default function MobileClientDetailPage({
             <button
               onClick={() => navigateDate("prev")}
               className="p-2 rounded-lg transition-colors"
-              style={{ 
+              style={{
                 backgroundColor: "#2A2F2F",
-                color: COLORS.TEXT_PRIMARY
+                color: COLORS.TEXT_PRIMARY,
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+              onMouseEnter={e =>
+                (e.currentTarget.style.backgroundColor = "#353A3A")
+              }
+              onMouseLeave={e =>
+                (e.currentTarget.style.backgroundColor = "#2A2F2F")
+              }
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+            <h3
+              className="text-lg font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
               {viewMode === "month"
                 ? format(currentDate, "MMMM yyyy")
                 : `${format(startOfWeek(currentDate), "MMM d")} - ${format(
@@ -1024,12 +1168,16 @@ export default function MobileClientDetailPage({
             <button
               onClick={() => navigateDate("next")}
               className="p-2 rounded-lg transition-colors"
-              style={{ 
+              style={{
                 backgroundColor: "#2A2F2F",
-                color: COLORS.TEXT_PRIMARY
+                color: COLORS.TEXT_PRIMARY,
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
+              onMouseEnter={e =>
+                (e.currentTarget.style.backgroundColor = "#353A3A")
+              }
+              onMouseLeave={e =>
+                (e.currentTarget.style.backgroundColor = "#2A2F2F")
+              }
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -1070,23 +1218,23 @@ export default function MobileClientDetailPage({
                         backgroundColor: isToday
                           ? getGoldenAccent(0.2)
                           : isCurrentMonth
-                          ? "#2A2F2F"
-                          : "#1C2021",
+                            ? "#2A2F2F"
+                            : "#1C2021",
                         color: isToday
                           ? COLORS.GOLDEN_ACCENT
                           : isCurrentMonth
-                          ? COLORS.TEXT_PRIMARY
-                          : COLORS.TEXT_MUTED,
+                            ? COLORS.TEXT_PRIMARY
+                            : COLORS.TEXT_MUTED,
                         borderColor: isToday
                           ? COLORS.GOLDEN_ACCENT
                           : COLORS.BORDER_SUBTLE,
                       }}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={e => {
                         if (isCurrentMonth && !isToday) {
                           e.currentTarget.style.backgroundColor = "#353A3A";
                         }
                       }}
-                      onMouseLeave={(e) => {
+                      onMouseLeave={e => {
                         if (isCurrentMonth && !isToday) {
                           e.currentTarget.style.backgroundColor = "#2A2F2F";
                         }
@@ -1097,24 +1245,38 @@ export default function MobileClientDetailPage({
                       </div>
                       <div className="flex justify-center items-center gap-1 mt-1">
                         {hasLessons && (
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_PRIMARY }} />
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
+                          />
                         )}
                         {hasPrograms && (
                           <>
                             {programsForDay.some(
                               (p: any) => p.type === "program"
                             ) && (
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }} />
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{
+                                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                                }}
+                              />
                             )}
                             {programsForDay.some(
                               (p: any) => p.type === "temporary_program"
                             ) && (
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.BLUE_PRIMARY }} />
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: COLORS.BLUE_PRIMARY }}
+                              />
                             )}
                           </>
                         )}
                         {hasRoutines && (
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_DARK }} />
+                          <div
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: COLORS.GREEN_DARK }}
+                          />
                         )}
                       </div>
                     </div>
@@ -1150,12 +1312,12 @@ export default function MobileClientDetailPage({
                           ? COLORS.GOLDEN_ACCENT
                           : COLORS.BORDER_SUBTLE,
                       }}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={e => {
                         if (!isToday) {
                           e.currentTarget.style.backgroundColor = "#353A3A";
                         }
                       }}
-                      onMouseLeave={(e) => {
+                      onMouseLeave={e => {
                         if (!isToday) {
                           e.currentTarget.style.backgroundColor = "#2A2F2F";
                         }
@@ -1167,24 +1329,40 @@ export default function MobileClientDetailPage({
                         </div>
                         <div className="flex items-center gap-2">
                           {hasLessons && (
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.GREEN_PRIMARY }} />
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
+                            />
                           )}
                           {hasPrograms && (
                             <>
                               {programsForDay.some(
                                 (p: any) => p.type === "program"
                               ) && (
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }} />
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                                  }}
+                                />
                               )}
                               {programsForDay.some(
                                 (p: any) => p.type === "temporary_program"
                               ) && (
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.BLUE_PRIMARY }} />
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: COLORS.BLUE_PRIMARY,
+                                  }}
+                                />
                               )}
                             </>
                           )}
                           {hasRoutines && (
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.GREEN_DARK }} />
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: COLORS.GREEN_DARK }}
+                            />
                           )}
                         </div>
                       </div>
@@ -1198,7 +1376,7 @@ export default function MobileClientDetailPage({
                                 className="text-xs px-2 py-1 rounded"
                                 style={{
                                   backgroundColor: COLORS.GREEN_PRIMARY + "20",
-                                  color: COLORS.GREEN_PRIMARY
+                                  color: COLORS.GREEN_PRIMARY,
                                 }}
                               >
                                 {formatTimeInUserTimezone(lesson.date)} -{" "}
@@ -1206,7 +1384,10 @@ export default function MobileClientDetailPage({
                               </div>
                             ))}
                           {lessonsForDay.length > 2 && (
-                            <div className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+                            <div
+                              className="text-xs"
+                              style={{ color: COLORS.TEXT_SECONDARY }}
+                            >
                               +{lessonsForDay.length - 2} more
                             </div>
                           )}
@@ -1223,7 +1404,7 @@ export default function MobileClientDetailPage({
                                 className="text-xs px-2 py-1 rounded"
                                 style={{
                                   backgroundColor: getGoldenAccent(0.2),
-                                  color: COLORS.GOLDEN_ACCENT
+                                  color: COLORS.GOLDEN_ACCENT,
                                 }}
                               >
                                 {program.title}
@@ -1244,20 +1425,52 @@ export default function MobileClientDetailPage({
             style={{ borderColor: COLORS.BORDER_SUBTLE }}
           >
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_PRIMARY }} />
-              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Lessons</span>
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
+              />
+              <span
+                className="text-xs"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
+                Lessons
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GOLDEN_ACCENT }} />
-              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Programs</span>
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: COLORS.GOLDEN_ACCENT }}
+              />
+              <span
+                className="text-xs"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
+                Programs
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.BLUE_PRIMARY }} />
-              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Temporary</span>
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: COLORS.BLUE_PRIMARY }}
+              />
+              <span
+                className="text-xs"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
+                Temporary
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.GREEN_DARK }} />
-              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>Routines</span>
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: COLORS.GREEN_DARK }}
+              />
+              <span
+                className="text-xs"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
+                Routines
+              </span>
             </div>
           </div>
         </div>
@@ -1342,24 +1555,36 @@ export default function MobileClientDetailPage({
             clientName={client.name}
             clientEmail={client.email}
             clientPhone={client.phone}
-            clientNotes={extractNoteContent(client.notes)}
+            clientNotes={extractNoteContent(client.notes ?? null)}
             clientAvatar={client.avatar}
           />
         )}
 
         {/* Day Overview Modal */}
         {showDayOverviewModal && selectedDate && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}>
+          <div
+            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
+          >
             <div
               className="rounded-2xl shadow-xl border w-full max-w-2xl max-h-[80vh] overflow-y-auto"
-              style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+              style={{
+                backgroundColor: "#1C2021",
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
             >
               <div
                 className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
-                style={{ backgroundColor: "#1C2021", borderColor: COLORS.BORDER_SUBTLE }}
+                style={{
+                  backgroundColor: "#1C2021",
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
               >
                 <div>
-                  <h2 className="text-xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                  <h2
+                    className="text-xl font-bold"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     {format(selectedDate, "EEEE, MMMM d, yyyy")}
                   </h2>
                 </div>
@@ -1370,8 +1595,12 @@ export default function MobileClientDetailPage({
                   }}
                   className="transition-colors"
                   style={{ color: COLORS.TEXT_SECONDARY }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = COLORS.TEXT_PRIMARY}
-                  onMouseLeave={(e) => e.currentTarget.style.color = COLORS.TEXT_SECONDARY}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.color = COLORS.TEXT_PRIMARY)
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.color = COLORS.TEXT_SECONDARY)
+                  }
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -1397,13 +1626,17 @@ export default function MobileClientDetailPage({
                         backgroundColor: "rgba(245, 158, 11, 0.1)",
                         borderColor: "rgba(245, 158, 11, 0.2)",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(245, 158, 11, 0.2)";
-                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(245, 158, 11, 0.2)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(245, 158, 11, 0.3)";
                       }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(245, 158, 11, 0.1)";
-                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.2)";
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(245, 158, 11, 0.1)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(245, 158, 11, 0.2)";
                       }}
                     >
                       <div className="text-center">
@@ -1413,7 +1646,10 @@ export default function MobileClientDetailPage({
                         >
                           Schedule Lesson
                         </div>
-                        <div className="text-[10px]" style={{ color: "rgba(245, 158, 11, 0.8)" }}>
+                        <div
+                          className="text-[10px]"
+                          style={{ color: "rgba(245, 158, 11, 0.8)" }}
+                        >
                           Book a lesson
                         </div>
                       </div>
@@ -1430,13 +1666,17 @@ export default function MobileClientDetailPage({
                         backgroundColor: "rgba(59, 130, 246, 0.1)",
                         borderColor: "rgba(59, 130, 246, 0.2)",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(59, 130, 246, 0.2)";
-                        e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.3)";
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(59, 130, 246, 0.2)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(59, 130, 246, 0.3)";
                       }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
-                        e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.2)";
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(59, 130, 246, 0.1)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(59, 130, 246, 0.2)";
                       }}
                     >
                       <div className="text-center">
@@ -1446,7 +1686,10 @@ export default function MobileClientDetailPage({
                         >
                           Assign Program
                         </div>
-                        <div className="text-[10px]" style={{ color: "rgba(59, 130, 246, 0.8)" }}>
+                        <div
+                          className="text-[10px]"
+                          style={{ color: "rgba(59, 130, 246, 0.8)" }}
+                        >
                           Start a program
                         </div>
                       </div>
@@ -1463,13 +1706,17 @@ export default function MobileClientDetailPage({
                         backgroundColor: "rgba(16, 185, 129, 0.1)",
                         borderColor: "rgba(16, 185, 129, 0.2)",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(16, 185, 129, 0.2)";
-                        e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.3)";
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(16, 185, 129, 0.2)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(16, 185, 129, 0.3)";
                       }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
-                        e.currentTarget.style.borderColor = "rgba(16, 185, 129, 0.2)";
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(16, 185, 129, 0.1)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(16, 185, 129, 0.2)";
                       }}
                     >
                       <div className="text-center">
@@ -1479,7 +1726,10 @@ export default function MobileClientDetailPage({
                         >
                           Assign Routine
                         </div>
-                        <div className="text-[10px]" style={{ color: "rgba(16, 185, 129, 0.8)" }}>
+                        <div
+                          className="text-[10px]"
+                          style={{ color: "rgba(16, 185, 129, 0.8)" }}
+                        >
                           Assign a routine
                         </div>
                       </div>
@@ -1496,13 +1746,17 @@ export default function MobileClientDetailPage({
                         backgroundColor: "rgba(139, 92, 246, 0.1)",
                         borderColor: "rgba(139, 92, 246, 0.2)",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(139, 92, 246, 0.2)";
-                        e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.3)";
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(139, 92, 246, 0.2)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(139, 92, 246, 0.3)";
                       }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(139, 92, 246, 0.1)";
-                        e.currentTarget.style.borderColor = "rgba(139, 92, 246, 0.2)";
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(139, 92, 246, 0.1)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(139, 92, 246, 0.2)";
                       }}
                     >
                       <div className="text-center">
@@ -1512,7 +1766,10 @@ export default function MobileClientDetailPage({
                         >
                           Assign Video
                         </div>
-                        <div className="text-[10px]" style={{ color: "rgba(139, 92, 246, 0.8)" }}>
+                        <div
+                          className="text-[10px]"
+                          style={{ color: "rgba(139, 92, 246, 0.8)" }}
+                        >
                           Assign a video
                         </div>
                       </div>
@@ -1535,7 +1792,10 @@ export default function MobileClientDetailPage({
                       {/* Lessons Section */}
                       {dayLessons.length > 0 && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                          <h3
+                            className="text-lg font-semibold"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             Scheduled Lessons
                           </h3>
                           <div className="space-y-3">
@@ -1545,14 +1805,20 @@ export default function MobileClientDetailPage({
                                 className="flex items-center justify-between p-4 rounded-lg border"
                                 style={{
                                   backgroundColor: "#2A2F2F",
-                                  borderColor: COLORS.GREEN_PRIMARY + "40"
+                                  borderColor: COLORS.GREEN_PRIMARY + "40",
                                 }}
                               >
                                 <div className="flex-1">
-                                  <div className="font-medium" style={{ color: COLORS.GREEN_PRIMARY }}>
+                                  <div
+                                    className="font-medium"
+                                    style={{ color: COLORS.GREEN_PRIMARY }}
+                                  >
                                     {formatTimeInUserTimezone(lesson.date)}
                                   </div>
-                                  <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                  <div
+                                    className="text-sm"
+                                    style={{ color: COLORS.TEXT_SECONDARY }}
+                                  >
                                     {lesson.title}
                                   </div>
                                 </div>
@@ -1560,8 +1826,14 @@ export default function MobileClientDetailPage({
                                   onClick={() => handleRemoveLesson(lesson)}
                                   className="p-2 transition-colors"
                                   style={{ color: COLORS.GREEN_PRIMARY }}
-                                  onMouseEnter={(e) => e.currentTarget.style.color = COLORS.RED_ALERT}
-                                  onMouseLeave={(e) => e.currentTarget.style.color = COLORS.GREEN_PRIMARY}
+                                  onMouseEnter={e =>
+                                    (e.currentTarget.style.color =
+                                      COLORS.RED_ALERT)
+                                  }
+                                  onMouseLeave={e =>
+                                    (e.currentTarget.style.color =
+                                      COLORS.GREEN_PRIMARY)
+                                  }
                                   title="Remove lesson"
                                 >
                                   <X className="h-4 w-4" />
@@ -1575,7 +1847,10 @@ export default function MobileClientDetailPage({
                       {/* Programs Section */}
                       {dayPrograms.length > 0 && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                          <h3
+                            className="text-lg font-semibold"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             Assigned Programs
                           </h3>
                           <div className="space-y-3">
@@ -1585,18 +1860,20 @@ export default function MobileClientDetailPage({
                                 className="flex items-center justify-between p-4 rounded-lg border"
                                 style={{
                                   backgroundColor: "#2A2F2F",
-                                  borderColor: program.type === "temporary_program"
-                                    ? COLORS.BLUE_PRIMARY + "40"
-                                    : getGoldenAccent(0.2)
+                                  borderColor:
+                                    program.type === "temporary_program"
+                                      ? COLORS.BLUE_PRIMARY + "40"
+                                      : getGoldenAccent(0.2),
                                 }}
                               >
                                 <div className="flex-1">
                                   <div
                                     className="font-medium"
                                     style={{
-                                      color: program.type === "temporary_program"
-                                        ? COLORS.BLUE_PRIMARY
-                                        : COLORS.GOLDEN_ACCENT
+                                      color:
+                                        program.type === "temporary_program"
+                                          ? COLORS.BLUE_PRIMARY
+                                          : COLORS.GOLDEN_ACCENT,
                                     }}
                                   >
                                     {program.title}
@@ -1612,12 +1889,18 @@ export default function MobileClientDetailPage({
                                   <DropdownMenuTrigger asChild>
                                     <button
                                       className="p-2 rounded-lg transition-colors"
-                                      style={{ 
+                                      style={{
                                         backgroundColor: "transparent",
-                                        color: COLORS.TEXT_SECONDARY
+                                        color: COLORS.TEXT_SECONDARY,
                                       }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#353A3A"}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                      onMouseEnter={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "#353A3A")
+                                      }
+                                      onMouseLeave={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "transparent")
+                                      }
                                       title="Program actions"
                                     >
                                       <MoreVertical className="h-4 w-4" />
@@ -1632,7 +1915,7 @@ export default function MobileClientDetailPage({
                                     }}
                                   >
                                     <DropdownMenuItem
-                                      onSelect={(e) => {
+                                      onSelect={e => {
                                         e.preventDefault();
                                         // Replace with lesson functionality
                                         const replacementData = {
@@ -1656,21 +1939,29 @@ export default function MobileClientDetailPage({
                                         setShowDayOverviewModal(false);
                                       }}
                                       className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                                      style={{ 
+                                      style={{
                                         color: COLORS.TEXT_PRIMARY,
-                                        backgroundColor: "transparent"
+                                        backgroundColor: "transparent",
                                       }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                      onMouseEnter={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "#2A2F2F")
+                                      }
+                                      onMouseLeave={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "transparent")
+                                      }
                                     >
                                       Replace with Lesson
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator
                                       className="my-1"
-                                      style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
+                                      style={{
+                                        backgroundColor: COLORS.BORDER_SUBTLE,
+                                      }}
                                     />
                                     <DropdownMenuItem
-                                      onSelect={(e) => {
+                                      onSelect={e => {
                                         e.preventDefault();
                                         // Handle temporary program days
                                         if (
@@ -1701,17 +1992,23 @@ export default function MobileClientDetailPage({
                                         handleRemoveProgram(programData, "day");
                                       }}
                                       className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                                      style={{ 
+                                      style={{
                                         color: COLORS.TEXT_PRIMARY,
-                                        backgroundColor: "transparent"
+                                        backgroundColor: "transparent",
                                       }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                      onMouseEnter={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "#2A2F2F")
+                                      }
+                                      onMouseLeave={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "transparent")
+                                      }
                                     >
                                       Remove This Day
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      onSelect={(e) => {
+                                      onSelect={e => {
                                         e.preventDefault();
                                         // Handle temporary program days
                                         if (
@@ -1745,12 +2042,18 @@ export default function MobileClientDetailPage({
                                         );
                                       }}
                                       className="flex items-center gap-2 cursor-pointer rounded-md px-3 py-2 text-sm transition-colors"
-                                      style={{ 
+                                      style={{
                                         color: COLORS.RED_ALERT,
-                                        backgroundColor: "transparent"
+                                        backgroundColor: "transparent",
                                       }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2A2F2F"}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                                      onMouseEnter={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "#2A2F2F")
+                                      }
+                                      onMouseLeave={e =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          "transparent")
+                                      }
                                     >
                                       Remove Entire Program
                                     </DropdownMenuItem>
@@ -1765,7 +2068,10 @@ export default function MobileClientDetailPage({
                       {/* Routine Assignments Section */}
                       {dayRoutines.length > 0 && (
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                          <h3
+                            className="text-lg font-semibold"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             Assigned Routines
                           </h3>
                           <div className="space-y-3">
@@ -1775,15 +2081,21 @@ export default function MobileClientDetailPage({
                                 className="flex items-center justify-between p-4 rounded-lg border"
                                 style={{
                                   backgroundColor: "#2A2F2F",
-                                  borderColor: COLORS.GREEN_DARK + "40"
+                                  borderColor: COLORS.GREEN_DARK + "40",
                                 }}
                               >
                                 <div className="flex items-center gap-3">
                                   <div>
-                                    <div className="font-medium" style={{ color: COLORS.GREEN_PRIMARY }}>
+                                    <div
+                                      className="font-medium"
+                                      style={{ color: COLORS.GREEN_PRIMARY }}
+                                    >
                                       {routine.routine?.name || "Routine"}
                                     </div>
-                                    <div className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                                    <div
+                                      className="text-sm"
+                                      style={{ color: COLORS.TEXT_SECONDARY }}
+                                    >
                                       {routine.routine?.exercises?.length || 0}{" "}
                                       exercises
                                     </div>
@@ -1793,8 +2105,14 @@ export default function MobileClientDetailPage({
                                   onClick={() => handleRemoveRoutine(routine)}
                                   className="p-2 transition-colors"
                                   style={{ color: COLORS.GREEN_PRIMARY }}
-                                  onMouseEnter={(e) => e.currentTarget.style.color = COLORS.RED_ALERT}
-                                  onMouseLeave={(e) => e.currentTarget.style.color = COLORS.GREEN_PRIMARY}
+                                  onMouseEnter={e =>
+                                    (e.currentTarget.style.color =
+                                      COLORS.RED_ALERT)
+                                  }
+                                  onMouseLeave={e =>
+                                    (e.currentTarget.style.color =
+                                      COLORS.GREEN_PRIMARY)
+                                  }
                                   title="Remove routine"
                                 >
                                   <X className="h-4 w-4" />

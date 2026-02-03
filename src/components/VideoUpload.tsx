@@ -121,25 +121,22 @@ export default function VideoUpload({
                 backgroundColor: COLORS.BACKGROUND_CARD,
                 borderColor: COLORS.BORDER_SUBTLE,
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = getGoldenAccent(0.4);
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
               }}
             >
               <div className="flex flex-col items-center space-y-4">
                 <div
                   className="p-4 rounded-full border"
-                  style={{
+                  style={{ 
                     backgroundColor: getGoldenAccent(0.2),
                     borderColor: getGoldenAccent(0.4),
                   }}
                 >
-                  <Video
-                    className="w-8 h-8"
-                    style={{ color: COLORS.GOLDEN_ACCENT }}
-                  />
+                  <Video className="w-8 h-8" style={{ color: COLORS.GOLDEN_ACCENT }} />
                 </div>
                 <div>
                   <h3
@@ -148,14 +145,12 @@ export default function VideoUpload({
                   >
                     Upload Video
                   </h3>
-                  <p
-                    className="text-sm"
-                    style={{ color: COLORS.TEXT_SECONDARY }}
-                  >
+                  <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
                     Drag and drop or click to select your video file
                   </p>
                 </div>
 
+                {/* @ts-expect-error - effect version conflict workaround */}
                 <UploadButton<OurFileRouter, "feedbackVideoUploader">
                   endpoint="feedbackVideoUploader"
                   onUploadBegin={() => setIsUploading(true)}
@@ -189,7 +184,7 @@ export default function VideoUpload({
           {/* Success Header */}
           <div
             className="flex items-center justify-between p-4 rounded-xl border"
-            style={{
+            style={{ 
               backgroundColor: COLORS.BACKGROUND_CARD,
               borderColor: COLORS.BORDER_SUBTLE,
             }}
@@ -197,21 +192,15 @@ export default function VideoUpload({
             <div className="flex items-center gap-3">
               <div
                 className="p-2 rounded-lg border"
-                style={{
+                style={{ 
                   backgroundColor: COLORS.GREEN_PRIMARY,
                   borderColor: COLORS.BORDER_SUBTLE,
                 }}
               >
-                <CheckCircle
-                  className="w-5 h-5"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                />
+                <CheckCircle className="w-5 h-5" style={{ color: COLORS.TEXT_PRIMARY }} />
               </div>
               <div>
-                <h3
-                  className="font-semibold"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
+                <h3 className="font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Upload Complete
                 </h3>
                 <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
@@ -227,13 +216,12 @@ export default function VideoUpload({
                 borderColor: COLORS.BORDER_SUBTLE,
                 color: COLORS.TEXT_SECONDARY,
               }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor =
-                  COLORS.BACKGROUND_CARD_HOVER;
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.borderColor = COLORS.RED_ALERT;
                 e.currentTarget.style.color = COLORS.RED_ALERT;
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
                 e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                 e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
@@ -265,11 +253,11 @@ export default function VideoUpload({
                   borderColor: COLORS.BORDER_SUBTLE,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onFocus={e => {
+                onFocus={(e) => {
                   e.currentTarget.style.borderColor = getGoldenAccent(0.5);
                   e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
                 }}
-                onBlur={e => {
+                onBlur={(e) => {
                   e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   e.currentTarget.style.boxShadow = "none";
                 }}
@@ -297,51 +285,21 @@ export default function VideoUpload({
                   borderColor: COLORS.BORDER_SUBTLE,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onFocus={e => {
+                onFocus={(e) => {
                   e.currentTarget.style.borderColor = getGoldenAccent(0.5);
                   e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
                 }}
-                onBlur={e => {
+                onBlur={(e) => {
                   e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                <option
-                  value="BULLPEN"
-                  style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                >
-                  Bullpen
-                </option>
-                <option
-                  value="PRACTICE"
-                  style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                >
-                  Practice
-                </option>
-                <option
-                  value="GAME_FOOTAGE"
-                  style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                >
-                  Game Footage
-                </option>
-                <option
-                  value="REFERENCE"
-                  style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                >
-                  Reference
-                </option>
-                <option
-                  value="COMPARISON"
-                  style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                >
-                  Comparison
-                </option>
-                <option
-                  value="OTHER"
-                  style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-                >
-                  Other
-                </option>
+                <option value="BULLPEN" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Bullpen</option>
+                <option value="PRACTICE" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Practice</option>
+                <option value="GAME_FOOTAGE" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Game Footage</option>
+                <option value="REFERENCE" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Reference</option>
+                <option value="COMPARISON" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Comparison</option>
+                <option value="OTHER" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>Other</option>
               </select>
             </div>
 
@@ -365,11 +323,11 @@ export default function VideoUpload({
                   borderColor: COLORS.BORDER_SUBTLE,
                   color: COLORS.TEXT_PRIMARY,
                 }}
-                onFocus={e => {
+                onFocus={(e) => {
                   e.currentTarget.style.borderColor = getGoldenAccent(0.5);
                   e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(0.1)}`;
                 }}
-                onBlur={e => {
+                onBlur={(e) => {
                   e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                   e.currentTarget.style.boxShadow = "none";
                 }}
@@ -380,24 +338,22 @@ export default function VideoUpload({
               onClick={handleSave}
               disabled={!formData.title.trim() || isUploading}
               className="w-full px-6 py-3 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed border"
-              style={{
-                backgroundColor:
-                  !formData.title.trim() || isUploading
-                    ? COLORS.BACKGROUND_CARD
-                    : getGoldenAccent(0.2),
+              style={{ 
+                backgroundColor: !formData.title.trim() || isUploading
+                  ? COLORS.BACKGROUND_CARD
+                  : getGoldenAccent(0.2),
                 color: COLORS.TEXT_PRIMARY,
-                borderColor:
-                  !formData.title.trim() || isUploading
-                    ? COLORS.BORDER_SUBTLE
-                    : getGoldenAccent(0.4),
+                borderColor: !formData.title.trim() || isUploading
+                  ? COLORS.BORDER_SUBTLE
+                  : getGoldenAccent(0.4),
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {
                   e.currentTarget.style.backgroundColor = getGoldenAccent(0.3);
                   e.currentTarget.style.borderColor = getGoldenAccent(0.5);
                 }
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 if (!e.currentTarget.disabled) {
                   e.currentTarget.style.backgroundColor = getGoldenAccent(0.2);
                   e.currentTarget.style.borderColor = getGoldenAccent(0.4);
@@ -406,9 +362,9 @@ export default function VideoUpload({
             >
               {isUploading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div
+                  <div 
                     className="w-4 h-4 border-2 rounded-full animate-spin"
-                    style={{
+                    style={{ 
                       borderColor: `${COLORS.TEXT_PRIMARY}30`,
                       borderTopColor: COLORS.TEXT_PRIMARY,
                     }}

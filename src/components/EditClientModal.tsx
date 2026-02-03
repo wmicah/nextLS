@@ -104,7 +104,7 @@ export default function EditClientModal({
     );
   }, [client]);
 
-  const updateClient = (trpc.clients.update as any).useMutation({
+  const updateClient = trpc.clients.update.useMutation({
     onSuccess: () => {
       utils.clients.list.invalidate();
       utils.clients.getById.invalidate({ id: client.id });

@@ -234,6 +234,7 @@ export default function SecureFileUpload({
               Choose Files
             </Button>
 
+            {/* @ts-expect-error - effect version conflict workaround */}
             <UploadButton<OurFileRouter, typeof endpoint>
               endpoint={endpoint}
               onClientUploadComplete={(res: any) => {
@@ -259,12 +260,12 @@ export default function SecureFileUpload({
               uploadType === "profilePicture"
                 ? "image/*"
                 : uploadType === "video"
-                  ? "video/*"
-                  : uploadType === "audio"
-                    ? "audio/*"
-                    : uploadType === "document"
-                      ? ".pdf,.doc,.docx,.txt,.md"
-                      : "*"
+                ? "video/*"
+                : uploadType === "audio"
+                ? "audio/*"
+                : uploadType === "document"
+                ? ".pdf,.doc,.docx,.txt,.md"
+                : "*"
             }
           />
         </div>

@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { ReactNode, Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ComponentErrorFallback } from "@/components/ErrorFallback";
+import Sidebar from "@/components/Sidebar";
+import ClientSidebar from "@/components/ClientSidebar";
 
 // Loading skeleton component for page transitions (not used anymore, but kept for reference)
 // const PageSkeleton = () => (
@@ -59,10 +61,13 @@ const MobileProgramsPage = dynamic(() => import("./MobileProgramsPage"), {
 });
 
 // Schedule components
-const SchedulePageClient = dynamic(() => import("../app/schedule/SchedulePageClient"), {
-  loading: () => null, // No loading screen - let the component handle its own loading state
-  ssr: false,
-});
+const SchedulePageClient = dynamic(
+  () => import("../app/schedule/SchedulePageClient"),
+  {
+    loading: () => null, // No loading screen - let the component handle its own loading state
+    ssr: false,
+  }
+);
 const MobileSchedulePage = dynamic(() => import("./MobileSchedulePage"), {
   loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
@@ -73,10 +78,13 @@ const NotificationsPage = dynamic(() => import("./NotificationsPage"), {
   loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
-const MobileNotificationsPage = dynamic(() => import("./MobileNotificationsPage"), {
-  loading: () => null, // No loading screen - let the component handle its own loading state
-  ssr: false,
-});
+const MobileNotificationsPage = dynamic(
+  () => import("./MobileNotificationsPage"),
+  {
+    loading: () => null, // No loading screen - let the component handle its own loading state
+    ssr: false,
+  }
+);
 
 // Messages components
 const MessagesPage = dynamic(() => import("./MessagesPage"), {
@@ -99,54 +107,95 @@ const ClientProgramPage = dynamic(() => import("./ClientProgramPage"), {
   loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
-const MobileClientProgramPage = dynamic(() => import("./MobileClientProgramPage"), {
-  loading: () => null, // No loading screen - let the component handle its own loading state
-  ssr: false,
-});
-const ClientSchedulePageClient = dynamic(() => import("../app/client-schedule/ClientSchedulePageClient"), {
-  loading: () => null, // No loading screen - let the component handle its own loading state
-  ssr: false,
-});
-const MobileClientSchedulePage = dynamic(() => import("./MobileClientSchedulePage"), {
-  loading: () => null, // No loading screen - let the component handle its own loading state
-  ssr: false,
-});
+const MobileClientProgramPage = dynamic(
+  () => import("./MobileClientProgramPage"),
+  {
+    loading: () => null, // No loading screen - let the component handle its own loading state
+    ssr: false,
+  }
+);
+const ClientSchedulePageClient = dynamic(
+  () => import("../app/client-schedule/ClientSchedulePageClient"),
+  {
+    loading: () => null, // No loading screen - let the component handle its own loading state
+    ssr: false,
+  }
+);
+const MobileClientSchedulePage = dynamic(
+  () => import("./MobileClientSchedulePage"),
+  {
+    loading: () => null, // No loading screen - let the component handle its own loading state
+    ssr: false,
+  }
+);
 const ClientMessagesPage = dynamic(() => import("./ClientMessagesPage"), {
   loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
-const MobileClientMessagesPage = dynamic(() => import("./MobileClientMessagesPage"), {
-  loading: () => null, // No loading screen - let the component handle its own loading state
-  ssr: false,
-});
+const MobileClientMessagesPage = dynamic(
+  () => import("./MobileClientMessagesPage"),
+  {
+    loading: () => null, // No loading screen - let the component handle its own loading state
+    ssr: false,
+  }
+);
 const ClientSettingsPage = dynamic(() => import("./ClientSettingsPage"), {
   loading: () => null, // No loading screen - let the component handle its own loading state
   ssr: false,
 });
-const MobileClientSettingsPage = dynamic(() => import("./MobileClientSettingsPage"), {
-  loading: () => null, // No loading screen - let the component handle its own loading state
-  ssr: false,
-});
+const MobileClientSettingsPage = dynamic(
+  () => import("./MobileClientSettingsPage"),
+  {
+    loading: () => null, // No loading screen - let the component handle its own loading state
+    ssr: false,
+  }
+);
 
 interface ClientSideMobileWrapperProps {
   children?: ReactNode;
+  /** When set, layout renders Sidebar/ClientSidebar once and children as main content (sidebar persists across nav). */
+  variant?: "coach" | "client";
 }
 
 // Route to component mapping for cleaner code
-const ROUTE_COMPONENTS: Record<string, { desktop: React.ComponentType; mobile: React.ComponentType }> = {
+const ROUTE_COMPONENTS: Record<
+  string,
+  { desktop: React.ComponentType; mobile: React.ComponentType }
+> = {
   "/dashboard": { desktop: Dashboard, mobile: MobileDashboard },
   "/clients": { desktop: ClientsPage, mobile: MobileClientsPage },
   "/library": { desktop: LibraryPage, mobile: MobileLibraryPage },
   "/programs": { desktop: ProgramsPage, mobile: MobileProgramsPage },
   "/schedule": { desktop: SchedulePageClient, mobile: MobileSchedulePage },
-  "/notifications": { desktop: NotificationsPage, mobile: MobileNotificationsPage },
+  "/notifications": {
+    desktop: NotificationsPage,
+    mobile: MobileNotificationsPage,
+  },
   "/messages": { desktop: MessagesPage, mobile: MobileMessagesPage },
-  "/client-dashboard": { desktop: ClientProgramPage, mobile: MobileClientProgramPage },
-  "/client-program": { desktop: ClientProgramPage, mobile: MobileClientProgramPage },
-  "/client-schedule": { desktop: ClientSchedulePageClient, mobile: MobileClientSchedulePage },
-  "/client-messages": { desktop: ClientMessagesPage, mobile: MobileClientMessagesPage },
-  "/client-settings": { desktop: ClientSettingsPage, mobile: MobileClientSettingsPage },
-  "/client-notifications": { desktop: NotificationsPage, mobile: MobileNotificationsPage },
+  "/client-dashboard": {
+    desktop: ClientProgramPage,
+    mobile: MobileClientProgramPage,
+  },
+  "/client-program": {
+    desktop: ClientProgramPage,
+    mobile: MobileClientProgramPage,
+  },
+  "/client-schedule": {
+    desktop: ClientSchedulePageClient,
+    mobile: MobileClientSchedulePage,
+  },
+  "/client-messages": {
+    desktop: ClientMessagesPage,
+    mobile: MobileClientMessagesPage,
+  },
+  "/client-settings": {
+    desktop: ClientSettingsPage,
+    mobile: MobileClientSettingsPage,
+  },
+  "/client-notifications": {
+    desktop: NotificationsPage,
+    mobile: MobileNotificationsPage,
+  },
 };
 
 // Special case - VideosPage has no mobile variant
@@ -156,16 +205,33 @@ const DESKTOP_ONLY_ROUTES: Record<string, React.ComponentType> = {
 
 export default function ClientSideMobileWrapper({
   children,
+  variant,
 }: ClientSideMobileWrapperProps) {
   const { isMobile, isClient } = useMobileDetection();
   const pathname = usePathname();
 
   // Don't render anything until we know if we're on client side
-  // Return null instead of skeleton to avoid flash
   if (!isClient) {
     return null;
   }
 
+  // Layout mode: sidebar provided by layout, children = page content (sidebar persists across navigation)
+  if (variant === "coach") {
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        <Sidebar>{children}</Sidebar>
+      </ErrorBoundary>
+    );
+  }
+  if (variant === "client") {
+    return (
+      <ErrorBoundary fallback={<ComponentErrorFallback />}>
+        <ClientSidebar>{children}</ClientSidebar>
+      </ErrorBoundary>
+    );
+  }
+
+  // Legacy: no variant — pathname-based component selection (for routes not under (coach)/(client))
   // Check for desktop-only routes first
   if (DESKTOP_ONLY_ROUTES[pathname]) {
     const Component = DESKTOP_ONLY_ROUTES[pathname];

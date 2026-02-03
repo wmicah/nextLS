@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -28,12 +29,16 @@ import ClientProgressCard from "@/components/ProgressTracking/ClientProgressCard
 
 interface ClientDetailsPageProps {
   clientId: string;
+  noSidebar?: boolean;
 }
 
 export default function ClientDetailsPage({
   clientId,
+  noSidebar = false,
 }: ClientDetailsPageProps) {
   const router = useRouter();
+  const wrap = (content: React.ReactNode) =>
+    noSidebar ? content : <Sidebar>{content}</Sidebar>;
   const [showAssignProgramModal, setShowAssignProgramModal] = useState(false);
   const [showAssignRoutineModal, setShowAssignRoutineModal] = useState(false);
   const [showScheduleLessonModal, setShowScheduleLessonModal] = useState(false);
@@ -120,48 +125,44 @@ export default function ClientDetailsPage({
   };
 
   if (isLoading) {
-    return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2"
-            style={{ borderColor: "#4A5A70" }}
-          />
-        </div>
-      </Sidebar>
+    return wrap(
+      <div className="flex items-center justify-center h-64">
+        <div
+          className="animate-spin rounded-full h-8 w-8 border-b-2"
+          style={{ borderColor: "#4A5A70" }}
+        />
+      </div>
     );
   }
 
   if (error || !client) {
-    return (
-      <Sidebar>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-white mb-2">
-              Client Not Found
-            </h2>
-            <p className="text-gray-400 mb-4">
-              The client you&apos;re looking for doesn&apos;t exist.
-            </p>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
-              style={{
-                backgroundColor: "#4A5A70",
-                color: "#FFFFFF",
-              }}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Link>
-          </div>
+    return wrap(
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-white mb-2">
+            Client Not Found
+          </h2>
+          <p className="text-gray-400 mb-4">
+            The client you&apos;re looking for doesn&apos;t exist.
+          </p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+            style={{
+              backgroundColor: "#4A5A70",
+              color: "#FFFFFF",
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
         </div>
-      </Sidebar>
+      </div>
     );
   }
 
-  return (
-    <Sidebar>
+  return wrap(
+    <>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -833,8 +834,8 @@ export default function ClientDetailsPage({
             </div>
           </>
         ) : (
-          /* Progress Tab Content */
           <div className="space-y-6">
+            {/* Progress Tab Content */}
             <ClientProgressCard
               clientId={clientId}
               clientName={client.name}
@@ -885,6 +886,6 @@ export default function ClientDetailsPage({
           } as any
         }
       />
-    </Sidebar>
+    </>
   );
 }

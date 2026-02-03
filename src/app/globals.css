@@ -333,6 +333,25 @@ body {
   }
 }
 
+/* Beacon highlight pulse for onboarding (golden) */
+@keyframes beacon-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 2px rgba(229, 178, 50, 0.5),
+      0 0 24px rgba(229, 178, 50, 0.2),
+      inset 0 0 20px rgba(229, 178, 50, 0.04);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 0 3px rgba(229, 178, 50, 0.6),
+      0 0 40px rgba(229, 178, 50, 0.35),
+      inset 0 0 24px rgba(229, 178, 50, 0.08);
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% center;
@@ -631,4 +650,141 @@ select option:focus {
 /* Checkbox styling with golden accent */
 input[type="checkbox"] {
   accent-color: #e5b232;
+}
+
+/* CSS Tooltip collection style - hover, arrow, transition */
+.css-tooltip-wrapper {
+  position: relative;
+}
+
+.css-tooltip-trigger {
+  outline: none;
+}
+
+.css-tooltip-content {
+  position: absolute;
+  z-index: 50;
+  max-width: 420px;
+  min-width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    transform 0.2s ease;
+  background-color: rgba(26, 31, 35, 0.98);
+  border-color: rgba(229, 178, 50, 0.35);
+  color: #f5f5f5;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(229, 178, 50, 0.15);
+}
+
+.css-tooltip-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+
+/* Show on hover/focus */
+.css-tooltip-wrapper:hover .css-tooltip-content,
+.css-tooltip-wrapper:focus-within .css-tooltip-content {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Placement: bottom (default) */
+.css-tooltip-wrapper[data-placement="bottom"] .css-tooltip-content {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  margin-top: 4px;
+}
+
+.css-tooltip-wrapper:hover[data-placement="bottom"] .css-tooltip-content,
+.css-tooltip-wrapper:focus-within[data-placement="bottom"]
+  .css-tooltip-content {
+  transform: translateX(-50%) translateY(0);
+}
+
+.css-tooltip-wrapper[data-placement="bottom"] .css-tooltip-arrow {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: rgba(26, 31, 35, 0.98);
+  border-top: none;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+/* Placement: top */
+.css-tooltip-wrapper[data-placement="top"] .css-tooltip-content {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  margin-bottom: 4px;
+}
+
+.css-tooltip-wrapper:hover[data-placement="top"] .css-tooltip-content,
+.css-tooltip-wrapper:focus-within[data-placement="top"] .css-tooltip-content {
+  transform: translateX(-50%) translateY(0);
+}
+
+.css-tooltip-wrapper[data-placement="top"] .css-tooltip-arrow {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: rgba(26, 31, 35, 0.98);
+  border-bottom: none;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+/* Placement: right */
+.css-tooltip-wrapper[data-placement="right"] .css-tooltip-content {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  margin-left: 4px;
+}
+
+.css-tooltip-wrapper:hover[data-placement="right"] .css-tooltip-content,
+.css-tooltip-wrapper:focus-within[data-placement="right"] .css-tooltip-content {
+  transform: translateY(-50%) translateX(0);
+}
+
+.css-tooltip-wrapper[data-placement="right"] .css-tooltip-arrow {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: rgba(26, 31, 35, 0.98);
+  border-left: none;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+
+/* Placement: left */
+.css-tooltip-wrapper[data-placement="left"] .css-tooltip-content {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  margin-right: 4px;
+}
+
+.css-tooltip-wrapper:hover[data-placement="left"] .css-tooltip-content,
+.css-tooltip-wrapper:focus-within[data-placement="left"] .css-tooltip-content {
+  transform: translateY(-50%) translateX(0);
+}
+
+.css-tooltip-wrapper[data-placement="left"] .css-tooltip-arrow {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: rgba(26, 31, 35, 0.98);
+  border-right: none;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
 }

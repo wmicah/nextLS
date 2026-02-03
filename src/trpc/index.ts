@@ -8,6 +8,7 @@
  * - All existing API calls remain unchanged
  * - Type safety preserved
  *
+ * Original file backed up at: src/trpc/index.backup.ts
  */
 
 import { router } from "./trpc";
@@ -29,10 +30,7 @@ import { workoutTemplatesRouter } from "./routers/workoutTemplates.router";
 import { schedulingRouter } from "./routers/scheduling.router";
 import { programsRouter } from "./routers/programs.router";
 import { routinesRouter } from "./routers/routines.router";
-import {
-  notificationsRouter,
-  pushNotificationsRouter,
-} from "./routers/notifications.router";
+import { notificationsRouter, pushNotificationsRouter } from "./routers/notifications.router";
 import { libraryResourcesRouter } from "./routers/libraryResources.router";
 import { analyticsRouter } from "./routers/analytics.router";
 import { analyticsGoalsRouter } from "./routers/analyticsGoals.router";

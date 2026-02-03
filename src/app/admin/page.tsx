@@ -223,6 +223,23 @@ export default function AdminDashboard() {
     }
   );
   const { data: stats } = trpc.admin.getStats.useQuery();
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<
+    "all" | "COACH" | "CLIENT" | "none"
+  >("all");
+  const [userAdminFilter, setUserAdminFilter] = useState<
+    "all" | "admin" | "non-admin"
+  >("all");
+  const { data: adminUsers = [] } = trpc.admin.getUsers.useQuery(undefined, {
+    enabled: activeTab === "users",
+  });
+  const updateUserAdminStatusMutation =
+    trpc.admin.updateUserAdminStatus.useMutation({
+      onSuccess: () => {
+        utils.admin.getUsers.invalidate();
+        utils.admin.getStats.invalidate();
+      },
+    });
   const { data: deletionAnalytics } =
     trpc.user.getAccountDeletionAnalytics.useQuery();
   const [showArchivedBugReports, setShowArchivedBugReports] = useState(false);
@@ -745,9 +762,9 @@ export default function AdminDashboard() {
                 >
                   <div className="text-center">
                     <div className="text-lg font-bold text-white">
-                      {stats?.totalResources || 0}
+                      {stats?.totalUsers ?? stats?.activeUsers ?? 0}
                     </div>
-                    <div className="text-xs text-gray-400">Resources</div>
+                    <div className="text-xs text-gray-400">Total Users</div>
                   </div>
                 </div>
                 <div
@@ -756,9 +773,9 @@ export default function AdminDashboard() {
                 >
                   <div className="text-center">
                     <div className="text-lg font-bold text-white">
-                      {stats?.masterLibraryCount || 0}
+                      {stats?.coachCount ?? 0}
                     </div>
-                    <div className="text-xs text-gray-400">Master</div>
+                    <div className="text-xs text-gray-400">Coaches</div>
                   </div>
                 </div>
                 <div
@@ -767,9 +784,9 @@ export default function AdminDashboard() {
                 >
                   <div className="text-center">
                     <div className="text-lg font-bold text-white">
-                      {stats?.activeUsers || 0}
+                      {stats?.clientCount ?? 0}
                     </div>
-                    <div className="text-xs text-gray-400">Users</div>
+                    <div className="text-xs text-gray-400">Clients</div>
                   </div>
                 </div>
                 <div
@@ -778,9 +795,9 @@ export default function AdminDashboard() {
                 >
                   <div className="text-center">
                     <div className="text-lg font-bold text-white">
-                      {stats?.activeUsers || 0}
+                      {stats?.masterLibraryCount ?? 0}
                     </div>
-                    <div className="text-xs text-gray-400">Active</div>
+                    <div className="text-xs text-gray-400">Master Library</div>
                   </div>
                 </div>
               </div>
@@ -791,33 +808,9 @@ export default function AdminDashboard() {
               <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">Total Resources</p>
+                    <p className="text-gray-400 text-sm">Total Users</p>
                     <p className="text-3xl font-bold text-white">
-                      {stats?.totalResources || 0}
-                    </p>
-                  </div>
-                  <BookOpen className="w-8 h-8 text-[#4A5A70]" />
-                </div>
-              </div>
-
-              <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Master Library</p>
-                    <p className="text-3xl font-bold text-white">
-                      {stats?.masterLibraryCount || 0}
-                    </p>
-                  </div>
-                  <Video className="w-8 h-8 text-[#4A5A70]" />
-                </div>
-              </div>
-
-              <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Active Users</p>
-                    <p className="text-3xl font-bold text-white">
-                      {stats?.activeUsers || 0}
+                      {stats?.totalUsers ?? stats?.activeUsers ?? 0}
                     </p>
                   </div>
                   <Users className="w-8 h-8 text-[#4A5A70]" />
@@ -827,9 +820,33 @@ export default function AdminDashboard() {
               <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">Total Resources</p>
+                    <p className="text-gray-400 text-sm">Coaches</p>
                     <p className="text-3xl font-bold text-white">
-                      {stats?.totalResources || 0}
+                      {stats?.coachCount ?? 0}
+                    </p>
+                  </div>
+                  <Users className="w-8 h-8 text-[#4A5A70]" />
+                </div>
+              </div>
+
+              <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-sm">Clients</p>
+                    <p className="text-3xl font-bold text-white">
+                      {stats?.clientCount ?? 0}
+                    </p>
+                  </div>
+                  <Target className="w-8 h-8 text-[#4A5A70]" />
+                </div>
+              </div>
+
+              <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-sm">Master Library</p>
+                    <p className="text-3xl font-bold text-white">
+                      {stats?.masterLibraryCount ?? 0}
                     </p>
                   </div>
                   <BookOpen className="w-8 h-8 text-[#4A5A70]" />
@@ -1370,9 +1387,164 @@ export default function AdminDashboard() {
         {activeTab === "users" && (
           <div className="bg-[#1A1D1E] rounded-xl p-6 border border-[#4A5A70]">
             <h2 className="text-xl font-bold mb-4">User Management</h2>
-            <p className="text-gray-400">
-              User management features coming soon...
+            <p className="text-gray-400 mb-6">
+              Search, filter, and manage user roles and admin status.
             </p>
+
+            {/* Search and filters */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search by name or email..."
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  className="pl-9 bg-[#2A3133] border-[#4A5A70] text-white placeholder:text-gray-500"
+                />
+              </div>
+              <select
+                value={userRoleFilter}
+                onChange={e =>
+                  setUserRoleFilter(
+                    e.target.value as "all" | "COACH" | "CLIENT" | "none"
+                  )
+                }
+                className="px-3 py-2 rounded-md bg-[#2A3133] border border-[#4A5A70] text-white min-w-[140px]"
+              >
+                <option value="all">All roles</option>
+                <option value="COACH">Coaches</option>
+                <option value="CLIENT">Clients</option>
+                <option value="none">No role</option>
+              </select>
+              <select
+                value={userAdminFilter}
+                onChange={e =>
+                  setUserAdminFilter(
+                    e.target.value as "all" | "admin" | "non-admin"
+                  )
+                }
+                className="px-3 py-2 rounded-md bg-[#2A3133] border border-[#4A5A70] text-white min-w-[140px]"
+              >
+                <option value="all">All users</option>
+                <option value="admin">Admins only</option>
+                <option value="non-admin">Non-admins</option>
+              </select>
+            </div>
+
+            {/* Filtered user list */}
+            {(() => {
+              const searchLower = userSearch.trim().toLowerCase();
+              const filtered = adminUsers.filter(u => {
+                const matchSearch =
+                  !searchLower ||
+                  (u.email ?? "").toLowerCase().includes(searchLower) ||
+                  (u.name ?? "").toLowerCase().includes(searchLower);
+                const matchRole =
+                  userRoleFilter === "all" ||
+                  (userRoleFilter === "none"
+                    ? u.role == null
+                    : u.role === userRoleFilter);
+                const matchAdmin =
+                  userAdminFilter === "all" ||
+                  (userAdminFilter === "admin" ? u.isAdmin : !u.isAdmin);
+                return matchSearch && matchRole && matchAdmin;
+              });
+              const currentUserId = authData?.user?.id;
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-[#4A5A70] text-gray-400 text-sm">
+                        <th className="pb-3 pr-4">Email</th>
+                        <th className="pb-3 pr-4">Name</th>
+                        <th className="pb-3 pr-4">Role</th>
+                        <th className="pb-3 pr-4">Admin</th>
+                        <th className="pb-3 pr-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="py-8 text-center text-gray-500"
+                          >
+                            No users match your filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        filtered.map(u => (
+                          <tr
+                            key={u.id}
+                            className="border-b border-[#4A5A70]/50 hover:bg-[#2A3133]/50"
+                          >
+                            <td className="py-3 pr-4 text-white">
+                              {u.email ?? "—"}
+                            </td>
+                            <td className="py-3 pr-4 text-white">
+                              {u.name ?? "—"}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <span
+                                className="px-2 py-0.5 rounded text-xs"
+                                style={{
+                                  backgroundColor:
+                                    u.role === "COACH"
+                                      ? getGoldenAccent(0.2)
+                                      : u.role === "CLIENT"
+                                        ? "rgba(74, 90, 112, 0.5)"
+                                        : "rgba(74, 90, 112, 0.3)",
+                                }}
+                              >
+                                {u.role ?? "None"}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4">
+                              {u.isAdmin ? (
+                                <span className="text-amber-400 text-sm">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="text-gray-500 text-sm">
+                                  No
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 pr-4">
+                              {u.id === currentUserId ? (
+                                <span className="text-gray-500 text-sm">
+                                  (you)
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateUserAdminStatusMutation.mutate({
+                                      userId: u.id,
+                                      isAdmin: !u.isAdmin,
+                                    });
+                                  }}
+                                  disabled={
+                                    updateUserAdminStatusMutation.isPending
+                                  }
+                                  className="px-2 py-1 rounded text-sm border border-[#4A5A70] hover:bg-[#2A3133] disabled:opacity-50"
+                                >
+                                  {u.isAdmin ? "Remove admin" : "Make admin"}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                  <p className="mt-4 text-sm text-gray-500">
+                    Showing {filtered.length} of {adminUsers.length} users
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -2584,6 +2756,7 @@ export default function AdminDashboard() {
                           </p>
                         </div>
                       )}
+                      {/* @ts-expect-error - effect version conflict workaround */}
                       <UploadButton<OurFileRouter, "videoUploader">
                         endpoint="videoUploader"
                         onClientUploadComplete={(res: any) => {

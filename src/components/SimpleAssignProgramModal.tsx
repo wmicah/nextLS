@@ -3,7 +3,14 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
 import { useUIStore } from "@/lib/stores/uiStore";
-import { X, CheckCircle, Plus, Trash2, Search, Loader2 } from "lucide-react";
+import {
+  X,
+  CheckCircle,
+  Plus,
+  Trash2,
+  Search,
+  Loader2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { COLORS } from "@/lib/colors";
 
@@ -31,16 +38,6 @@ interface Client {
     };
   }[];
 }
-
-type ProgramAssignmentWithClient = {
-  id: string;
-  programId: string;
-  progress: number;
-  program: { id: string; title: string };
-  client: { id: string; name: string; email: string | null };
-  startDate?: string;
-  assignedAt?: string;
-};
 
 export default function SimpleAssignProgramModal({
   isOpen,
@@ -91,8 +88,8 @@ export default function SimpleAssignProgramModal({
     archived: false,
   });
 
-  // Sort clients alphabetically by name (typed to avoid deep inference)
-  const clients: Client[] = [...(clientsRaw as Client[])].sort((a, b) =>
+  // Sort clients alphabetically by name
+  const clients = [...clientsRaw].sort((a, b) =>
     (a.name || "").localeCompare(b.name || "")
   );
 
@@ -182,9 +179,8 @@ export default function SimpleAssignProgramModal({
       return;
     }
 
-    const targetStartDate =
-      propStartDate || startDate || new Date().toISOString().split("T")[0];
-
+    const targetStartDate = propStartDate || startDate || new Date().toISOString().split("T")[0];
+    
     // Validate that start date is not in the past (allow today and future)
     const selectedDate = new Date(targetStartDate);
     const today = new Date();
@@ -296,39 +292,20 @@ export default function SimpleAssignProgramModal({
   };
 
   // Get assignments for the selected program in manage mode
-  const programAssignments: ProgramAssignmentWithClient[] =
-    manageSelectedProgram
-      ? (allClients as Client[]).flatMap(client =>
-          (client.programAssignments ?? [])
-            .filter(
-              assignment => assignment.programId === manageSelectedProgram
-            )
-            .map(assignment => {
-              const a = assignment as {
-                startDate?: string;
-                assignedAt?: string | Date;
-              };
-              return {
-                id: assignment.id,
-                programId: assignment.programId,
-                progress: assignment.progress,
-                program: assignment.program,
-                client: {
-                  id: client.id,
-                  name: client.name,
-                  email: client.email,
-                },
-                startDate: a.startDate,
-                assignedAt:
-                  a.assignedAt != null
-                    ? typeof a.assignedAt === "string"
-                      ? a.assignedAt
-                      : new Date(a.assignedAt).toISOString()
-                    : undefined,
-              };
-            })
-        )
-      : [];
+  const programAssignments = manageSelectedProgram
+    ? allClients.flatMap(client =>
+        client.programAssignments
+          .filter(assignment => assignment.programId === manageSelectedProgram)
+          .map(assignment => ({
+            ...assignment,
+            client: {
+              id: client.id,
+              name: client.name,
+              email: client.email,
+            },
+          }))
+      )
+    : [];
 
   // Filter assigned clients based on search term
   const filteredAssignedClients = programAssignments.filter(
@@ -403,10 +380,7 @@ export default function SimpleAssignProgramModal({
           style={{ borderColor: COLORS.BORDER_SUBTLE }}
         >
           <div>
-            <h2
-              className="text-lg font-bold mb-0.5"
-              style={{ color: COLORS.TEXT_PRIMARY }}
-            >
+            <h2 className="text-lg font-bold mb-0.5" style={{ color: COLORS.TEXT_PRIMARY }}>
               {viewMode === "assign" ? "Assign Program" : "Manage Programs"}
             </h2>
             <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
@@ -427,8 +401,7 @@ export default function SimpleAssignProgramModal({
                 borderColor: COLORS.BORDER_SUBTLE,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor =
-                  COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
@@ -443,8 +416,7 @@ export default function SimpleAssignProgramModal({
               className="p-1.5 rounded-md transition-colors"
               style={{ color: COLORS.TEXT_SECONDARY }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor =
-                  COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {
@@ -464,20 +436,14 @@ export default function SimpleAssignProgramModal({
             <div className="space-y-6">
               {/* Step 1: Select Program */}
               <div>
-                <h3
-                  className="text-sm font-bold mb-3"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
+                <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                   Step 1: Choose a Program
                 </h3>
 
                 {/* Program Search */}
                 <div className="mb-3">
                   <div className="relative">
-                    <Search
-                      className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    />
+                    <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                     <input
                       type="text"
                       placeholder="Search programs by title, level, or description..."
@@ -490,20 +456,15 @@ export default function SimpleAssignProgramModal({
                         color: COLORS.TEXT_PRIMARY,
                       }}
                       onFocus={e => {
-                        e.currentTarget.style.borderColor =
-                          COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                       }}
                       onBlur={e => {
-                        e.currentTarget.style.borderColor =
-                          COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                       }}
                     />
                   </div>
                   {programSearchTerm && (
-                    <p
-                      className="text-xs mt-1"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
+                    <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                       {filteredPrograms.length} program
                       {filteredPrograms.length !== 1 ? "s" : ""} found
                     </p>
@@ -511,25 +472,13 @@ export default function SimpleAssignProgramModal({
                 </div>
 
                 {/* Programs List - Fixed Height with Scroll */}
-                <div
-                  className="max-h-96 overflow-y-auto border rounded-md p-3"
-                  style={{
-                    borderColor: COLORS.BORDER_SUBTLE,
-                    backgroundColor: COLORS.BACKGROUND_CARD,
-                  }}
-                >
+                <div className="max-h-96 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
                   {filteredPrograms.length === 0 ? (
                     <div className="text-center py-6">
-                      <p
-                        className="text-sm font-medium mb-1"
-                        style={{ color: COLORS.TEXT_PRIMARY }}
-                      >
+                      <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                         No programs found
                       </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      >
+                      <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {programSearchTerm
                           ? `No programs match "${programSearchTerm}"`
                           : "No programs available"}
@@ -547,16 +496,10 @@ export default function SimpleAssignProgramModal({
                           }}
                         >
                           <div className="flex-1 min-w-0">
-                            <div
-                              className="font-medium text-sm mb-1"
-                              style={{ color: COLORS.TEXT_PRIMARY }}
-                            >
+                            <div className="font-medium text-sm mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                               {program.title}
                             </div>
-                            <div
-                              className="flex items-center gap-2 text-xs"
-                              style={{ color: COLORS.TEXT_SECONDARY }}
-                            >
+                            <div className="flex items-center gap-2 text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                               <span>{program.level}</span>
                               <span>•</span>
                               <span>{program.duration} weeks</span>
@@ -605,10 +548,7 @@ export default function SimpleAssignProgramModal({
 
                   {/* Programs Summary */}
                   {filteredPrograms.length > 0 && (
-                    <div
-                      className="mt-2 text-xs text-center"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
+                    <div className="mt-2 text-xs text-center" style={{ color: COLORS.TEXT_SECONDARY }}>
                       {filteredPrograms.length} program
                       {filteredPrograms.length !== 1 ? "s" : ""} available
                     </div>
@@ -620,10 +560,7 @@ export default function SimpleAssignProgramModal({
               {selectedProgram && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3
-                      className="text-sm font-bold"
-                      style={{ color: COLORS.TEXT_PRIMARY }}
-                    >
+                    <h3 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                       Step 2: Select Clients ({selectedClients.length} selected)
                     </h3>
                     <div className="flex gap-2">
@@ -636,12 +573,10 @@ export default function SimpleAssignProgramModal({
                           color: COLORS.GOLDEN_ACCENT,
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor =
-                            "rgba(229, 178, 50, 0.2)";
+                          e.currentTarget.style.backgroundColor = "rgba(229, 178, 50, 0.2)";
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor =
-                            "rgba(229, 178, 50, 0.1)";
+                          e.currentTarget.style.backgroundColor = "rgba(229, 178, 50, 0.1)";
                         }}
                       >
                         Select All ({filteredClients.length})
@@ -655,13 +590,11 @@ export default function SimpleAssignProgramModal({
                           color: COLORS.TEXT_SECONDARY,
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor =
-                            COLORS.BACKGROUND_CARD_HOVER;
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                           e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor =
-                            COLORS.BACKGROUND_CARD;
+                          e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
                           e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                         }}
                       >
@@ -673,10 +606,7 @@ export default function SimpleAssignProgramModal({
                   {/* Client Search */}
                   <div className="mb-3">
                     <div className="relative">
-                      <Search
-                        className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      />
+                      <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                       <input
                         type="text"
                         placeholder="Search clients by name or email..."
@@ -689,20 +619,15 @@ export default function SimpleAssignProgramModal({
                           color: COLORS.TEXT_PRIMARY,
                         }}
                         onFocus={e => {
-                          e.currentTarget.style.borderColor =
-                            COLORS.GOLDEN_ACCENT;
+                          e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                         }}
                         onBlur={e => {
-                          e.currentTarget.style.borderColor =
-                            COLORS.BORDER_SUBTLE;
+                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                         }}
                       />
                     </div>
                     {clientSearchTerm && (
-                      <p
-                        className="text-xs mt-1"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      >
+                      <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                         {filteredClients.length} client
                         {filteredClients.length !== 1 ? "s" : ""} found
                       </p>
@@ -710,26 +635,14 @@ export default function SimpleAssignProgramModal({
                   </div>
 
                   {/* Clients Grid - Fixed Height with Scroll */}
-                  <div
-                    className="max-h-72 overflow-y-auto border rounded-md p-3"
-                    style={{
-                      borderColor: COLORS.BORDER_SUBTLE,
-                      backgroundColor: COLORS.BACKGROUND_CARD,
-                    }}
-                  >
+                  <div className="max-h-72 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
                       {filteredClients.length === 0 ? (
                         <div className="col-span-full text-center py-6">
-                          <p
-                            className="text-sm font-medium mb-1"
-                            style={{ color: COLORS.TEXT_PRIMARY }}
-                          >
+                          <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                             No clients found
                           </p>
-                          <p
-                            className="text-xs"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          >
+                          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {clientSearchTerm
                               ? `No clients match "${clientSearchTerm}"`
                               : "No clients available"}
@@ -752,75 +665,45 @@ export default function SimpleAssignProgramModal({
                               onClick={() => toggleClientSelection(client.id)}
                               className="p-2.5 rounded-md border text-left transition-colors"
                               style={{
-                                borderColor: isSelected
-                                  ? COLORS.GOLDEN_ACCENT
-                                  : COLORS.BORDER_SUBTLE,
-                                backgroundColor: isSelected
-                                  ? "rgba(229, 178, 50, 0.1)"
-                                  : COLORS.BACKGROUND_DARK,
+                                borderColor: isSelected ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                                backgroundColor: isSelected ? "rgba(229, 178, 50, 0.1)" : COLORS.BACKGROUND_DARK,
                               }}
                               onMouseEnter={e => {
                                 if (!isSelected) {
-                                  e.currentTarget.style.borderColor =
-                                    COLORS.BORDER_ACCENT;
-                                  e.currentTarget.style.backgroundColor =
-                                    COLORS.BACKGROUND_CARD_HOVER;
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                                 }
                               }}
                               onMouseLeave={e => {
                                 if (!isSelected) {
-                                  e.currentTarget.style.borderColor =
-                                    COLORS.BORDER_SUBTLE;
-                                  e.currentTarget.style.backgroundColor =
-                                    COLORS.BACKGROUND_DARK;
+                                  e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
                                 }
                               }}
                             >
                               <div className="flex items-center gap-2">
-                                <div
-                                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
-                                  style={{
-                                    backgroundColor: COLORS.BACKGROUND_CARD,
-                                    color: COLORS.TEXT_PRIMARY,
-                                  }}
-                                >
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: COLORS.BACKGROUND_CARD, color: COLORS.TEXT_PRIMARY }}>
                                   {client.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
-                                    <h4
-                                      className="text-xs font-medium truncate"
-                                      style={{ color: COLORS.TEXT_PRIMARY }}
-                                    >
+                                    <h4 className="text-xs font-medium truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                                       {client.name}
                                     </h4>
                                     {hasCurrentProgram && (
-                                      <span
-                                        className="px-1 py-0.5 rounded text-[10px]"
-                                        style={{
-                                          backgroundColor:
-                                            "rgba(242, 143, 59, 0.2)",
-                                          color: "#F28F3B",
-                                        }}
-                                      >
+                                      <span className="px-1 py-0.5 rounded text-[10px]" style={{ backgroundColor: "rgba(242, 143, 59, 0.2)", color: "#F28F3B" }}>
                                         Has Program
                                       </span>
                                     )}
                                   </div>
                                   {client.email && (
-                                    <p
-                                      className="text-[10px] truncate mt-0.5"
-                                      style={{ color: COLORS.TEXT_SECONDARY }}
-                                    >
+                                    <p className="text-[10px] truncate mt-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                                       {client.email}
                                     </p>
                                   )}
                                 </div>
                                 {isSelected && (
-                                  <CheckCircle
-                                    className="h-3.5 w-3.5 flex-shrink-0 ml-1"
-                                    style={{ color: COLORS.GOLDEN_ACCENT }}
-                                  />
+                                  <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 ml-1" style={{ color: COLORS.GOLDEN_ACCENT }} />
                                 )}
                               </div>
                             </button>
@@ -832,10 +715,7 @@ export default function SimpleAssignProgramModal({
 
                   {/* Clients Summary */}
                   {filteredClients.length > 0 && (
-                    <div
-                      className="mt-2 text-xs text-center"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
+                    <div className="mt-2 text-xs text-center" style={{ color: COLORS.TEXT_SECONDARY }}>
                       {filteredClients.length} client
                       {filteredClients.length !== 1 ? "s" : ""} available
                     </div>
@@ -846,10 +726,7 @@ export default function SimpleAssignProgramModal({
               {/* Step 3: Set Start Date */}
               {selectedProgram && selectedClients.length > 0 && (
                 <div>
-                  <h3
-                    className="text-sm font-bold mb-3"
-                    style={{ color: COLORS.TEXT_PRIMARY }}
-                  >
+                  <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Step 3: Set Start Date
                   </h3>
                   <div className="max-w-md">
@@ -868,18 +745,13 @@ export default function SimpleAssignProgramModal({
                         color: COLORS.TEXT_PRIMARY,
                       }}
                       onFocus={e => {
-                        e.currentTarget.style.borderColor =
-                          COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                       }}
                       onBlur={e => {
-                        e.currentTarget.style.borderColor =
-                          COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                       }}
                     />
-                    <p
-                      className="text-xs mt-1.5"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
+                    <p className="text-xs mt-1.5" style={{ color: COLORS.TEXT_SECONDARY }}>
                       When should this program start for the selected clients?
                       (Can be today or in the future)
                     </p>
@@ -900,21 +772,16 @@ export default function SimpleAssignProgramModal({
                     }}
                     onMouseEnter={e => {
                       if (!isAssigning) {
-                        e.currentTarget.style.backgroundColor =
-                          COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                       }
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.GOLDEN_DARK;
+                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                     }}
                   >
                     {isAssigning ? (
                       <>
-                        <div
-                          className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent"
-                          style={{ borderColor: COLORS.TEXT_PRIMARY }}
-                        ></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent" style={{ borderColor: COLORS.TEXT_PRIMARY }}></div>
                         Assigning...
                       </>
                     ) : (
@@ -934,25 +801,16 @@ export default function SimpleAssignProgramModal({
               {clientId ? (
                 /* Client-specific management (existing functionality) */
                 <>
-                  <h3
-                    className="text-sm font-bold mb-3"
-                    style={{ color: COLORS.TEXT_PRIMARY }}
-                  >
+                  <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                     Current Program Assignments
                   </h3>
 
                   {clientAssignments.length === 0 ? (
                     <div className="text-center py-8">
-                      <h4
-                        className="text-sm font-semibold mb-1.5"
-                        style={{ color: COLORS.TEXT_PRIMARY }}
-                      >
+                      <h4 className="text-sm font-semibold mb-1.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                         No Programs Assigned
                       </h4>
-                      <p
-                        className="text-xs mb-4"
-                        style={{ color: COLORS.TEXT_SECONDARY }}
-                      >
+                      <p className="text-xs mb-4" style={{ color: COLORS.TEXT_SECONDARY }}>
                         This client doesn't have any programs assigned yet.
                       </p>
                       <button
@@ -963,12 +821,10 @@ export default function SimpleAssignProgramModal({
                           color: COLORS.TEXT_PRIMARY,
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor =
-                            COLORS.GOLDEN_ACCENT;
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
                         }}
                         onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor =
-                            COLORS.GOLDEN_DARK;
+                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                         }}
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -989,24 +845,14 @@ export default function SimpleAssignProgramModal({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div>
-                                <h4
-                                  className="text-xs font-semibold"
-                                  style={{ color: COLORS.TEXT_PRIMARY }}
-                                >
+                                <h4 className="text-xs font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                                   {assignment.program.title}
                                 </h4>
-                                <div
-                                  className="flex items-center gap-3 text-[10px] mt-1"
-                                  style={{ color: COLORS.TEXT_SECONDARY }}
-                                >
+                                <div className="flex items-center gap-3 text-[10px] mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                                   <span>
                                     Assigned{" "}
                                     {format(
-                                      new Date(
-                                        assignment.assignedAt ??
-                                          assignment.startDate ??
-                                          Date.now()
-                                      ),
+                                      new Date(assignment.assignedAt),
                                       "MMM dd, yyyy"
                                     )}
                                   </span>
@@ -1016,16 +862,10 @@ export default function SimpleAssignProgramModal({
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="text-right">
-                                <div
-                                  className="text-base font-bold mb-0.5"
-                                  style={{ color: COLORS.TEXT_PRIMARY }}
-                                >
+                                <div className="text-base font-bold mb-0.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                                   {assignment.progress}%
                                 </div>
-                                <div
-                                  className="text-[10px]"
-                                  style={{ color: COLORS.TEXT_MUTED }}
-                                >
+                                <div className="text-[10px]" style={{ color: COLORS.TEXT_MUTED }}>
                                   Progress
                                 </div>
                               </div>
@@ -1037,12 +877,10 @@ export default function SimpleAssignProgramModal({
                                   color: COLORS.TEXT_PRIMARY,
                                 }}
                                 onMouseEnter={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    COLORS.RED_DARK;
+                                  e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                                 }}
                                 onMouseLeave={e => {
-                                  e.currentTarget.style.backgroundColor =
-                                    COLORS.RED_ALERT;
+                                  e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                                 }}
                                 title="Remove Program"
                               >
@@ -1061,20 +899,14 @@ export default function SimpleAssignProgramModal({
                   {!manageSelectedProgram ? (
                     /* Show programs to select */
                     <>
-                      <h3
-                        className="text-sm font-bold mb-3"
-                        style={{ color: COLORS.TEXT_PRIMARY }}
-                      >
+                      <h3 className="text-sm font-bold mb-3" style={{ color: COLORS.TEXT_PRIMARY }}>
                         Select Program to Manage
                       </h3>
 
                       {/* Program Search */}
                       <div className="mb-3">
                         <div className="relative">
-                          <Search
-                            className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          />
+                          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                           <input
                             type="text"
                             placeholder="Search programs by title, level, or description..."
@@ -1087,20 +919,15 @@ export default function SimpleAssignProgramModal({
                               color: COLORS.TEXT_PRIMARY,
                             }}
                             onFocus={e => {
-                              e.currentTarget.style.borderColor =
-                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                             }}
                             onBlur={e => {
-                              e.currentTarget.style.borderColor =
-                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                             }}
                           />
                         </div>
                         {programSearchTerm && (
-                          <p
-                            className="text-xs mt-1"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          >
+                          <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {filteredPrograms.length} program
                             {filteredPrograms.length !== 1 ? "s" : ""} found
                           </p>
@@ -1108,26 +935,14 @@ export default function SimpleAssignProgramModal({
                       </div>
 
                       {/* Programs Grid */}
-                      <div
-                        className="max-h-80 overflow-y-auto border rounded-md p-3"
-                        style={{
-                          borderColor: COLORS.BORDER_SUBTLE,
-                          backgroundColor: COLORS.BACKGROUND_CARD,
-                        }}
-                      >
+                      <div className="max-h-80 overflow-y-auto border rounded-md p-3" style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                           {filteredPrograms.length === 0 ? (
                             <div className="col-span-full text-center py-6">
-                              <p
-                                className="text-sm font-medium mb-1"
-                                style={{ color: COLORS.TEXT_PRIMARY }}
-                              >
+                              <p className="text-sm font-medium mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>
                                 No programs found
                               </p>
-                              <p
-                                className="text-xs"
-                                style={{ color: COLORS.TEXT_SECONDARY }}
-                              >
+                              <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                                 {programSearchTerm
                                   ? `No programs match "${programSearchTerm}"`
                                   : "No programs available"}
@@ -1142,50 +957,31 @@ export default function SimpleAssignProgramModal({
                                 }
                                 className="p-3 rounded-md border-2 text-left transition-colors"
                                 style={{
-                                  borderColor:
-                                    manageSelectedProgram === program.id
-                                      ? COLORS.GOLDEN_ACCENT
-                                      : COLORS.BORDER_SUBTLE,
-                                  backgroundColor:
-                                    manageSelectedProgram === program.id
-                                      ? "rgba(229, 178, 50, 0.1)"
-                                      : COLORS.BACKGROUND_DARK,
+                                  borderColor: manageSelectedProgram === program.id ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                                  backgroundColor: manageSelectedProgram === program.id ? "rgba(229, 178, 50, 0.1)" : COLORS.BACKGROUND_DARK,
                                 }}
                                 onMouseEnter={e => {
                                   if (manageSelectedProgram !== program.id) {
-                                    e.currentTarget.style.borderColor =
-                                      COLORS.BORDER_ACCENT;
-                                    e.currentTarget.style.backgroundColor =
-                                      COLORS.BACKGROUND_CARD_HOVER;
+                                    e.currentTarget.style.borderColor = COLORS.BORDER_ACCENT;
+                                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                                   }
                                 }}
                                 onMouseLeave={e => {
                                   if (manageSelectedProgram !== program.id) {
-                                    e.currentTarget.style.borderColor =
-                                      COLORS.BORDER_SUBTLE;
-                                    e.currentTarget.style.backgroundColor =
-                                      COLORS.BACKGROUND_DARK;
+                                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
                                   }
                                 }}
                               >
                                 <div className="flex items-center justify-between mb-1.5">
-                                  <h4
-                                    className="text-xs font-semibold truncate"
-                                    style={{ color: COLORS.TEXT_PRIMARY }}
-                                  >
+                                  <h4 className="text-xs font-semibold truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
                                     {program.title}
                                   </h4>
                                   {manageSelectedProgram === program.id && (
-                                    <CheckCircle
-                                      className="h-4 w-4 flex-shrink-0 ml-1"
-                                      style={{ color: COLORS.GOLDEN_ACCENT }}
-                                    />
+                                    <CheckCircle className="h-4 w-4 flex-shrink-0 ml-1" style={{ color: COLORS.GOLDEN_ACCENT }} />
                                   )}
                                 </div>
-                                <p
-                                  className="text-[10px] mt-1"
-                                  style={{ color: COLORS.TEXT_MUTED }}
-                                >
+                                <p className="text-[10px] mt-1" style={{ color: COLORS.TEXT_MUTED }}>
                                   {program.activeClientCount} active clients
                                 </p>
                               </button>
@@ -1201,28 +997,23 @@ export default function SimpleAssignProgramModal({
                         <button
                           onClick={() => setManageSelectedProgram("")}
                           className="px-2 py-1 rounded-md text-xs transition-colors"
-                          style={{
+                          style={{ 
                             backgroundColor: COLORS.BACKGROUND_CARD,
                             color: COLORS.TEXT_SECONDARY,
                             borderColor: COLORS.BORDER_SUBTLE,
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor =
-                              COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
                             e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor =
-                              COLORS.BACKGROUND_CARD;
+                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                           }}
                         >
                           Back
                         </button>
-                        <h3
-                          className="text-sm font-bold"
-                          style={{ color: COLORS.TEXT_PRIMARY }}
-                        >
+                        <h3 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
                           Assigned Clients
                         </h3>
                       </div>
@@ -1230,10 +1021,7 @@ export default function SimpleAssignProgramModal({
                       {/* Client Search */}
                       <div className="mb-3">
                         <div className="relative">
-                          <Search
-                            className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          />
+                          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: COLORS.TEXT_SECONDARY }} />
                           <input
                             type="text"
                             placeholder="Search assigned clients by name or email..."
@@ -1246,20 +1034,15 @@ export default function SimpleAssignProgramModal({
                               color: COLORS.TEXT_PRIMARY,
                             }}
                             onFocus={e => {
-                              e.currentTarget.style.borderColor =
-                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                             }}
                             onBlur={e => {
-                              e.currentTarget.style.borderColor =
-                                COLORS.BORDER_SUBTLE;
+                              e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                             }}
                           />
                         </div>
                         {clientSearchTerm && (
-                          <p
-                            className="text-xs mt-1"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          >
+                          <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {filteredAssignedClients.length} client
                             {filteredAssignedClients.length !== 1
                               ? "s"
@@ -1271,18 +1054,12 @@ export default function SimpleAssignProgramModal({
 
                       {filteredAssignedClients.length === 0 ? (
                         <div className="text-center py-8">
-                          <h4
-                            className="text-sm font-semibold mb-1.5"
-                            style={{ color: COLORS.TEXT_PRIMARY }}
-                          >
+                          <h4 className="text-sm font-semibold mb-1.5" style={{ color: COLORS.TEXT_PRIMARY }}>
                             {programAssignments.length === 0
                               ? "No Clients Assigned"
                               : "No Clients Found"}
                           </h4>
-                          <p
-                            className="text-xs"
-                            style={{ color: COLORS.TEXT_SECONDARY }}
-                          >
+                          <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
                             {programAssignments.length === 0
                               ? "This program doesn't have any clients assigned yet."
                               : `No clients match "${clientSearchTerm}"`}
@@ -1301,36 +1078,21 @@ export default function SimpleAssignProgramModal({
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
-                                    style={{
-                                      backgroundColor: COLORS.BACKGROUND_DARK,
-                                      color: COLORS.TEXT_PRIMARY,
-                                    }}
-                                  >
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}>
                                     {assignment.client.name
                                       .charAt(0)
                                       .toUpperCase()}
                                   </div>
                                   <div>
-                                    <h4
-                                      className="text-xs font-semibold"
-                                      style={{ color: COLORS.TEXT_PRIMARY }}
-                                    >
+                                    <h4 className="text-xs font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
                                       {assignment.client.name}
                                     </h4>
-                                    <div
-                                      className="flex items-center gap-3 text-[10px] mt-1"
-                                      style={{ color: COLORS.TEXT_SECONDARY }}
-                                    >
+                                    <div className="flex items-center gap-3 text-[10px] mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>
                                       <span>
                                         {(() => {
-                                          const dateStr =
-                                            assignment.startDate ||
-                                            assignment.assignedAt ||
-                                            new Date().toISOString();
                                           const assignmentDate = new Date(
-                                            dateStr
+                                            assignment.startDate ||
+                                              assignment.assignedAt
                                           );
                                           const today = new Date();
                                           today.setHours(0, 0, 0, 0); // Reset time to start of day
@@ -1365,12 +1127,10 @@ export default function SimpleAssignProgramModal({
                                     color: COLORS.TEXT_PRIMARY,
                                   }}
                                   onMouseEnter={e => {
-                                    e.currentTarget.style.backgroundColor =
-                                      COLORS.RED_DARK;
+                                    e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                                   }}
                                   onMouseLeave={e => {
-                                    e.currentTarget.style.backgroundColor =
-                                      COLORS.RED_ALERT;
+                                    e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
                                   }}
                                 >
                                   Remove

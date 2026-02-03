@@ -158,9 +158,8 @@ export const userRouter = router({
 
           // Send push notification
           try {
-            const { sendClientJoinNotification } = await import(
-              "@/lib/pushNotificationService"
-            );
+            const { sendClientJoinNotification } =
+              await import("@/lib/pushNotificationService");
             const client = await db.client.findFirst({
               where: { userId: ensureUserId(user.id) },
             });
@@ -240,9 +239,8 @@ export const userRouter = router({
 
           // Send push notification
           try {
-            const { sendClientJoinNotification } = await import(
-              "@/lib/pushNotificationService"
-            );
+            const { sendClientJoinNotification } =
+              await import("@/lib/pushNotificationService");
             const client = await db.client.findFirst({
               where: { userId: ensureUserId(user.id) },
             });
@@ -911,7 +909,8 @@ export const userRouter = router({
 
       // Extract clientUserId from notification data
       const notificationData = notification.data as any;
-      const clientUserId = notificationData?.clientUserId || notificationData?.clientId;
+      const clientUserId =
+        notificationData?.clientUserId || notificationData?.clientId;
 
       if (!clientUserId) {
         // Still mark as read even if we can't find clientUserId
@@ -1116,35 +1115,61 @@ export const userRouter = router({
       });
     }
 
-    // Get deletion analytics
-    const deletions = await db.accountDeletionLog.findMany({
-      orderBy: { deletedAt: "desc" },
-      take: 100,
-    });
-
-    // Calculate time-based stats
+    // Time bounds for stats
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const deletionsThisWeek = deletions.filter(
-      d => new Date(d.deletedAt) >= oneWeekAgo
-    ).length;
+    // Accurate counts (not limited by take)
+    const [
+      totalDeletions,
+      deletionsThisWeek,
+      deletionsThisMonth,
+      roleCounts,
+      reasonGroups,
+      recentDeletions,
+    ] = await Promise.all([
+      db.accountDeletionLog.count(),
+      db.accountDeletionLog.count({
+        where: { deletedAt: { gte: oneWeekAgo } },
+      }),
+      db.accountDeletionLog.count({
+        where: { deletedAt: { gte: oneMonthAgo } },
+      }),
+      db.accountDeletionLog.groupBy({
+        by: ["userRole"],
+        _count: true,
+      }),
+      db.accountDeletionLog.groupBy({
+        by: ["reason"],
+        _count: true,
+      }),
+      db.accountDeletionLog.findMany({
+        orderBy: { deletedAt: "desc" },
+        take: 20,
+        select: {
+          userId: true,
+          userEmail: true,
+          userRole: true,
+          reason: true,
+          deletedAt: true,
+        },
+      }),
+    ]);
 
-    const deletionsThisMonth = deletions.filter(
-      d => new Date(d.deletedAt) >= oneMonthAgo
-    ).length;
+    // Map role counts: { COACH: n, CLIENT: m, no_role: k }
+    const deletionsByRole: Record<string, number> = {};
+    for (const row of roleCounts) {
+      const key = row.userRole ?? "no_role";
+      deletionsByRole[key] = row._count;
+    }
 
-    // Aggregate by reason
-    const reasonCounts = deletions.reduce((acc, deletion) => {
-      const reason = deletion.reason || "no_reason_provided";
-      acc[reason] = (acc[reason] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Convert to array and sort by count
-    const topReasons = Object.entries(reasonCounts)
-      .map(([reason, count]) => ({ reason, count }))
+    // Top reasons from groupBy (reason can be null)
+    const topReasons = reasonGroups
+      .map(r => ({
+        reason: r.reason ?? "no_reason_provided",
+        count: r._count,
+      }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
@@ -1152,11 +1177,12 @@ export const userRouter = router({
     const { isKindeManagementApiConfigured } = await import("@/lib/kinde-api");
 
     return {
-      totalDeletions: deletions.length,
+      totalDeletions,
       deletionsThisWeek,
       deletionsThisMonth,
+      deletionsByRole,
       topReasons,
-      recentDeletions: deletions.slice(0, 20),
+      recentDeletions,
       kindeIntegrationEnabled: isKindeManagementApiConfigured(),
     };
   }),
@@ -1300,9 +1326,8 @@ export const userRouter = router({
 
         // Send push notification
         try {
-          const { sendNotificationPush } = await import(
-            "@/lib/pushNotificationService"
-          );
+          const { sendNotificationPush } =
+            await import("@/lib/pushNotificationService");
           await sendNotificationPush(
             coachId,
             "CLIENT_JOIN_REQUEST",
@@ -1311,7 +1336,10 @@ export const userRouter = router({
             notification.data as any
           );
         } catch (error) {
-          console.error("Failed to send push notification for client join request:", error);
+          console.error(
+            "Failed to send push notification for client join request:",
+            error
+          );
         }
 
         console.log("✅ Notification created successfully:", {

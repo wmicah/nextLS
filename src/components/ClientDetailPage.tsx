@@ -46,6 +46,7 @@ import {
   ChevronDown,
   Send,
   File as FileIcon,
+  Info,
 } from "lucide-react";
 import {
   Dialog,
@@ -112,6 +113,7 @@ import DrillItemComponent from "@/components/ClientDetailDrillItem";
 import QuickMessagePopup from "@/components/ClientDetailQuickMessage";
 import ClientDetailCalendarDayCell from "@/components/ClientDetailCalendarDayCell";
 import ClientDetailDock from "@/components/ClientDetailDock";
+import { CssTooltip } from "@/components/ui/CssTooltip";
 import {
   ClipboardData,
   ClipboardRoutineAssignment,
@@ -192,12 +194,14 @@ function ClientDetailPage({
   const [showNotes, setShowNotes] = useState(false);
   const [isQuickMessageOpen, setIsQuickMessageOpen] = useState(false);
   const quickMessageButtonRef = useRef<HTMLButtonElement | null>(null);
-  
+
   // Detect if mobile/tablet - only enable drag-drop on desktop
   const [isDesktop, setIsDesktop] = useState(true);
   useEffect(() => {
     const checkDesktop = () => {
-      const isMobileDevice = window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 1024;
+      const isMobileDevice =
+        window.matchMedia("(pointer: coarse)").matches ||
+        window.innerWidth < 1024;
       setIsDesktop(!isMobileDevice);
       if (isMobileDevice) {
         setDockOpen(false); // Close dock on mobile
@@ -207,7 +211,7 @@ function ClientDetailPage({
     window.addEventListener("resize", checkDesktop);
     return () => window.removeEventListener("resize", checkDesktop);
   }, []);
-  
+
   // Dock state for drag-and-drop
   const [dockOpen, setDockOpen] = useState(() => {
     try {
@@ -217,14 +221,18 @@ function ClientDetailPage({
       return true;
     }
   });
-  const [dockActiveTab, setDockActiveTab] = useState<"programs" | "routines">(() => {
-    try {
-      const saved = localStorage.getItem("nls_dock_tab");
-      return (saved === "routines" ? "routines" : "programs") as "programs" | "routines";
-    } catch {
-      return "programs";
+  const [dockActiveTab, setDockActiveTab] = useState<"programs" | "routines">(
+    () => {
+      try {
+        const saved = localStorage.getItem("nls_dock_tab");
+        return (saved === "routines" ? "routines" : "programs") as
+          | "programs"
+          | "routines";
+      } catch {
+        return "programs";
+      }
     }
-  });
+  );
   const [dockSearchTerm, setDockSearchTerm] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -233,31 +241,32 @@ function ClientDetailPage({
     id: string;
     title: string;
   } | null>(null);
-  
+
   // Store item order for each day (keyed by date string)
-  const [dayItemOrders, setDayItemOrders] = useState<Record<string, string[]>>(() => {
-    try {
-      const saved = localStorage.getItem("nls_day_item_orders");
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
+  const [dayItemOrders, setDayItemOrders] = useState<Record<string, string[]>>(
+    () => {
+      try {
+        const saved = localStorage.getItem("nls_day_item_orders");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
     }
-  });
-  
+  );
+
   // Persist dock state
   useEffect(() => {
     try {
       localStorage.setItem("nls_dock_open", dockOpen ? "1" : "0");
     } catch {}
   }, [dockOpen]);
-  
+
   useEffect(() => {
     try {
       localStorage.setItem("nls_dock_tab", dockActiveTab);
     } catch {}
   }, [dockActiveTab]);
-  
-  
+
   // Setup drag sensors
   const dragSensors = useSensors(
     useSensor(PointerSensor, {
@@ -266,13 +275,17 @@ function ClientDetailPage({
       },
     })
   );
-  
+
   // Handle drag start
-  const handleDragStart = (item: { type: "program" | "routine"; id: string; title: string }) => {
+  const handleDragStart = (item: {
+    type: "program" | "routine";
+    id: string;
+    title: string;
+  }) => {
     setDraggedItem(item);
     setIsDragging(true);
   };
-  
+
   // Handle reordering items within a day
   const handleReorderItems = (date: Date, newOrder: string[]) => {
     const dateKey = format(date, "yyyy-MM-dd");
@@ -284,44 +297,48 @@ function ClientDetailPage({
       return updated;
     });
   };
-  
+
   // Handle drag end - assign to calendar day OR reorder within day
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     const currentDraggedItem = draggedItem;
     setIsDragging(false);
     setDraggedItem(null);
-    
+
     if (!over) return;
-    
+
     // Check if this is a reorder within a day (active.id starts with day-)
     const activeId = active.id as string;
     const overId = over.id as string;
-    
-    if (activeId.startsWith("day-") && overId.startsWith("day-") && activeId !== overId) {
+
+    if (
+      activeId.startsWith("day-") &&
+      overId.startsWith("day-") &&
+      activeId !== overId
+    ) {
       // Extract date from the IDs (format: day-YYYY-MM-DD-type-id)
       const activeMatch = activeId.match(/^day-(\d{4}-\d{2}-\d{2})-/);
       const overMatch = overId.match(/^day-(\d{4}-\d{2}-\d{2})-/);
-      
+
       if (activeMatch && overMatch && activeMatch[1] === overMatch[1]) {
         // Same day - this is a reorder
         const dateStr = activeMatch[1];
         const date = new Date(dateStr + "T00:00:00");
         const dateKey = format(date, "yyyy-MM-dd");
-        
+
         // Get current order for this day, or build it from the items if empty
         let currentOrder = dayItemOrders[dateKey];
-        
+
         // If no order exists, we need to wait for the component to initialize it
         // For now, just return and let the component handle initialization
         if (!currentOrder || currentOrder.length === 0) {
           return;
         }
-        
+
         // Find the indices
         const oldIndex = currentOrder.indexOf(activeId);
         const newIndex = currentOrder.indexOf(overId);
-        
+
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
           // Use arrayMove to reorder
           const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
@@ -330,32 +347,33 @@ function ClientDetailPage({
       }
       return;
     }
-    
+
     // Otherwise, check if dropped on a calendar day (assigning from dock)
     if (!currentDraggedItem) return;
-    
+
     const overData = over.data.current;
     if (overData?.type === "day" && overData.date) {
       const targetDate = new Date(overData.date as Date);
       const targetDateStr = format(targetDate, "yyyy-MM-dd");
-      
+
       // Validate date is not in the past
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       targetDate.setHours(0, 0, 0, 0);
-      
+
       if (targetDate < today) {
         addToast({
           type: "error",
           title: "Invalid Date",
-          message: "Cannot assign to past dates. Please select today or a future date.",
+          message:
+            "Cannot assign to past dates. Please select today or a future date.",
         });
         return;
       }
-      
+
       // Set loading state
       setIsAssigning(true);
-      
+
       // Assign program or routine
       if (currentDraggedItem.type === "program") {
         assignProgramDragMutation.mutate(
@@ -377,7 +395,7 @@ function ClientDetailPage({
               refreshAllData();
               setIsAssigning(false);
             },
-            onError: (error) => {
+            onError: error => {
               setIsAssigning(false);
               addToast({
                 type: "error",
@@ -406,7 +424,7 @@ function ClientDetailPage({
               refreshAllData();
               setIsAssigning(false);
             },
-            onError: (error) => {
+            onError: error => {
               setIsAssigning(false);
               addToast({
                 type: "error",
@@ -496,7 +514,9 @@ function ClientDetailPage({
   // Filter upcoming lessons for this specific client - memoized
   const upcomingLessons = useMemo(
     () =>
-      coachUpcomingLessons.filter((lesson: any) => lesson.clientId === clientId),
+      coachUpcomingLessons.filter(
+        (lesson: any) => lesson.clientId === clientId
+      ),
     [coachUpcomingLessons, clientId]
   );
 
@@ -588,6 +608,25 @@ function ClientDetailPage({
 
   const utils = trpc.useUtils();
 
+  // Walkthrough hints (first-time onboarding) - persisted per user
+  const { data: userSettings } = trpc.settings.getSettings.useQuery();
+  const dismissHintMutation = trpc.settings.dismissClientDetailHint.useMutation(
+    {
+      onSuccess: () => void utils.settings.getSettings.invalidate(),
+    }
+  );
+  const dismissedHints: string[] = (() => {
+    const raw = userSettings?.dismissedClientDetailHints;
+    if (raw == null) return [];
+    if (Array.isArray(raw)) return raw as string[];
+    try {
+      const parsed = JSON.parse(String(raw)) as string[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
+
   // Remove program mutation - using specific assignment ID
   const removeProgramMutation =
     trpc.programs.unassignSpecificProgram.useMutation({
@@ -671,7 +710,7 @@ function ClientDetailPage({
       console.error("Error assigning video:", error);
     },
   });
-  
+
   // Assign program mutation for drag-and-drop
   const assignProgramDragMutation = trpc.programs.assignToClients.useMutation();
 
@@ -1359,11 +1398,13 @@ function ClientDetailPage({
 
       // Check if all days are in the same week (for smart paste mode)
       const firstDayOfWeek = new Date(daysArray[0]);
-      firstDayOfWeek.setDate(firstDayOfWeek.getDate() - firstDayOfWeek.getDay()); // Start of week (Sunday)
-      
+      firstDayOfWeek.setDate(
+        firstDayOfWeek.getDate() - firstDayOfWeek.getDay()
+      ); // Start of week (Sunday)
+
       const lastDayOfWeek = new Date(firstDayOfWeek);
       lastDayOfWeek.setDate(lastDayOfWeek.getDate() + 6); // End of week (Saturday)
-      
+
       const allInSameWeek = daysArray.every(day => {
         return day >= firstDayOfWeek && day <= lastDayOfWeek;
       });
@@ -1689,13 +1730,13 @@ function ClientDetailPage({
 
         for (let i = 0; i < clipboardData.multiDayAssignments.length; i++) {
           const dayData = clipboardData.multiDayAssignments[i];
-          
+
           // Sequential paste: paste in order starting from target date
           // Example: Copy Mon, Wed, Fri → Paste on Mon → Mon→Mon, Tue→Tue, Wed→Wed
           // Example: Copy Mon, Wed, Fri → Paste on Wed → Wed→Wed, Thu→Thu, Fri→Fri
           // Always paste sequentially from the selected day, ignoring original day-of-week
           const pasteDate = addDays(targetDate, i);
-          
+
           const pasteDateStr = pasteDate.toISOString().split("T")[0];
 
           // Validate paste date
@@ -1978,7 +2019,6 @@ function ClientDetailPage({
     setConflictData(null);
   };
 
-
   const getRoutineAssignmentsForDate = (date: Date) => {
     return assignedRoutines
       .filter((assignment: any) => {
@@ -2124,7 +2164,7 @@ function ClientDetailPage({
     <DndContext
       sensors={dragSensors}
       collisionDetection={closestCenter}
-      onDragStart={(event) => {
+      onDragStart={event => {
         const data = event.active.data.current;
         if (data) {
           handleDragStart({
@@ -2136,679 +2176,808 @@ function ClientDetailPage({
       }}
       onDragEnd={handleDragEnd}
     >
-    <SidebarWrapperComponent noSidebar={noSidebar}>
-      <div
-        className="min-h-screen"
-        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
-      >
-        <div className="max-w-7xl mx-auto p-4">
-          {/* Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-            {/* Client Info */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push(backPath)}
-                className="p-1.5 rounded-lg transition-colors"
-                style={{
-                  color: COLORS.TEXT_SECONDARY,
-                  backgroundColor: "transparent",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor =
-                    COLORS.BACKGROUND_CARD_HOVER;
-                  e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-
-              <ProfilePictureUploader
-                currentAvatarUrl={
-                  client.user?.settings?.avatarUrl || client.avatar
-                }
-                userName={client.name}
-                onAvatarChange={() => {}}
-                readOnly={true}
-                size="md"
-              />
-
-              <div className="flex items-center gap-2">
-                <div>
-                  <h1
-                    className="text-xl font-semibold mb-1"
-                    style={{ color: COLORS.TEXT_PRIMARY }}
-                  >
-                    {client.name}
-                  </h1>
-                  <div
-                    className="flex items-center gap-3 text-xs"
-                    style={{ color: "#9CA3B0" }}
-                  >
-                    {client.user?.email && <span>{client.user.email}</span>}
-                    {client.phone && <span>{client.phone}</span>}
-                  </div>
-                </div>
-                {client.userId && (
-                  <button
-                    ref={quickMessageButtonRef}
-                    onClick={e => {
-                      setIsQuickMessageOpen(true);
-                    }}
-                    className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 flex-shrink-0"
-                    style={{
-                      color: COLORS.TEXT_SECONDARY,
-                      backgroundColor: "transparent",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.BACKGROUND_CARD_HOVER;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                    title="Send message"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              {/* Notes Button */}
-              <button
-                onClick={() => setShowNotes(!showNotes)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border"
-                style={{
-                  backgroundColor: showNotes
-                    ? getGoldenAccent(0.1)
-                    : COLORS.BACKGROUND_CARD,
-                  color: showNotes ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_PRIMARY,
-                  borderColor: showNotes
-                    ? COLORS.GOLDEN_ACCENT
-                    : COLORS.BORDER_SUBTLE,
-                }}
-                onMouseEnter={e => {
-                  if (!showNotes) {
+      <SidebarWrapperComponent noSidebar={noSidebar}>
+        <div
+          className="min-h-screen"
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+        >
+          <div className="max-w-7xl mx-auto p-4">
+            {/* Header */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+              {/* Client Info */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => router.push(backPath)}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{
+                    color: COLORS.TEXT_SECONDARY,
+                    backgroundColor: "transparent",
+                  }}
+                  onMouseEnter={e => {
                     e.currentTarget.style.backgroundColor =
                       COLORS.BACKGROUND_CARD_HOVER;
-                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!showNotes) {
-                    e.currentTarget.style.backgroundColor =
-                      COLORS.BACKGROUND_CARD;
-                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                  }
-                }}
-              >
-                Notes
-              </button>
+                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  }}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
 
-              {/* Primary action - Schedule Lesson (most common) */}
-              <button
-                onClick={() => setShowScheduleLessonModal(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
-                style={{
-                  backgroundColor: COLORS.GOLDEN_DARK,
-                  color: "#FFFFFF",
-                  borderColor: COLORS.GOLDEN_BORDER,
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
-                }}
-              >
-                Schedule Lesson
-              </button>
+                <ProfilePictureUploader
+                  currentAvatarUrl={
+                    client.user?.settings?.avatarUrl || client.avatar
+                  }
+                  userName={client.name}
+                  onAvatarChange={() => {}}
+                  readOnly={true}
+                  size="md"
+                />
 
-              {/* Dropdown for other assignments */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border"
-                    style={{
-                      backgroundColor: COLORS.BACKGROUND_CARD,
-                      color: COLORS.TEXT_PRIMARY,
-                      borderColor: COLORS.BORDER_SUBTLE,
-                    }}
-                    onMouseEnter={e => {
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h1
+                      className="text-xl font-semibold mb-1"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {client.name}
+                    </h1>
+                    <div
+                      className="flex items-center gap-3 text-xs"
+                      style={{ color: "#9CA3B0" }}
+                    >
+                      {client.user?.email && <span>{client.user.email}</span>}
+                      {client.phone && <span>{client.phone}</span>}
+                    </div>
+                  </div>
+                  {client.userId && (
+                    <button
+                      ref={quickMessageButtonRef}
+                      onClick={e => {
+                        setIsQuickMessageOpen(true);
+                      }}
+                      className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 flex-shrink-0"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
+                      title="Send message"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                {/* Notes Button */}
+                <button
+                  onClick={() => setShowNotes(!showNotes)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border"
+                  style={{
+                    backgroundColor: showNotes
+                      ? getGoldenAccent(0.1)
+                      : COLORS.BACKGROUND_CARD,
+                    color: showNotes
+                      ? COLORS.GOLDEN_ACCENT
+                      : COLORS.TEXT_PRIMARY,
+                    borderColor: showNotes
+                      ? COLORS.GOLDEN_ACCENT
+                      : COLORS.BORDER_SUBTLE,
+                  }}
+                  onMouseEnter={e => {
+                    if (!showNotes) {
                       e.currentTarget.style.backgroundColor =
                         COLORS.BACKGROUND_CARD_HOVER;
                       e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                    }}
-                    onMouseLeave={e => {
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!showNotes) {
                       e.currentTarget.style.backgroundColor =
                         COLORS.BACKGROUND_CARD;
                       e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
-                    }}
-                  >
-                    Assign
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="min-w-[200px] rounded-lg border shadow-xl"
-                  style={{
-                    backgroundColor: COLORS.BACKGROUND_DARK,
-                    borderColor: COLORS.BORDER_SUBTLE,
+                    }
                   }}
                 >
-                  <DropdownMenuItem
-                    onClick={() => setShowAssignProgramModal(true)}
-                    className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
-                    style={{
-                      color: COLORS.TEXT_SECONDARY,
-                      backgroundColor: "transparent",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.BACKGROUND_CARD_HOVER;
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                    }}
-                  >
-                    Assign Program
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setShowQuickAssignRoutineModal(true)}
-                    className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
-                    style={{
-                      color: COLORS.TEXT_SECONDARY,
-                      backgroundColor: "transparent",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.BACKGROUND_CARD_HOVER;
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                    }}
-                  >
-                    Assign Routine
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setShowAssignVideoModal(true)}
-                    className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
-                    style={{
-                      color: COLORS.TEXT_SECONDARY,
-                      backgroundColor: "transparent",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.BACKGROUND_CARD_HOVER;
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                    }}
-                  >
-                    Assign Video
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
+                  Notes
+                </button>
 
-          {/* Athlete Overview Bar */}
-          <div
-            className="rounded-lg border p-4 mb-6"
-            style={{
-              backgroundColor: COLORS.BACKGROUND_CARD,
-              borderColor: COLORS.BORDER_SUBTLE,
-            }}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {/* Compliance Rate */}
-              <div
-                className="md:col-span-2 border-r pr-4"
-                style={{ borderColor: COLORS.BORDER_SUBTLE }}
-              >
-                <p
-                  className="text-[10px] font-medium mb-1"
-                  style={{ color: COLORS.TEXT_SECONDARY }}
+                {/* Primary action - Schedule Lesson (most common) */}
+                <button
+                  onClick={() => setShowScheduleLessonModal(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_DARK,
+                    color: "#FFFFFF",
+                    borderColor: COLORS.GOLDEN_BORDER,
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.GOLDEN_ACCENT;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                  }}
                 >
-                  Compliance Rate
-                </p>
-                <p
-                  className="text-xl font-bold mb-2"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  {complianceLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    `${Math.min(
-                      100,
-                      Math.max(0, complianceData?.completionRate || 0)
-                    )}%`
-                  )}
-                </p>
-                <div className="flex gap-0.5 mb-1.5">
-                  {["4", "6", "8", "all"].map(period => (
+                  Schedule Lesson
+                </button>
+
+                {/* Dropdown for other assignments */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <button
-                      key={period}
-                      onClick={() => {
-                        setCompliancePeriod(period as "4" | "6" | "8" | "all");
-                        utils.clients.getComplianceData.invalidate({
-                          clientId,
-                          period: period as "4" | "6" | "8" | "all",
-                        });
-                      }}
-                      className="px-1 py-0.5 rounded text-[9px] font-medium transition-all duration-200"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border"
                       style={{
-                        backgroundColor:
-                          compliancePeriod === period
-                            ? getGoldenAccent(0.1)
-                            : "transparent",
-                        color:
-                          compliancePeriod === period
-                            ? COLORS.TEXT_PRIMARY
-                            : COLORS.TEXT_SECONDARY,
+                        backgroundColor: COLORS.BACKGROUND_CARD,
+                        color: COLORS.TEXT_PRIMARY,
+                        borderColor: COLORS.BORDER_SUBTLE,
                       }}
                       onMouseEnter={e => {
-                        if (compliancePeriod !== period) {
-                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                        }
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }}
                       onMouseLeave={e => {
-                        if (compliancePeriod !== period) {
-                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                        }
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD;
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
                       }}
                     >
-                      {period === "all" ? "All" : `${period}w`}
+                      Assign
+                      <ChevronDown className="h-3 w-3" />
                     </button>
-                  ))}
-                </div>
-                <div
-                  className="w-full rounded-full h-1.5"
-                  style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
-                >
-                  <div
-                    className="h-1.5 rounded-full transition-all duration-500"
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="min-w-[200px] rounded-lg border shadow-xl"
                     style={{
-                      width: `${Math.min(
-                        100,
-                        complianceData?.completionRate || 0
-                      )}%`,
-                      backgroundColor:
-                        Math.min(100, complianceData?.completionRate || 0) >= 80
-                          ? COLORS.GREEN_PRIMARY
-                          : Math.min(
-                              100,
-                              complianceData?.completionRate || 0
-                            ) >= 60
-                          ? COLORS.GOLDEN_ACCENT
-                          : COLORS.RED_ALERT,
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
                     }}
-                  />
-                </div>
-                {complianceData && (
-                  <div
-                    className="flex justify-between text-[9px] mt-1"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => setShowAssignProgramModal(true)}
+                      className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
+                    >
+                      Assign Program
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setShowQuickAssignRoutineModal(true)}
+                      className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
+                    >
+                      Assign Routine
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setShowAssignVideoModal(true)}
+                      className="cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
+                    >
+                      Assign Video
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Athlete Overview Bar */}
+            <div
+              className="rounded-lg border p-4 mb-6"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {/* Compliance Rate */}
+                <div
+                  className="md:col-span-2 border-r pr-4"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                >
+                  <p
+                    className="text-[10px] font-medium mb-1"
                     style={{ color: COLORS.TEXT_SECONDARY }}
                   >
-                    <span>
-                      {Math.min(
-                        complianceData.completed || 0,
-                        complianceData.total || 0
-                      )}{" "}
-                      completed
-                    </span>
-                    <span>{complianceData.total || 0} total</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Next Lesson */}
-              <div
-                className="border-r pr-4"
-                style={{ borderColor: COLORS.BORDER_SUBTLE }}
-              >
-                <p
-                  className="text-[10px] font-medium mb-1"
-                  style={{ color: COLORS.TEXT_SECONDARY }}
-                >
-                  Next Lesson
-                </p>
-                {upcomingLessons.length > 0 ? (
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
-                      />
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: COLORS.TEXT_PRIMARY }}
-                      >
-                        {format(
-                          new Date(upcomingLessons[0].date),
-                          "MMM d, yyyy"
-                        )}
-                      </p>
-                    </div>
-                    <p
-                      className="text-xs"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
-                      {format(new Date(upcomingLessons[0].date), "h:mm a")}
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <p
-                      className="text-sm mb-1"
-                      style={{ color: COLORS.TEXT_MUTED }}
-                    >
-                      No lesson scheduled
-                    </p>
-                    <button
-                      onClick={() => setShowScheduleLessonModal(true)}
-                      className="text-xs font-medium transition-colors"
-                      style={{ color: COLORS.GOLDEN_ACCENT }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                      }}
-                    >
-                      Schedule
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Current Program */}
-              <div
-                className="border-r pr-4"
-                style={{ borderColor: COLORS.BORDER_SUBTLE }}
-              >
-                <p
-                  className="text-[10px] font-medium mb-1"
-                  style={{ color: COLORS.TEXT_SECONDARY }}
-                >
-                  Current Program
-                </p>
-                {assignedPrograms.length > 0 ? (
+                    Compliance Rate
+                  </p>
                   <p
-                    className="text-sm font-semibold"
+                    className="text-xl font-bold mb-2"
                     style={{ color: COLORS.TEXT_PRIMARY }}
                   >
-                    {assignedPrograms[0].program.title}
+                    {complianceLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      `${Math.min(
+                        100,
+                        Math.max(0, complianceData?.completionRate || 0)
+                      )}%`
+                    )}
                   </p>
-                ) : (
-                  <div>
-                    <p
-                      className="text-sm mb-1"
-                      style={{ color: COLORS.TEXT_MUTED }}
-                    >
-                      No program assigned
-                    </p>
-                    <button
-                      onClick={() => setShowAssignProgramModal(true)}
-                      className="text-xs font-medium transition-colors"
-                      style={{ color: COLORS.GOLDEN_ACCENT }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                      }}
-                    >
-                      Assign program
-                    </button>
+                  <div className="flex gap-0.5 mb-1.5">
+                    {["4", "6", "8", "all"].map(period => (
+                      <button
+                        key={period}
+                        onClick={() => {
+                          setCompliancePeriod(
+                            period as "4" | "6" | "8" | "all"
+                          );
+                          utils.clients.getComplianceData.invalidate({
+                            clientId,
+                            period: period as "4" | "6" | "8" | "all",
+                          });
+                        }}
+                        className="px-1 py-0.5 rounded text-[9px] font-medium transition-all duration-200"
+                        style={{
+                          backgroundColor:
+                            compliancePeriod === period
+                              ? getGoldenAccent(0.1)
+                              : "transparent",
+                          color:
+                            compliancePeriod === period
+                              ? COLORS.TEXT_PRIMARY
+                              : COLORS.TEXT_SECONDARY,
+                        }}
+                        onMouseEnter={e => {
+                          if (compliancePeriod !== period) {
+                            e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (compliancePeriod !== period) {
+                            e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                          }
+                        }}
+                      >
+                        {period === "all" ? "All" : `${period}w`}
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
+                  <div
+                    className="w-full rounded-full h-1.5"
+                    style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+                  >
+                    <div
+                      className="h-1.5 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          complianceData?.completionRate || 0
+                        )}%`,
+                        backgroundColor:
+                          Math.min(100, complianceData?.completionRate || 0) >=
+                          80
+                            ? COLORS.GREEN_PRIMARY
+                            : Math.min(
+                                  100,
+                                  complianceData?.completionRate || 0
+                                ) >= 60
+                              ? COLORS.GOLDEN_ACCENT
+                              : COLORS.RED_ALERT,
+                      }}
+                    />
+                  </div>
+                  {complianceData && (
+                    <div
+                      className="flex justify-between text-[9px] mt-1"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      <span>
+                        {Math.min(
+                          complianceData.completed || 0,
+                          complianceData.total || 0
+                        )}{" "}
+                        completed
+                      </span>
+                      <span>{complianceData.total || 0} total</span>
+                    </div>
+                  )}
+                </div>
 
-              {/* Last Activity */}
-              <div>
-                <p
-                  className="text-[10px] font-medium mb-1"
-                  style={{ color: COLORS.TEXT_SECONDARY }}
+                {/* Next Lesson */}
+                <div
+                  className="border-r pr-4"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
-                  Last Activity
-                </p>
-                {lastActivity ? (
-                  <>
+                  <p
+                    className="text-[10px] font-medium mb-1"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
+                    Next Lesson
+                  </p>
+                  {upcomingLessons.length > 0 ? (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: COLORS.GREEN_PRIMARY }}
+                        />
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
+                          {format(
+                            new Date(upcomingLessons[0].date),
+                            "MMM d, yyyy"
+                          )}
+                        </p>
+                      </div>
+                      <p
+                        className="text-xs"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        {format(new Date(upcomingLessons[0].date), "h:mm a")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p
+                        className="text-sm mb-1"
+                        style={{ color: COLORS.TEXT_MUTED }}
+                      >
+                        No lesson scheduled
+                      </p>
+                      <button
+                        onClick={() => setShowScheduleLessonModal(true)}
+                        className="text-xs font-medium transition-colors"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                        }}
+                      >
+                        Schedule
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Current Program */}
+                <div
+                  className="border-r pr-4"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                >
+                  <p
+                    className="text-[10px] font-medium mb-1"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
+                    Current Program
+                  </p>
+                  {assignedPrograms.length > 0 ? (
                     <p
                       className="text-sm font-semibold"
                       style={{ color: COLORS.TEXT_PRIMARY }}
                     >
-                      {(() => {
-                        const activityDate = parseISO(lastActivity.timestamp);
-                        const now = new Date();
-                        const diffMs = now.getTime() - activityDate.getTime();
-                        const diffMins = Math.floor(diffMs / 60000);
-                        const diffHours = Math.floor(diffMs / 3600000);
-                        const diffDays = Math.floor(diffMs / 86400000);
-
-                        if (diffMins < 1) return "Just now";
-                        if (diffMins < 60) return `${diffMins}m ago`;
-                        if (diffHours < 24) return `${diffHours}h ago`;
-                        if (diffDays === 1) return "1 day ago";
-                        if (diffDays < 7) return `${diffDays} days ago`;
-                        if (diffDays < 30) {
-                          const weeks = Math.floor(diffDays / 7);
-                          return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
-                        }
-                        return format(activityDate, "MMM d, yyyy");
-                      })()}
+                      {assignedPrograms[0].program.title}
                     </p>
-                    <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
-                      {lastActivity.type === "program_drill"
-                        ? lastActivity.programTitle
-                          ? `${lastActivity.description} - ${lastActivity.programTitle}`
-                          : lastActivity.description
-                        : lastActivity.type === "routine_exercise"
-                        ? `Completed ${lastActivity.description}`
-                        : `Completed ${lastActivity.description}`}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
-                      No activity yet
-                    </p>
-                    <p className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
-                      Waiting for first completion
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Calendar Section */}
-          <div
-            className="rounded-lg border p-4 relative overflow-visible"
-            style={{
-              backgroundColor: COLORS.BACKGROUND_CARD,
-              borderColor: COLORS.BORDER_SUBTLE,
-            }}
-          >
-            {/* Calendar Header */}
-            <div 
-              className="flex items-center justify-between mb-4"
-              style={{
-                marginRight: dockOpen && isDesktop ? "320px" : "0",
-                transition: "margin-right 0.3s ease",
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <h2
-                  className="text-lg font-semibold"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  Calendar View
-                </h2>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setViewMode("month")}
-                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200"
-                    style={{
-                      backgroundColor:
-                        viewMode === "month"
-                          ? getGoldenAccent(0.1)
-                          : "transparent",
-                      color:
-                        viewMode === "month"
-                          ? COLORS.TEXT_PRIMARY
-                          : COLORS.TEXT_SECONDARY,
-                    }}
-                    onMouseEnter={e => {
-                      if (viewMode !== "month") {
-                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (viewMode !== "month") {
-                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                      }
-                    }}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => setViewMode("week")}
-                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200"
-                    style={{
-                      backgroundColor:
-                        viewMode === "week"
-                          ? getGoldenAccent(0.1)
-                          : "transparent",
-                      color:
-                        viewMode === "week"
-                          ? COLORS.TEXT_PRIMARY
-                          : COLORS.TEXT_SECONDARY,
-                    }}
-                    onMouseEnter={e => {
-                      if (viewMode !== "week") {
-                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (viewMode !== "week") {
-                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                      }
-                    }}
-                  >
-                    Week
-                  </button>
+                  ) : (
+                    <div>
+                      <p
+                        className="text-sm mb-1"
+                        style={{ color: COLORS.TEXT_MUTED }}
+                      >
+                        No program assigned
+                      </p>
+                      <button
+                        onClick={() => setShowAssignProgramModal(true)}
+                        className="text-xs font-medium transition-colors"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                        }}
+                      >
+                        Assign program
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* Multi-Select Mode Toggle */}
-                <button
-                  onClick={() => {
-                    setMultiSelectMode(!multiSelectMode);
-                    setWeekSelectMode(false); // Disable week select when enabling day select
-                    if (multiSelectMode) {
-                      setSelectedDays(new Set());
-                    }
-                  }}
-                  className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
-                  style={{
-                    backgroundColor: multiSelectMode
-                      ? COLORS.BACKGROUND_CARD
-                      : COLORS.BACKGROUND_CARD,
-                    color: multiSelectMode
-                      ? COLORS.TEXT_SECONDARY
-                      : COLORS.TEXT_SECONDARY,
-                    borderColor: multiSelectMode
-                      ? COLORS.BORDER_SUBTLE
-                      : COLORS.BORDER_SUBTLE,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor =
-                      COLORS.BACKGROUND_CARD_HOVER;
-                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor =
-                      COLORS.BACKGROUND_CARD;
-                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                  }}
-                >
-                  {multiSelectMode ? "Cancel" : "Select Days"}
-                </button>
+                {/* Last Activity */}
+                <div>
+                  <p
+                    className="text-[10px] font-medium mb-1"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
+                    Last Activity
+                  </p>
+                  {lastActivity ? (
+                    <>
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
+                        {(() => {
+                          const activityDate = parseISO(lastActivity.timestamp);
+                          const now = new Date();
+                          const diffMs = now.getTime() - activityDate.getTime();
+                          const diffMins = Math.floor(diffMs / 60000);
+                          const diffHours = Math.floor(diffMs / 3600000);
+                          const diffDays = Math.floor(diffMs / 86400000);
 
-                {/* Week Select Mode Toggle */}
-                <button
-                  onClick={() => {
-                    setWeekSelectMode(!weekSelectMode);
-                    setMultiSelectMode(false); // Disable day select when enabling week select
-                    if (weekSelectMode) {
-                      setSelectedWeekStart(null);
-                    }
-                  }}
-                  className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
-                  style={{
-                    backgroundColor: weekSelectMode
-                      ? COLORS.BACKGROUND_CARD
-                      : COLORS.BACKGROUND_CARD,
-                    color: weekSelectMode
-                      ? COLORS.TEXT_SECONDARY
-                      : COLORS.TEXT_SECONDARY,
-                    borderColor: weekSelectMode
-                      ? COLORS.BORDER_SUBTLE
-                      : COLORS.BORDER_SUBTLE,
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor =
-                      COLORS.BACKGROUND_CARD_HOVER;
-                    e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor =
-                      COLORS.BACKGROUND_CARD;
-                    e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                  }}
-                >
-                  {weekSelectMode ? "Cancel" : "Select Week"}
-                </button>
+                          if (diffMins < 1) return "Just now";
+                          if (diffMins < 60) return `${diffMins}m ago`;
+                          if (diffHours < 24) return `${diffHours}h ago`;
+                          if (diffDays === 1) return "1 day ago";
+                          if (diffDays < 7) return `${diffDays} days ago`;
+                          if (diffDays < 30) {
+                            const weeks = Math.floor(diffDays / 7);
+                            return weeks === 1
+                              ? "1 week ago"
+                              : `${weeks} weeks ago`;
+                          }
+                          return format(activityDate, "MMM d, yyyy");
+                        })()}
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        {lastActivity.type === "program_drill"
+                          ? lastActivity.programTitle
+                            ? `${lastActivity.description} - ${lastActivity.programTitle}`
+                            : lastActivity.description
+                          : lastActivity.type === "routine_exercise"
+                            ? `Completed ${lastActivity.description}`
+                            : `Completed ${lastActivity.description}`}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        No activity yet
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        Waiting for first completion
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
 
-                {/* Copy and Delete Selected Buttons */}
-                {multiSelectMode && selectedDays.size > 0 && (
-                  <>
+            {/* Calendar Section */}
+            <div
+              className="rounded-lg border p-4 relative overflow-visible"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              {/* Calendar Header */}
+              <div
+                className="flex items-center justify-between mb-4"
+                style={{
+                  marginRight: dockOpen && isDesktop ? "320px" : "0",
+                  transition: "margin-right 0.3s ease",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <h2
+                    className="text-lg font-semibold"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Calendar View
+                  </h2>
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        // Copy all selected days
-                        if (selectedDays.size > 0) {
-                          const daysArray = Array.from(selectedDays).map(
-                            dayKey => {
-                              const [year, month, day] = dayKey
-                                .split("-")
-                                .map(Number);
-                              return new Date(year, month - 1, day);
-                            }
-                          );
-                          // Use the first selected day to trigger copy (will handle multiple days)
-                          handleCopyDay(daysArray[0]);
+                      onClick={() => setViewMode("month")}
+                      className="px-2 py-1 rounded text-xs font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor:
+                          viewMode === "month"
+                            ? getGoldenAccent(0.1)
+                            : "transparent",
+                        color:
+                          viewMode === "month"
+                            ? COLORS.TEXT_PRIMARY
+                            : COLORS.TEXT_SECONDARY,
+                      }}
+                      onMouseEnter={e => {
+                        if (viewMode !== "month") {
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                         }
                       }}
+                      onMouseLeave={e => {
+                        if (viewMode !== "month") {
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }
+                      }}
+                    >
+                      Month
+                    </button>
+                    <button
+                      onClick={() => setViewMode("week")}
+                      className="px-2 py-1 rounded text-xs font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor:
+                          viewMode === "week"
+                            ? getGoldenAccent(0.1)
+                            : "transparent",
+                        color:
+                          viewMode === "week"
+                            ? COLORS.TEXT_PRIMARY
+                            : COLORS.TEXT_SECONDARY,
+                      }}
+                      onMouseEnter={e => {
+                        if (viewMode !== "week") {
+                          e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (viewMode !== "week") {
+                          e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                        }
+                      }}
+                    >
+                      Week
+                    </button>
+                  </div>
+
+                  {/* Multi-Select Mode Toggle */}
+                  <button
+                    onClick={() => {
+                      setMultiSelectMode(!multiSelectMode);
+                      setWeekSelectMode(false); // Disable week select when enabling day select
+                      if (multiSelectMode) {
+                        setSelectedDays(new Set());
+                      }
+                    }}
+                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
+                    style={{
+                      backgroundColor: multiSelectMode
+                        ? COLORS.BACKGROUND_CARD
+                        : COLORS.BACKGROUND_CARD,
+                      color: multiSelectMode
+                        ? COLORS.TEXT_SECONDARY
+                        : COLORS.TEXT_SECONDARY,
+                      borderColor: multiSelectMode
+                        ? COLORS.BORDER_SUBTLE
+                        : COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
+                  >
+                    {multiSelectMode ? "Cancel" : "Select Days"}
+                  </button>
+
+                  {/* Week Select Mode Toggle */}
+                  <button
+                    onClick={() => {
+                      setWeekSelectMode(!weekSelectMode);
+                      setMultiSelectMode(false); // Disable day select when enabling week select
+                      if (weekSelectMode) {
+                        setSelectedWeekStart(null);
+                      }
+                    }}
+                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
+                    style={{
+                      backgroundColor: weekSelectMode
+                        ? COLORS.BACKGROUND_CARD
+                        : COLORS.BACKGROUND_CARD,
+                      color: weekSelectMode
+                        ? COLORS.TEXT_SECONDARY
+                        : COLORS.TEXT_SECONDARY,
+                      borderColor: weekSelectMode
+                        ? COLORS.BORDER_SUBTLE
+                        : COLORS.BORDER_SUBTLE,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                    }}
+                  >
+                    {weekSelectMode ? "Cancel" : "Select Week"}
+                  </button>
+
+                  {/* Single tooltip for Select Days + Select Week (right side only) */}
+                  <CssTooltip
+                    placement="bottom"
+                    content={
+                      <div className="space-y-3">
+                        <div>
+                          <p
+                            className="font-medium mb-1"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
+                            Copy & paste days
+                          </p>
+                          <p
+                            className="text-sm leading-snug"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            Use Select Days, pick days, then Copy and click a
+                            target day to paste. Pasted days keep their order.
+                          </p>
+                        </div>
+                        <div>
+                          <p
+                            className="font-medium mb-1"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
+                            Select Week
+                          </p>
+                          <p
+                            className="text-sm leading-snug"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            Use Select Week and click a week, then &quot;Convert
+                            to program&quot; to turn that week into a separate
+                            program (it becomes week 1).
+                          </p>
+                        </div>
+                      </div>
+                    }
+                    contentClassName="max-w-[400px]"
+                  >
+                    <span
+                      className="inline-flex p-1 rounded cursor-help"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                      aria-label="Select days and week tips"
+                    >
+                      <Info className="h-4 w-4" />
+                    </span>
+                  </CssTooltip>
+
+                  {/* Copy and Delete Selected Buttons */}
+                  {multiSelectMode && selectedDays.size > 0 && (
+                    <>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          // Copy all selected days
+                          if (selectedDays.size > 0) {
+                            const daysArray = Array.from(selectedDays).map(
+                              dayKey => {
+                                const [year, month, day] = dayKey
+                                  .split("-")
+                                  .map(Number);
+                                return new Date(year, month - 1, day);
+                              }
+                            );
+                            // Use the first selected day to trigger copy (will handle multiple days)
+                            handleCopyDay(daysArray[0]);
+                          }
+                        }}
+                        className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
+                        style={{
+                          backgroundColor: getGoldenAccent(0.1),
+                          color: COLORS.GOLDEN_ACCENT,
+                          borderColor: COLORS.GOLDEN_BORDER,
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor =
+                            getGoldenAccent(0.15);
+                          e.currentTarget.style.borderColor =
+                            COLORS.GOLDEN_ACCENT;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor =
+                            getGoldenAccent(0.1);
+                          e.currentTarget.style.borderColor =
+                            COLORS.GOLDEN_BORDER;
+                        }}
+                      >
+                        Copy {selectedDays.size} Day
+                        {selectedDays.size !== 1 ? "s" : ""}
+                      </button>
+                      <button
+                        onClick={handleDeleteMultipleDays}
+                        disabled={isDeletingMultipleDays}
+                        className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          backgroundColor: getRedAlert(0.1),
+                          color: COLORS.RED_ALERT,
+                          borderColor: COLORS.RED_BORDER,
+                        }}
+                        onMouseEnter={e => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor =
+                              getRedAlert(0.15);
+                            e.currentTarget.style.borderColor =
+                              COLORS.RED_ALERT;
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor =
+                              getRedAlert(0.1);
+                            e.currentTarget.style.borderColor =
+                              COLORS.RED_BORDER;
+                          }
+                        }}
+                      >
+                        {isDeletingMultipleDays ? (
+                          <span className="flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Deleting...
+                          </span>
+                        ) : (
+                          `Delete ${selectedDays.size}`
+                        )}
+                      </button>
+                    </>
+                  )}
+
+                  {/* Convert Week Button */}
+                  {weekSelectMode && selectedWeekStart && (
+                    <button
+                      onClick={() => setShowConvertWeekModal(true)}
                       className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
                       style={{
                         backgroundColor: getGoldenAccent(0.1),
@@ -2828,674 +2997,659 @@ function ClientDetailPage({
                           COLORS.GOLDEN_BORDER;
                       }}
                     >
-                      Copy {selectedDays.size} Day
-                      {selectedDays.size !== 1 ? "s" : ""}
+                      Convert to Program
                     </button>
-                    <button
-                      onClick={handleDeleteMultipleDays}
-                      disabled={isDeletingMultipleDays}
-                      className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+
+                  {/* Clipboard Indicator */}
+                  {clipboardData && (
+                    <div
+                      className="flex items-center gap-1.5 px-2 py-1 rounded border"
                       style={{
-                        backgroundColor: getRedAlert(0.1),
-                        color: COLORS.RED_ALERT,
-                        borderColor: COLORS.RED_BORDER,
-                      }}
-                      onMouseEnter={e => {
-                        if (!e.currentTarget.disabled) {
-                          e.currentTarget.style.backgroundColor =
-                            getRedAlert(0.15);
-                          e.currentTarget.style.borderColor = COLORS.RED_ALERT;
-                        }
-                      }}
-                      onMouseLeave={e => {
-                        if (!e.currentTarget.disabled) {
-                          e.currentTarget.style.backgroundColor =
-                            getRedAlert(0.1);
-                          e.currentTarget.style.borderColor = COLORS.RED_BORDER;
-                        }
+                        backgroundColor: getGoldenAccent(0.1),
+                        borderColor: COLORS.GOLDEN_BORDER,
                       }}
                     >
-                      {isDeletingMultipleDays ? (
-                        <span className="flex items-center gap-1">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Deleting...
-                        </span>
-                      ) : (
-                        `Delete ${selectedDays.size}`
-                      )}
-                    </button>
-                  </>
-                )}
+                      <span
+                        className="text-xs"
+                        style={{ color: COLORS.GOLDEN_HOVER }}
+                      >
+                        {clipboardData.assignments.routines.length +
+                          clipboardData.assignments.programs.length +
+                          clipboardData.assignments.videos.length}{" "}
+                        copied
+                      </span>
+                      <button
+                        onClick={() => setClipboardData(null)}
+                        className="transition-colors"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                        }}
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-                {/* Convert Week Button */}
-                {weekSelectMode && selectedWeekStart && (
-                  <button
-                    onClick={() => setShowConvertWeekModal(true)}
-                    className="px-2 py-1 rounded text-xs font-medium transition-all duration-200 border"
-                    style={{
-                      backgroundColor: getGoldenAccent(0.1),
-                      color: COLORS.GOLDEN_ACCENT,
-                      borderColor: COLORS.GOLDEN_BORDER,
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor =
-                        getGoldenAccent(0.15);
-                      e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor =
-                        getGoldenAccent(0.1);
-                      e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
-                    }}
-                  >
-                    Convert to Program
-                  </button>
-                )}
-
-                {/* Clipboard Indicator */}
-                {clipboardData && (
-                  <div
-                    className="flex items-center gap-1.5 px-2 py-1 rounded border"
-                    style={{
-                      backgroundColor: getGoldenAccent(0.1),
-                      borderColor: COLORS.GOLDEN_BORDER,
-                    }}
-                  >
-                    <span
-                      className="text-xs"
-                      style={{ color: COLORS.GOLDEN_HOVER }}
-                    >
-                      {clipboardData.assignments.routines.length +
-                        clipboardData.assignments.programs.length +
-                        clipboardData.assignments.videos.length}{" "}
-                      copied
-                    </span>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setClipboardData(null)}
-                      className="transition-colors"
-                      style={{ color: COLORS.GOLDEN_ACCENT }}
+                      onClick={() => navigateMonth("prev")}
+                      className="p-2 rounded-lg transition-colors"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                        backgroundColor: "transparent",
+                      }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.color = COLORS.GOLDEN_HOVER;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                       }}
                       onMouseLeave={e => {
-                        e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                       }}
+                      title="Previous"
                     >
-                      <X className="h-2.5 w-2.5" />
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <h3
+                      className="text-xl font-semibold min-w-[200px] text-center"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {viewMode === "week"
+                        ? `${format(calendarStart, "MMM d")} - ${format(
+                            calendarEnd,
+                            "MMM d, yyyy"
+                          )}`
+                        : format(currentMonth, "MMMM yyyy")}
+                    </h3>
+                    <button
+                      onClick={() => navigateMonth("next")}
+                      className="p-2 rounded-lg transition-colors"
+                      style={{
+                        color: COLORS.TEXT_SECONDARY,
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
+                      title="Next"
+                    >
+                      <ChevronRight className="h-5 w-5" />
                     </button>
                   </div>
-                )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => navigateMonth("prev")}
-                    className="p-2 rounded-lg transition-colors"
-                    style={{
-                      color: COLORS.TEXT_SECONDARY,
-                      backgroundColor: "transparent",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.BACKGROUND_CARD_HOVER;
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                    }}
-                    title="Previous"
+              {/* Calendar Legend + tooltip */}
+              <div className="flex items-center gap-4 mb-4 text-xs flex-wrap">
+                {activeTab === "overview" && (
+                  <CssTooltip
+                    placement="bottom"
+                    content={
+                      <div className="space-y-2">
+                        <p
+                          className="font-medium"
+                          style={{ color: COLORS.TEXT_PRIMARY }}
+                        >
+                          How to assign to the calendar
+                        </p>
+                        <ol className="list-decimal list-inside space-y-1 text-left">
+                          <li
+                            className="leading-snug"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            Choose a day to assign a program, routine, video, or
+                            lesson.
+                          </li>
+                          <li
+                            className="leading-snug"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            Choose the desired option.
+                          </li>
+                        </ol>
+                        <p
+                          className="text-xs leading-snug mt-2"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
+                          Remember: if choosing a program, the program starts on
+                          day 1.
+                        </p>
+                      </div>
+                    }
+                    contentClassName="max-w-[400px]"
                   >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <h3
-                    className="text-xl font-semibold min-w-[200px] text-center"
+                    <span
+                      className="inline-flex p-1 rounded"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                      aria-label="Calendar tip"
+                    >
+                      <Info className="h-4 w-4" />
+                    </span>
+                  </CssTooltip>
+                )}
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded border-2"
+                    style={{
+                      backgroundColor: "rgba(245, 158, 11, 0.2)",
+                      borderColor: "#F59E0B",
+                    }}
+                  />
+                  <span
+                    className="font-medium"
                     style={{ color: COLORS.TEXT_PRIMARY }}
                   >
-                    {viewMode === "week"
-                      ? `${format(calendarStart, "MMM d")} - ${format(
-                          calendarEnd,
-                          "MMM d, yyyy"
-                        )}`
-                      : format(currentMonth, "MMMM yyyy")}
-                  </h3>
-                  <button
-                    onClick={() => navigateMonth("next")}
-                    className="p-2 rounded-lg transition-colors"
+                    Lessons
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded border-2"
+                    style={{
+                      backgroundColor: "rgba(59, 130, 246, 0.2)",
+                      borderColor: "#3B82F6",
+                    }}
+                  />
+                  <span
+                    className="font-medium"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Programs
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded border-2"
+                    style={{
+                      backgroundColor: "rgba(16, 185, 129, 0.2)",
+                      borderColor: "#10B981",
+                    }}
+                  />
+                  <span
+                    className="font-medium"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Routines
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded border-2"
+                    style={{
+                      backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      borderColor: "#8B5CF6",
+                    }}
+                  />
+                  <span
+                    className="font-medium"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Videos
+                  </span>
+                </div>
+              </div>
+
+              {/* Calendar Grid */}
+              <div
+                className="grid grid-cols-7 gap-1 transition-all duration-300"
+                style={{
+                  marginRight: dockOpen && isDesktop ? "320px" : "0",
+                }}
+              >
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                  <div
+                    key={day}
+                    className="text-center text-xs font-semibold py-2 border-b"
                     style={{
                       color: COLORS.TEXT_SECONDARY,
-                      backgroundColor: "transparent",
+                      borderColor: COLORS.BORDER_SUBTLE,
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.BACKGROUND_CARD_HOVER;
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                    }}
-                    title="Next"
                   >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
+                    {day}
+                  </div>
+                ))}
+                {calendarDays.map(day => {
+                  const lessonsForDay = getLessonsForDate(day);
+                  const programsForDay = getProgramsForDate(day);
+                  const videosForDay = getVideosForDate(day);
+                  const routineAssignmentsForDay =
+                    getRoutineAssignmentsForDate(day);
+                  const dayKey = format(day, "yyyy-MM-dd");
+                  const isSelected = selectedDays.has(dayKey);
+
+                  // Check if this day is part of the selected week
+                  const dayWeekStart = startOfWeek(day, { weekStartsOn: 0 });
+                  const isInSelectedWeek = Boolean(
+                    weekSelectMode &&
+                    selectedWeekStart &&
+                    dayWeekStart.getTime() === selectedWeekStart.getTime()
+                  );
+
+                  const itemOrder = dayItemOrders[dayKey];
+
+                  return (
+                    <ClientDetailCalendarDayCell
+                      key={day.toISOString()}
+                      day={day}
+                      viewMode={viewMode}
+                      currentMonth={currentMonth}
+                      isSelected={isSelected}
+                      isInSelectedWeek={isInSelectedWeek}
+                      multiSelectMode={multiSelectMode}
+                      weekSelectMode={weekSelectMode}
+                      lessonsForDay={lessonsForDay}
+                      programsForDay={programsForDay}
+                      videosForDay={videosForDay}
+                      routineAssignmentsForDay={routineAssignmentsForDay}
+                      clipboardData={clipboardData}
+                      onDateClick={handleDateClick}
+                      onCopyDay={handleCopyDay}
+                      onPasteDay={handlePasteDay}
+                      onToggleDaySelection={toggleDaySelection}
+                      onWeekSelection={handleWeekSelection}
+                      setSelectedEventDetails={setSelectedEventDetails}
+                      onReorderItems={handleReorderItems}
+                      itemOrder={itemOrder}
+                      isDesktop={isDesktop}
+                    />
+                  );
+                })}
               </div>
+
+              {/* Drag-and-Drop Dock - Attached to Calendar */}
+              {isDesktop && (
+                <ClientDetailDock
+                  isOpen={dockOpen}
+                  activeTab={dockActiveTab}
+                  searchTerm={dockSearchTerm}
+                  onToggle={() => setDockOpen(!dockOpen)}
+                  onTabChange={setDockActiveTab}
+                  onSearchChange={setDockSearchTerm}
+                  onDragStart={handleDragStart}
+                  onDragEnd={item => {
+                    setIsDragging(false);
+                    setDraggedItem(null);
+                  }}
+                />
+              )}
             </div>
 
-            {/* Calendar Legend */}
-            <div className="flex items-center gap-4 mb-4 text-xs flex-wrap">
-              <div className="flex items-center gap-2">
+            {/* Notes Modal */}
+            {showNotes && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div
-                  className="w-4 h-4 rounded border-2"
-                  style={{
-                    backgroundColor: "rgba(245, 158, 11, 0.2)",
-                    borderColor: "#F59E0B",
-                  }}
+                  className="absolute inset-0 bg-black bg-opacity-50"
+                  onClick={() => setShowNotes(false)}
                 />
-                <span
-                  className="font-medium"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  Lessons
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
                 <div
-                  className="w-4 h-4 rounded border-2"
-                  style={{
-                    backgroundColor: "rgba(59, 130, 246, 0.2)",
-                    borderColor: "#3B82F6",
-                  }}
-                />
-                <span
-                  className="font-medium"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  Programs
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded border-2"
-                  style={{
-                    backgroundColor: "rgba(16, 185, 129, 0.2)",
-                    borderColor: "#10B981",
-                  }}
-                />
-                <span
-                  className="font-medium"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  Routines
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded border-2"
-                  style={{
-                    backgroundColor: "rgba(139, 92, 246, 0.2)",
-                    borderColor: "#8B5CF6",
-                  }}
-                />
-                <span
-                  className="font-medium"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
-                >
-                  Videos
-                </span>
-              </div>
-            </div>
-
-            {/* Calendar Grid */}
-            <div 
-              className="grid grid-cols-7 gap-1 transition-all duration-300"
-              style={{
-                marginRight: dockOpen && isDesktop ? "320px" : "0",
-              }}
-            >
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                <div
-                  key={day}
-                  className="text-center text-xs font-semibold py-2 border-b"
-                  style={{
-                    color: COLORS.TEXT_SECONDARY,
-                    borderColor: COLORS.BORDER_SUBTLE,
-                  }}
-                >
-                  {day}
-                </div>
-              ))}
-              {calendarDays.map(day => {
-                const lessonsForDay = getLessonsForDate(day);
-                const programsForDay = getProgramsForDate(day);
-                const videosForDay = getVideosForDate(day);
-                const routineAssignmentsForDay =
-                  getRoutineAssignmentsForDate(day);
-                const dayKey = format(day, "yyyy-MM-dd");
-                const isSelected = selectedDays.has(dayKey);
-
-                // Check if this day is part of the selected week
-                const dayWeekStart = startOfWeek(day, { weekStartsOn: 0 });
-                const isInSelectedWeek = Boolean(
-                  weekSelectMode &&
-                  selectedWeekStart &&
-                  dayWeekStart.getTime() === selectedWeekStart.getTime()
-                );
-
-                const itemOrder = dayItemOrders[dayKey];
-
-                return (
-                  <ClientDetailCalendarDayCell
-                    key={day.toISOString()}
-                    day={day}
-                    viewMode={viewMode}
-                    currentMonth={currentMonth}
-                    isSelected={isSelected}
-                    isInSelectedWeek={isInSelectedWeek}
-                    multiSelectMode={multiSelectMode}
-                    weekSelectMode={weekSelectMode}
-                    lessonsForDay={lessonsForDay}
-                    programsForDay={programsForDay}
-                    videosForDay={videosForDay}
-                    routineAssignmentsForDay={routineAssignmentsForDay}
-                    clipboardData={clipboardData}
-                    onDateClick={handleDateClick}
-                    onCopyDay={handleCopyDay}
-                    onPasteDay={handlePasteDay}
-                    onToggleDaySelection={toggleDaySelection}
-                    onWeekSelection={handleWeekSelection}
-                    setSelectedEventDetails={setSelectedEventDetails}
-                    onReorderItems={handleReorderItems}
-                    itemOrder={itemOrder}
-                    isDesktop={isDesktop}
-                  />
-                        );
-                      })}
-                        </div>
-            
-            {/* Drag-and-Drop Dock - Attached to Calendar */}
-            {isDesktop && (
-              <ClientDetailDock
-                isOpen={dockOpen}
-                activeTab={dockActiveTab}
-                searchTerm={dockSearchTerm}
-                onToggle={() => setDockOpen(!dockOpen)}
-                onTabChange={setDockActiveTab}
-                onSearchChange={setDockSearchTerm}
-                onDragStart={handleDragStart}
-                onDragEnd={(item) => {
-                  setIsDragging(false);
-                  setDraggedItem(null);
-                }}
-              />
-            )}
-          </div>
-
-          {/* Notes Modal */}
-          {showNotes && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div
-                className="absolute inset-0 bg-black bg-opacity-50"
-                onClick={() => setShowNotes(false)}
-              />
-              <div
-                className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg border shadow-xl"
-                style={{
-                  backgroundColor: COLORS.BACKGROUND_DARK,
-                  borderColor: COLORS.BORDER_SUBTLE,
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                <div
-                  className="sticky top-0 flex items-center justify-between p-4 border-b z-10"
+                  className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg border shadow-xl"
                   style={{
                     backgroundColor: COLORS.BACKGROUND_DARK,
                     borderColor: COLORS.BORDER_SUBTLE,
                   }}
+                  onClick={e => e.stopPropagation()}
                 >
-                  <h2
-                    className="text-xl font-semibold"
-                    style={{ color: COLORS.TEXT_PRIMARY }}
-                  >
-                    Notes for {client.name}
-                  </h2>
-                  <button
-                    onClick={() => setShowNotes(false)}
-                    className="p-1.5 rounded-lg transition-colors"
-                    style={{ color: COLORS.TEXT_SECONDARY }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor =
-                        COLORS.BACKGROUND_CARD_HOVER;
-                      e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                  <div
+                    className="sticky top-0 flex items-center justify-between p-4 border-b z-10"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
                     }}
                   >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                <div className="p-6">
-                  <NotesDisplay clientId={clientId} showComposer={true} />
+                    <h2
+                      className="text-xl font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      Notes for {client.name}
+                    </h2>
+                    <button
+                      onClick={() => setShowNotes(false)}
+                      className="p-1.5 rounded-lg transition-colors"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
+                      }}
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <NotesDisplay clientId={clientId} showComposer={true} />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Modals */}
-          {showAssignProgramModal && (
-            <QuickAssignProgramModal
-              isOpen={showAssignProgramModal}
-              onClose={() => {
-                setShowAssignProgramModal(false);
-                refreshAllData();
-              }}
-              clientId={clientId}
-              clientName={client.name}
-              startDate={
-                selectedDate
-                  ? selectedDate.toISOString().split("T")[0]
-                  : new Date().toISOString().split("T")[0]
-              }
-            />
-          )}
+            {/* Modals */}
+            {showAssignProgramModal && (
+              <QuickAssignProgramModal
+                isOpen={showAssignProgramModal}
+                onClose={() => {
+                  setShowAssignProgramModal(false);
+                  refreshAllData();
+                }}
+                clientId={clientId}
+                clientName={client.name}
+                startDate={
+                  selectedDate
+                    ? selectedDate.toISOString().split("T")[0]
+                    : new Date().toISOString().split("T")[0]
+                }
+              />
+            )}
 
+            {showQuickAssignRoutineModal && (
+              <QuickAssignRoutineModal
+                isOpen={showQuickAssignRoutineModal}
+                onClose={() => {
+                  setShowQuickAssignRoutineModal(false);
+                  refreshAllData();
+                }}
+                clientId={clientId}
+                clientName={client.name}
+                startDate={new Date().toISOString().split("T")[0]}
+              />
+            )}
 
-          {showQuickAssignRoutineModal && (
-            <QuickAssignRoutineModal
-              isOpen={showQuickAssignRoutineModal}
-              onClose={() => {
-                setShowQuickAssignRoutineModal(false);
-                refreshAllData();
-              }}
-              clientId={clientId}
-              clientName={client.name}
-              startDate={new Date().toISOString().split("T")[0]}
-            />
-          )}
+            {showQuickAssignRoutineFromDayModal && (
+              <QuickAssignRoutineFromDayModal
+                isOpen={showQuickAssignRoutineFromDayModal}
+                onClose={() => {
+                  setShowQuickAssignRoutineFromDayModal(false);
+                  refreshAllData();
+                }}
+                clientId={clientId}
+                clientName={client.name}
+                startDate={
+                  selectedDate
+                    ? selectedDate.toISOString().split("T")[0]
+                    : new Date().toISOString().split("T")[0]
+                }
+              />
+            )}
 
-          {showQuickAssignRoutineFromDayModal && (
-            <QuickAssignRoutineFromDayModal
-              isOpen={showQuickAssignRoutineFromDayModal}
-              onClose={() => {
-                setShowQuickAssignRoutineFromDayModal(false);
-                refreshAllData();
-              }}
-              clientId={clientId}
-              clientName={client.name}
-              startDate={
-                selectedDate
-                  ? selectedDate.toISOString().split("T")[0]
-                  : new Date().toISOString().split("T")[0]
-              }
-            />
-          )}
+            {showAssignRoutineModal && (
+              <AssignRoutineModal
+                isOpen={showAssignRoutineModal}
+                onClose={() => {
+                  setShowAssignRoutineModal(false);
+                  refreshAllData();
+                }}
+                clientId={clientId}
+                clientName={client.name}
+                startDate={
+                  selectedDate
+                    ? selectedDate.toISOString().split("T")[0]
+                    : undefined
+                }
+              />
+            )}
 
-          {showAssignRoutineModal && (
-            <AssignRoutineModal
-              isOpen={showAssignRoutineModal}
-              onClose={() => {
-                setShowAssignRoutineModal(false);
-                refreshAllData();
-              }}
-              clientId={clientId}
-              clientName={client.name}
-              startDate={
-                selectedDate
-                  ? selectedDate.toISOString().split("T")[0]
-                  : undefined
-              }
-            />
-          )}
+            {showAssignVideoModal && client && (
+              <AssignVideoModal
+                isOpen={showAssignVideoModal}
+                onClose={() => {
+                  setShowAssignVideoModal(false);
+                  refreshAllData();
+                }}
+                clientId={clientId}
+                clientName={client.name || "Client"}
+                startDate={
+                  selectedDate
+                    ? selectedDate.toISOString().split("T")[0]
+                    : undefined
+                }
+              />
+            )}
 
-          {showAssignVideoModal && client && (
-            <AssignVideoModal
-              isOpen={showAssignVideoModal}
-              onClose={() => {
-                setShowAssignVideoModal(false);
-                refreshAllData();
-              }}
-              clientId={clientId}
-              clientName={client.name || "Client"}
-              startDate={
-                selectedDate
-                  ? selectedDate.toISOString().split("T")[0]
-                  : undefined
-              }
-            />
-          )}
+            {showScheduleLessonModal && (
+              <StreamlinedScheduleLessonModal
+                isOpen={showScheduleLessonModal}
+                onClose={() => {
+                  setShowScheduleLessonModal(false);
+                  setReplacementData(null);
+                  refreshAllData();
+                }}
+                clientId={clientId}
+                clientName={client.name}
+                clientEmail={client.user?.email}
+                selectedDate={selectedDate}
+                overrideWorkingDays={noSidebar} // Override working days in organization context
+                replacementData={replacementData} // Pass replacement data to override restrictions
+              />
+            )}
 
-          {showScheduleLessonModal && (
-            <StreamlinedScheduleLessonModal
-              isOpen={showScheduleLessonModal}
-              onClose={() => {
-                setShowScheduleLessonModal(false);
-                setReplacementData(null);
-                refreshAllData();
-              }}
-              clientId={clientId}
-              clientName={client.name}
-              clientEmail={client.user?.email}
+            {/* Day Details Modal */}
+            <DayDetailsModal
+              isOpen={showDayDetailsModal}
+              onClose={() => setShowDayDetailsModal(false)}
               selectedDate={selectedDate}
-              overrideWorkingDays={noSidebar} // Override working days in organization context
-              replacementData={replacementData} // Pass replacement data to override restrictions
+              lessons={dayModalData.lessons}
+              programs={dayModalData.programs}
+              routineAssignments={dayModalData.routineAssignments}
+              videoAssignments={dayModalData.videoAssignments}
+              onScheduleLesson={() => {
+                setShowScheduleLessonModal(true);
+                setShowDayDetailsModal(false);
+              }}
+              onAssignProgram={() => {
+                setShowAssignProgramModal(true);
+                setShowDayDetailsModal(false);
+              }}
+              onAssignRoutine={() => {
+                setShowQuickAssignRoutineFromDayModal(true);
+                setShowDayDetailsModal(false);
+              }}
+              onAssignVideo={() => {
+                setShowAssignVideoModal(true);
+                setShowDayDetailsModal(false);
+              }}
+              onReplaceWithLesson={replacementData => {
+                setReplacementData(replacementData);
+                setShowScheduleLessonModal(true);
+                setShowDayDetailsModal(false);
+              }}
+              onRemoveProgram={handleRemoveProgram}
+              onRemoveRoutine={handleRemoveRoutine}
+              onRemoveLesson={handleRemoveLesson}
+              onRemoveVideo={handleRemoveVideo}
+              getStatusIcon={getStatusIcon}
+              getStatusColor={getStatusColor}
             />
-          )}
 
-          {/* Day Details Modal */}
-          <DayDetailsModal
-            isOpen={showDayDetailsModal}
-            onClose={() => setShowDayDetailsModal(false)}
-            selectedDate={selectedDate}
-            lessons={dayModalData.lessons}
-            programs={dayModalData.programs}
-            routineAssignments={dayModalData.routineAssignments}
-            videoAssignments={dayModalData.videoAssignments}
-            onScheduleLesson={() => {
-              setShowScheduleLessonModal(true);
-              setShowDayDetailsModal(false);
-            }}
-            onAssignProgram={() => {
-              setShowAssignProgramModal(true);
-              setShowDayDetailsModal(false);
-            }}
-            onAssignRoutine={() => {
-              setShowQuickAssignRoutineFromDayModal(true);
-              setShowDayDetailsModal(false);
-            }}
-            onAssignVideo={() => {
-              setShowAssignVideoModal(true);
-              setShowDayDetailsModal(false);
-            }}
-            onReplaceWithLesson={replacementData => {
-              setReplacementData(replacementData);
-              setShowScheduleLessonModal(true);
-              setShowDayDetailsModal(false);
-            }}
-            onRemoveProgram={handleRemoveProgram}
-            onRemoveRoutine={handleRemoveRoutine}
-            onRemoveLesson={handleRemoveLesson}
-            onRemoveVideo={handleRemoveVideo}
-            getStatusIcon={getStatusIcon}
-            getStatusColor={getStatusColor}
-          />
-
-          {/* Conflict Resolution Modal */}
-          <ConflictResolutionModal
-            isOpen={showConflictResolutionModal}
-            onClose={() => {
-              setShowConflictResolutionModal(false);
-              setConflictData(null);
-            }}
-            onResolve={handleConflictResolution}
-            conflictData={conflictData}
-          />
-
-          {/* Convert Week to Program Modal */}
-          {selectedWeekStart && (
-            <ConvertWeekToProgramModal
-              isOpen={showConvertWeekModal}
+            {/* Conflict Resolution Modal */}
+            <ConflictResolutionModal
+              isOpen={showConflictResolutionModal}
               onClose={() => {
-                setShowConvertWeekModal(false);
-                setSelectedWeekStart(null);
-                setWeekSelectMode(false);
+                setShowConflictResolutionModal(false);
+                setConflictData(null);
               }}
-              weekStart={selectedWeekStart}
-              clientId={clientId}
-              onSuccess={() => {
-                refreshAllData();
-              }}
-              getLessonsForDate={getLessonsForDate}
-              getProgramsForDate={getProgramsForDate}
-              getRoutineAssignmentsForDate={getRoutineAssignmentsForDate}
-              getVideosForDate={getVideosForDate}
+              onResolve={handleConflictResolution}
+              conflictData={conflictData}
             />
-          )}
 
-          {/* Event Details Modal */}
-          <Dialog
-            open={!!selectedEventDetails}
-            onOpenChange={(open: boolean) => {
-              if (!open) setSelectedEventDetails(null);
-            }}
-          >
-            <DialogContent
-              className="max-w-md"
-              style={{
-                backgroundColor: COLORS.BACKGROUND_DARK,
-                borderColor: COLORS.BORDER_SUBTLE,
+            {/* Convert Week to Program Modal */}
+            {selectedWeekStart && (
+              <ConvertWeekToProgramModal
+                isOpen={showConvertWeekModal}
+                onClose={() => {
+                  setShowConvertWeekModal(false);
+                  setSelectedWeekStart(null);
+                  setWeekSelectMode(false);
+                }}
+                weekStart={selectedWeekStart}
+                clientId={clientId}
+                onSuccess={() => {
+                  refreshAllData();
+                }}
+                getLessonsForDate={getLessonsForDate}
+                getProgramsForDate={getProgramsForDate}
+                getRoutineAssignmentsForDate={getRoutineAssignmentsForDate}
+                getVideosForDate={getVideosForDate}
+              />
+            )}
+
+            {/* Event Details Modal */}
+            <Dialog
+              open={!!selectedEventDetails}
+              onOpenChange={(open: boolean) => {
+                if (!open) setSelectedEventDetails(null);
               }}
             >
-              <DialogHeader>
-                <DialogTitle
-                  style={{
-                    color: COLORS.TEXT_PRIMARY,
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  {selectedEventDetails?.name}
-                </DialogTitle>
-                <DialogDescription className="sr-only">
-                  Details for{" "}
-                  {selectedEventDetails?.type === "program"
-                    ? "program"
-                    : "routine"}
-                  : {selectedEventDetails?.name}
-                </DialogDescription>
-              </DialogHeader>
-              {selectedEventDetails && (
-                <div>
-                  {selectedEventDetails.items &&
-                    selectedEventDetails.items.length > 0 && (
-                      <div className="mb-3">
-                        <div
-                          className="text-xs mb-2"
-                          style={{ color: COLORS.TEXT_SECONDARY }}
-                        >
-                          {selectedEventDetails.items.length}{" "}
-                          {selectedEventDetails.type === "program"
-                            ? "drill"
-                            : "exercise"}
-                          {selectedEventDetails.items.length !== 1 ? "s" : ""}
-                        </div>
-                        <div
-                          className="max-h-[400px] overflow-y-auto space-y-1.5"
-                          style={{
-                            borderColor: COLORS.BORDER_SUBTLE,
-                          }}
-                        >
-                          {selectedEventDetails.items.map((item, index) => {
-                            const itemId = item.id || `item-${index}`;
-                            const isExpanded = expandedDrills.has(itemId);
-                            const hasRoutine = item.routineId;
-
-                            return (
-                              <DrillItemComponent
-                                key={itemId}
-                                item={item}
-                                itemId={itemId}
-                                isExpanded={isExpanded}
-                                onToggle={() => {
-                                  const newExpanded = new Set(expandedDrills);
-                                  if (newExpanded.has(itemId)) {
-                                    newExpanded.delete(itemId);
-                                  } else {
-                                    newExpanded.add(itemId);
-                                  }
-                                  setExpandedDrills(newExpanded);
-                                }}
-                                type={selectedEventDetails.type}
-                                routineCache={routineCache}
-                                setRoutineCache={setRoutineCache}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                  {(!selectedEventDetails.items ||
-                    selectedEventDetails.items.length === 0) && (
-                    <div
-                      className="py-4 text-sm text-center"
-                      style={{ color: COLORS.TEXT_SECONDARY }}
-                    >
-                      No items
-                    </div>
-                  )}
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {/* Quick Message Popup */}
-          {client && client.userId && (
-            <QuickMessagePopup
-              isOpen={isQuickMessageOpen}
-              onClose={() => setIsQuickMessageOpen(false)}
-              client={{
-                id: client.id,
-                name: client.name,
-                userId: client.userId,
-              }}
-              buttonRef={quickMessageButtonRef}
-            />
-          )}
-          
-          {/* Loading indicator during assignment */}
-          {isDesktop && isAssigning && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
-            >
-              <div
-                className="px-6 py-4 rounded-lg shadow-lg flex items-center gap-3"
+              <DialogContent
+                className="max-w-md"
                 style={{
-                  backgroundColor: COLORS.BACKGROUND_CARD,
-                  borderColor: COLORS.GOLDEN_ACCENT,
-                  border: "2px solid",
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                  borderColor: COLORS.BORDER_SUBTLE,
                 }}
               >
-                <Loader2
-                  className="h-5 w-5 animate-spin"
-                  style={{ color: COLORS.GOLDEN_ACCENT }}
-                />
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: COLORS.TEXT_PRIMARY }}
+                <DialogHeader>
+                  <DialogTitle
+                    style={{
+                      color: COLORS.TEXT_PRIMARY,
+                      fontSize: "1rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {selectedEventDetails?.name}
+                  </DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Details for{" "}
+                    {selectedEventDetails?.type === "program"
+                      ? "program"
+                      : "routine"}
+                    : {selectedEventDetails?.name}
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedEventDetails && (
+                  <div>
+                    {selectedEventDetails.items &&
+                      selectedEventDetails.items.length > 0 && (
+                        <div className="mb-3">
+                          <div
+                            className="text-xs mb-2"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            {selectedEventDetails.items.length}{" "}
+                            {selectedEventDetails.type === "program"
+                              ? "drill"
+                              : "exercise"}
+                            {selectedEventDetails.items.length !== 1 ? "s" : ""}
+                          </div>
+                          <div
+                            className="max-h-[400px] overflow-y-auto space-y-1.5"
+                            style={{
+                              borderColor: COLORS.BORDER_SUBTLE,
+                            }}
+                          >
+                            {selectedEventDetails.items.map((item, index) => {
+                              const itemId = item.id || `item-${index}`;
+                              const isExpanded = expandedDrills.has(itemId);
+                              const hasRoutine = item.routineId;
+
+                              return (
+                                <DrillItemComponent
+                                  key={itemId}
+                                  item={item}
+                                  itemId={itemId}
+                                  isExpanded={isExpanded}
+                                  onToggle={() => {
+                                    const newExpanded = new Set(expandedDrills);
+                                    if (newExpanded.has(itemId)) {
+                                      newExpanded.delete(itemId);
+                                    } else {
+                                      newExpanded.add(itemId);
+                                    }
+                                    setExpandedDrills(newExpanded);
+                                  }}
+                                  type={selectedEventDetails.type}
+                                  routineCache={routineCache}
+                                  setRoutineCache={setRoutineCache}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                    {(!selectedEventDetails.items ||
+                      selectedEventDetails.items.length === 0) && (
+                      <div
+                        className="py-4 text-sm text-center"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        No items
+                      </div>
+                    )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Quick Message Popup */}
+            {client && client.userId && (
+              <QuickMessagePopup
+                isOpen={isQuickMessageOpen}
+                onClose={() => setIsQuickMessageOpen(false)}
+                client={{
+                  id: client.id,
+                  name: client.name,
+                  userId: client.userId,
+                }}
+                buttonRef={quickMessageButtonRef}
+              />
+            )}
+
+            {/* Loading indicator during assignment */}
+            {isDesktop && isAssigning && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+                style={{ backgroundColor: "rgba(0, 0, 0, 0.3)" }}
+              >
+                <div
+                  className="px-6 py-4 rounded-lg shadow-lg flex items-center gap-3"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.GOLDEN_ACCENT,
+                    border: "2px solid",
+                  }}
                 >
-                  Assigning...
-                </span>
+                  <Loader2
+                    className="h-5 w-5 animate-spin"
+                    style={{ color: COLORS.GOLDEN_ACCENT }}
+                  />
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
+                    Assigning...
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-    </SidebarWrapperComponent>
+      </SidebarWrapperComponent>
     </DndContext>
   );
 }

@@ -7,14 +7,15 @@ import Sidebar from "./Sidebar";
 import ClientSidebar from "./ClientSidebar";
 import { trpc } from "@/app/_trpc/client";
 
-interface NotificationsPageWrapperProps {}
+interface NotificationsPageWrapperProps {
+  noSidebar?: boolean;
+}
 
-export default function NotificationsPageWrapper({}: NotificationsPageWrapperProps) {
+export default function NotificationsPageWrapper({
+  noSidebar = false,
+}: NotificationsPageWrapperProps) {
   const { isMobile } = useMobileDetection();
   const { data: userProfile } = trpc.user.getProfile.useQuery();
-
-  // Determine if user is a coach or client
-  const isCoach = userProfile?.role === "COACH";
 
   const NotificationsContent = () => {
     if (isMobile) {
@@ -23,28 +24,28 @@ export default function NotificationsPageWrapper({}: NotificationsPageWrapperPro
     return <NotificationsPage />;
   };
 
-  // Use appropriate sidebar based on user role
+  // When layout provides sidebar (noSidebar), render content only
+  if (noSidebar) {
+    return <NotificationsContent />;
+  }
+
+  // Legacy: use appropriate sidebar based on user role
+  const isCoach = userProfile?.role === "COACH";
   if (isCoach) {
     return (
       <Sidebar>
         <NotificationsContent />
       </Sidebar>
     );
-  } else {
-    // For clients, we need to pass user data to ClientSidebar
-    return (
-      <ClientSidebar
-        user={{
-          name: userProfile?.name || "",
-          email: userProfile?.email || "",
-        }}
-      >
-        <NotificationsContent />
-      </ClientSidebar>
-    );
   }
+  return (
+    <ClientSidebar
+      user={{
+        name: userProfile?.name || "",
+        email: userProfile?.email || "",
+      }}
+    >
+      <NotificationsContent />
+    </ClientSidebar>
+  );
 }
-
-
-
-

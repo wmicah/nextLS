@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { trpc } from "@/app/_trpc/client";
@@ -59,14 +59,20 @@ const DEFAULT_CATEGORIES = [
   "Extension",
 ];
 
-function LibraryPage() {
+interface LibraryPageProps {
+  noSidebar?: boolean;
+}
+
+function LibraryPage({ noSidebar = false }: LibraryPageProps) {
   const searchParams = useSearchParams();
+  const wrap = (content: React.ReactNode) =>
+    noSidebar ? content : <Sidebar>{content}</Sidebar>;
   const tabParam = searchParams?.get("tab");
   const videoIdParam = searchParams?.get("videoId");
   const [activeTab, setActiveTab] = useState<"master" | "local">(
     tabParam === "master" ? "master" : "local"
   );
-  
+
   // Update active tab when URL param changes
   useEffect(() => {
     if (tabParam === "master") {
@@ -233,9 +239,13 @@ function LibraryPage() {
     if (videoIdParam && activeTab === "master") {
       // Wait for master items to load
       if (masterItems.length > 0) {
-        const videoItem = masterItems.find((item: any) => item.id === videoIdParam);
+        const videoItem = masterItems.find(
+          (item: any) => item.id === videoIdParam
+        );
         if (videoItem) {
-          const itemIndex = masterItems.findIndex((item: any) => item.id === videoIdParam);
+          const itemIndex = masterItems.findIndex(
+            (item: any) => item.id === videoIdParam
+          );
           setCurrentItemIndex(itemIndex);
           setSelectedItem(videoItem);
           setIsVideoViewerOpen(true);
@@ -340,7 +350,8 @@ function LibraryPage() {
   }, [libraryItems.length]);
 
   // Only show full page loading on very first mount with no data
-  const isInitialLoading = isFirstMount.current && isLoading && libraryItems.length === 0;
+  const isInitialLoading =
+    isFirstMount.current && isLoading && libraryItems.length === 0;
 
   // Reset loading more state when new data arrives
   useEffect(() => {
@@ -371,8 +382,6 @@ function LibraryPage() {
 
   // Debug logging with useEffect to monitor changes
   useEffect(() => {
-
-
     if (localError) {
       console.error("❌ Local library error:", localError);
     }
@@ -424,8 +433,8 @@ function LibraryPage() {
   // Show error inline, not blocking the entire page
   const showError = error && libraryItems.length === 0 && !isLoading;
 
-  return (
-    <Sidebar>
+  return wrap(
+    <>
       {/* Header with Golden Bar Indicator */}
       <div className="mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -461,7 +470,10 @@ function LibraryPage() {
       {/* Enhanced Search and Filters */}
       <div
         className="rounded-lg p-3 mb-4 shadow-lg border"
-        style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
       >
         <div className="flex gap-2 items-center">
           {/* Search */}
@@ -518,11 +530,15 @@ function LibraryPage() {
                 style={{
                   backgroundColor:
                     viewMode === "grid" ? COLORS.GOLDEN_DARK : "transparent",
-                  color: viewMode === "grid" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  color:
+                    viewMode === "grid"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
                 }}
                 onMouseEnter={e => {
                   if (viewMode !== "grid") {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                   }
                 }}
                 onMouseLeave={e => {
@@ -542,11 +558,15 @@ function LibraryPage() {
                 style={{
                   backgroundColor:
                     viewMode === "list" ? COLORS.GOLDEN_DARK : "transparent",
-                  color: viewMode === "list" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                  color:
+                    viewMode === "list"
+                      ? COLORS.TEXT_PRIMARY
+                      : COLORS.TEXT_SECONDARY,
                 }}
                 onMouseEnter={e => {
                   if (viewMode !== "list") {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                   }
                 }}
                 onMouseLeave={e => {
@@ -565,10 +585,11 @@ function LibraryPage() {
 
       {/* Tabs + Actions Combined */}
       <div className="mb-4">
-        <div className="flex items-center justify-between gap-3 rounded-lg p-2.5 border"
-          style={{ 
-            backgroundColor: COLORS.BACKGROUND_DARK, 
-            borderColor: COLORS.BORDER_SUBTLE 
+        <div
+          className="flex items-center justify-between gap-3 rounded-lg p-2.5 border"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            borderColor: COLORS.BORDER_SUBTLE,
           }}
         >
           {/* Left: Tabs */}
@@ -579,12 +600,17 @@ function LibraryPage() {
                 activeTab === "master" ? "" : ""
               }`}
               style={{
-                backgroundColor: activeTab === "master" ? COLORS.GOLDEN_DARK : "transparent",
-                color: activeTab === "master" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                backgroundColor:
+                  activeTab === "master" ? COLORS.GOLDEN_DARK : "transparent",
+                color:
+                  activeTab === "master"
+                    ? COLORS.TEXT_PRIMARY
+                    : COLORS.TEXT_SECONDARY,
               }}
               onMouseEnter={e => {
                 if (activeTab !== "master") {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                   e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                 }
               }}
@@ -604,12 +630,17 @@ function LibraryPage() {
                 activeTab === "local" ? "" : ""
               }`}
               style={{
-                backgroundColor: activeTab === "local" ? COLORS.GOLDEN_DARK : "transparent",
-                color: activeTab === "local" ? COLORS.TEXT_PRIMARY : COLORS.TEXT_SECONDARY,
+                backgroundColor:
+                  activeTab === "local" ? COLORS.GOLDEN_DARK : "transparent",
+                color:
+                  activeTab === "local"
+                    ? COLORS.TEXT_PRIMARY
+                    : COLORS.TEXT_SECONDARY,
               }}
               onMouseEnter={e => {
                 if (activeTab !== "local") {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                   e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                 }
               }}
@@ -632,7 +663,10 @@ function LibraryPage() {
                 <button
                   onClick={() => setIsYouTubeModalOpen(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
-                  style={{ backgroundColor: COLORS.RED_ALERT, color: "#FFFFFF" }}
+                  style={{
+                    backgroundColor: COLORS.RED_ALERT,
+                    color: "#FFFFFF",
+                  }}
                   onMouseEnter={e => {
                     e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                   }}
@@ -646,9 +680,13 @@ function LibraryPage() {
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
-                  style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_DARK,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.GOLDEN_ACCENT;
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
@@ -671,7 +709,10 @@ function LibraryPage() {
                 <span>Read-only</span>
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_MUTED }}
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    color: COLORS.TEXT_MUTED,
+                  }}
                 >
                   Admin Only
                 </span>
@@ -699,7 +740,10 @@ function LibraryPage() {
           }}
         >
           <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" style={{ color: COLORS.GOLDEN_ACCENT }} />
+            <BookOpen
+              className="h-4 w-4"
+              style={{ color: COLORS.GOLDEN_ACCENT }}
+            />
             <div>
               <h4
                 className="font-semibold text-xs"
@@ -720,7 +764,10 @@ function LibraryPage() {
       {!isLoading && libraryItems.length === 0 && !showError && (
         <div
           className="flex flex-col items-center justify-center h-64 rounded-lg shadow-sm border relative overflow-hidden"
-          style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
         >
           <div className="relative text-center">
             <div
@@ -728,9 +775,15 @@ function LibraryPage() {
               style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
             >
               {activeTab === "master" ? (
-                <BookOpen className="h-8 w-8" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                <BookOpen
+                  className="h-8 w-8"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
               ) : (
-                <Video className="h-8 w-8" style={{ color: COLORS.GOLDEN_ACCENT }} />
+                <Video
+                  className="h-8 w-8"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
               )}
             </div>
             <h3
@@ -740,8 +793,8 @@ function LibraryPage() {
               {searchTerm || selectedCategory !== "All"
                 ? "No resources found"
                 : activeTab === "master"
-                ? "Shared Library is Empty"
-                : "Start Building Your Library"}
+                  ? "Shared Library is Empty"
+                  : "Start Building Your Library"}
             </h3>
             <p
               className="text-center mb-6 max-w-md text-xs"
@@ -750,8 +803,8 @@ function LibraryPage() {
               {searchTerm || selectedCategory !== "All"
                 ? "Try adjusting your search terms or filters to find what you're looking for."
                 : activeTab === "master"
-                ? "The shared library doesn't have any resources yet. Contact your administrator to add training resources that everyone can access."
-                : "Upload your first training resource or import from YouTube to start building your personal library."}
+                  ? "The shared library doesn't have any resources yet. Contact your administrator to add training resources that everyone can access."
+                  : "Upload your first training resource or import from YouTube to start building your personal library."}
             </p>
             <div className="flex gap-2 justify-center flex-wrap">
               {activeTab === "local" && (
@@ -759,12 +812,17 @@ function LibraryPage() {
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
                     className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
-                    style={{ backgroundColor: COLORS.GOLDEN_DARK, color: COLORS.TEXT_PRIMARY }}
+                    style={{
+                      backgroundColor: COLORS.GOLDEN_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.GOLDEN_ACCENT;
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.GOLDEN_DARK;
                     }}
                   >
                     Upload Video
@@ -772,7 +830,10 @@ function LibraryPage() {
                   <button
                     onClick={() => setIsYouTubeModalOpen(true)}
                     className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
-                    style={{ backgroundColor: COLORS.RED_ALERT, color: "#FFFFFF" }}
+                    style={{
+                      backgroundColor: COLORS.RED_ALERT,
+                      color: "#FFFFFF",
+                    }}
                     onMouseEnter={e => {
                       e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
                     }}
@@ -795,17 +856,19 @@ function LibraryPage() {
                     }
                   }}
                   className="px-3 py-1.5 rounded-md transition-all duration-200 text-xs font-medium"
-                  style={{ 
+                  style={{
                     backgroundColor: COLORS.BACKGROUND_CARD,
                     color: COLORS.TEXT_SECONDARY,
                     border: `1px solid ${COLORS.BORDER_SUBTLE}`,
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                     e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                   }}
                 >
@@ -821,10 +884,13 @@ function LibraryPage() {
 
       {/* Error Display - Inline */}
       {showError && (
-        <div className="mb-4 p-4 rounded-lg border" style={{ 
-          backgroundColor: COLORS.BACKGROUND_CARD, 
-          borderColor: COLORS.RED_ALERT 
-        }}>
+        <div
+          className="mb-4 p-4 rounded-lg border"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.RED_ALERT,
+          }}
+        >
           <p style={{ color: COLORS.RED_ALERT }}>
             Error loading library: {error?.message || "Unknown error"}
           </p>
@@ -850,12 +916,21 @@ function LibraryPage() {
         <div className="w-full">
           {/* Show loading overlay when searching with existing items */}
           {isLoading && (
-            <div className="mb-4 p-3 rounded-lg border flex items-center gap-2" style={{
-              backgroundColor: COLORS.BACKGROUND_CARD,
-              borderColor: COLORS.GOLDEN_BORDER,
-            }}>
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ color: COLORS.GOLDEN_ACCENT }}></div>
-              <span className="text-xs" style={{ color: COLORS.TEXT_SECONDARY }}>
+            <div
+              className="mb-4 p-3 rounded-lg border flex items-center gap-2"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.GOLDEN_BORDER,
+              }}
+            >
+              <div
+                className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+                style={{ color: COLORS.GOLDEN_ACCENT }}
+              ></div>
+              <span
+                className="text-xs"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+              >
                 Searching...
               </span>
             </div>
@@ -873,13 +948,16 @@ function LibraryPage() {
                   }}
                   onClick={() => handleItemClick(item)}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                     e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                     e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(0, 0, 0, 0.15)";
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
                     e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     e.currentTarget.style.transform = "translateY(0)";
                     e.currentTarget.style.boxShadow = "none";
@@ -926,7 +1004,10 @@ function LibraryPage() {
                         </span>
                         <div className="flex items-center gap-1">
                           {item.isYoutube ? (
-                            <Video className="h-3 w-3" style={{ color: COLORS.RED_ALERT }} />
+                            <Video
+                              className="h-3 w-3"
+                              style={{ color: COLORS.RED_ALERT }}
+                            />
                           ) : item.type === "video" ? (
                             <Video
                               className="h-3 w-3"
@@ -980,13 +1061,16 @@ function LibraryPage() {
                   }}
                   onClick={() => handleItemClick(item)}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                     e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                     e.currentTarget.style.transform = "translateX(2px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 12px rgba(0, 0, 0, 0.15)";
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
                     e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     e.currentTarget.style.transform = "translateX(0)";
                     e.currentTarget.style.boxShadow = "none";
@@ -1066,7 +1150,10 @@ function LibraryPage() {
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
                           {item.isYoutube ? (
-                            <Video className="h-3 w-3" style={{ color: COLORS.RED_ALERT }} />
+                            <Video
+                              className="h-3 w-3"
+                              style={{ color: COLORS.RED_ALERT }}
+                            />
                           ) : item.type === "video" ? (
                             <Video
                               className="h-3 w-3"
@@ -1107,14 +1194,17 @@ function LibraryPage() {
                           borderColor: COLORS.BORDER_SUBTLE,
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.GOLDEN_DARK;
                           e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                          e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                          e.currentTarget.style.borderColor =
+                            COLORS.GOLDEN_ACCENT;
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.backgroundColor = "transparent";
                           e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                          e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                          e.currentTarget.style.borderColor =
+                            COLORS.BORDER_SUBTLE;
                         }}
                       >
                         {item.isYoutube || item.type === "video" ? (
@@ -1207,7 +1297,7 @@ function LibraryPage() {
         onNext={navigateToNext}
         libraryItems={libraryItems}
       />
-    </Sidebar>
+    </>
   );
 }
 

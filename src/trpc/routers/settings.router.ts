@@ -62,7 +62,6 @@ export const settingsRouter = router({
 
       return settings;
     } catch (error) {
-
       // Return null instead of throwing error to prevent crashes
       return null;
     }
@@ -149,6 +148,47 @@ export const settingsRouter = router({
         });
         return newSettings;
       }
+    }),
+
+  /** Dismiss a client detail walkthrough hint (persisted per user). */
+  dismissClientDetailHint: publicProcedure
+    .input(z.object({ hintId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getUser } = getKindeServerSession();
+      const user = await getUser();
+
+      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const existing = await db.userSettings.findUnique({
+        where: { userId: user.id },
+      });
+
+      const current =
+        existing?.dismissedClientDetailHints != null
+          ? Array.isArray(existing.dismissedClientDetailHints)
+            ? (existing.dismissedClientDetailHints as string[])
+            : (JSON.parse(
+                String(existing.dismissedClientDetailHints)
+              ) as string[])
+          : [];
+
+      if (current.includes(input.hintId)) return existing;
+
+      const updated = [...current, input.hintId];
+
+      if (existing) {
+        return db.userSettings.update({
+          where: { userId: user.id },
+          data: { dismissedClientDetailHints: updated as unknown as any },
+        });
+      }
+
+      return db.userSettings.create({
+        data: {
+          userId: user.id,
+          dismissedClientDetailHints: updated as unknown as any,
+        },
+      });
     }),
 
   updateProfile: publicProcedure

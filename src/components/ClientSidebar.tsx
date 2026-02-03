@@ -859,8 +859,8 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
                     isAnimating && !showRecentMessages
                       ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
                       : isAnimating
-                      ? "animate-[slideInUp_0.3s_ease-out_forwards]"
-                      : "transform scale-100 opacity-100"
+                        ? "animate-[slideInUp_0.3s_ease-out_forwards]"
+                        : "transform scale-100 opacity-100"
                   }`}
                   style={{
                     backgroundColor: COLORS.BACKGROUND_DARK,

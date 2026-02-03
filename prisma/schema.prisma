@@ -744,6 +744,7 @@ model UserSettings {
   compactSidebar         Boolean  @default(false)
   showAnimations         Boolean  @default(true)
   analyticsGoals         Json?    @default("{\"activeClients\": 20, \"clientRetention\": 90, \"programProgress\": 75, \"workoutCompletion\": 85}")
+  dismissedClientDetailHints Json? @default("[]") @map("dismissed_client_detail_hints")
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
@@ -976,6 +977,7 @@ model AccountDeletionLog {
   id        String   @id @default(cuid())
   userId    String
   userEmail String
+  userRole  UserRole? @map("user_role")
   reason    String?
   deletedAt DateTime @default(now())
   userAgent String?

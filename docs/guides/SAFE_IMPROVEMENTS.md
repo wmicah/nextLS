@@ -124,10 +124,10 @@ Visit `/admin/monitoring` to see real-time system status.
 
 ## 🧪 Testing
 
-Run the project test suite to verify behavior:
+Run the test script to verify all improvements:
 
 ```bash
-npm run test
+node scripts/test-safe-improvements.js
 ```
 
 ## 📊 Benefits

@@ -29,7 +29,7 @@ export default function MessagingServiceProvider({
     enabled: !!currentUser?.id,
     userId: currentUser?.id || null,
     conversationId: null, // Listen to all conversations
-    onNewMessage: (data) => {
+    onNewMessage: data => {
       if (process.env.NODE_ENV === "development") {
         console.log("🔄 New message received via Realtime:", {
           messageId: data.id,
@@ -39,7 +39,7 @@ export default function MessagingServiceProvider({
           currentUserId: currentUser?.id,
         });
       }
-      
+
       // Invalidate all messaging queries (marks them as stale)
       // This will trigger refetch for active queries
       utils.messaging.getMessages.invalidate();
@@ -47,40 +47,47 @@ export default function MessagingServiceProvider({
       utils.messaging.getUnreadCount.invalidate();
       utils.messaging.getConversationUnreadCounts.invalidate(); // This is what ClientTopNav uses!
       utils.sidebar.getSidebarData.invalidate(); // This is what Sidebar uses!
-      
+
       // Force immediate refetch of active queries (especially the badge count)
       // Use Promise.all to ensure all refetches complete
       Promise.all([
         utils.messaging.getConversationUnreadCounts.refetch(),
         utils.messaging.getUnreadCount.refetch(),
         utils.sidebar.getSidebarData.refetch(),
-      ]).then((results) => {
-        if (process.env.NODE_ENV === "development") {
-          console.log("✅ All queries refetched:", {
-            conversationUnreadCounts: (results[0] as any)?.data,
-            unreadCount: (results[1] as any)?.data,
-            sidebarData: (results[2] as any)?.data ? {
-              totalUnreadCount: (results[2] as any).data.totalUnreadCount,
-              unreadCountsObj: (results[2] as any).data.unreadCountsObj,
-            } : null,
-          });
-        }
-      }).catch((error) => {
-        if (process.env.NODE_ENV === "development") {
-          console.error("❌ Error refetching queries:", error);
-        }
-      });
+      ])
+        .then(results => {
+          if (process.env.NODE_ENV === "development") {
+            console.log("✅ All queries refetched:", {
+              conversationUnreadCounts: (results[0] as any)?.data,
+              unreadCount: (results[1] as any)?.data,
+              sidebarData: (results[2] as any)?.data
+                ? {
+                    totalUnreadCount: (results[2] as any).data.totalUnreadCount,
+                    unreadCountsObj: (results[2] as any).data.unreadCountsObj,
+                  }
+                : null,
+            });
+          }
+        })
+        .catch(error => {
+          if (process.env.NODE_ENV === "development") {
+            console.error("❌ Error refetching queries:", error);
+          }
+        });
     },
-    onConversationUpdate: (data) => {
+    onConversationUpdate: data => {
       if (process.env.NODE_ENV === "development") {
-        console.log("🔄 Conversation updated via Realtime, invalidating queries...", data);
+        console.log(
+          "🔄 Conversation updated via Realtime, invalidating queries...",
+          data
+        );
       }
-      
+
       // Invalidate conversation queries
       utils.messaging.getConversations.invalidate();
       utils.messaging.getConversationUnreadCounts.invalidate();
       utils.sidebar.getSidebarData.invalidate(); // Sidebar also needs to update
-      
+
       // Force immediate refetch
       utils.messaging.getConversationUnreadCounts.refetch();
       utils.sidebar.getSidebarData.refetch();
@@ -106,7 +113,10 @@ export default function MessagingServiceProvider({
   // Debug: Log connection status
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.log("🔌 Supabase Realtime Status:", isConnected ? "✅ Connected" : "❌ Not Connected");
+      console.log(
+        "🔌 Supabase Realtime Status:",
+        isConnected ? "✅ Connected" : "❌ Not Connected"
+      );
       if (!isConnected && currentUser?.id) {
         console.warn("⚠️ Realtime not connected - falling back to polling");
       }

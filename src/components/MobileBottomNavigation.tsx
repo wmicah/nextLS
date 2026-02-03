@@ -41,9 +41,9 @@ export default function MobileBottomNavigation() {
   };
 
   return (
-    <div 
+    <div
       className="fixed bottom-0 left-0 right-0 z-40 shadow-lg"
-      style={{ 
+      style={{
         backgroundColor: "#353A3A",
         borderTop: "none",
         paddingBottom: "env(safe-area-inset-bottom)",
@@ -62,8 +62,8 @@ export default function MobileBottomNavigation() {
                 {notificationsLoading
                   ? "..."
                   : unreadNotifications > 99
-                  ? "99+"
-                  : unreadNotifications}
+                    ? "99+"
+                    : unreadNotifications}
               </div>
             )}
           </div>
@@ -82,8 +82,8 @@ export default function MobileBottomNavigation() {
                 {messagesLoading
                   ? "..."
                   : unreadMessages > 99
-                  ? "99+"
-                  : unreadMessages}
+                    ? "99+"
+                    : unreadMessages}
               </div>
             )}
           </div>

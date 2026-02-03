@@ -936,6 +936,7 @@ export const clientRouterRouter = router({
                   dayData.totalDrills = totalDrills;
                   dayData.completedDrills = completedDrills;
 
+
                   dayData.programs.push({
                     id: program.id,
                     title: program.title,
@@ -1265,6 +1266,7 @@ export const clientRouterRouter = router({
                   const completion = allCompletionsCombined.find(
                     (c: any) => c.drillId === drill.id
                   );
+
 
                   if (drill.routineId && drill.type === "routine") {
                     // This is a routine drill - fetch and expand the routine
@@ -1809,6 +1811,7 @@ export const clientRouterRouter = router({
           expectedTime: 0,
           drills: [], // For backward compatibility
         };
+
 
         // Process program assignments for this date
         for (const assignment of (client as any).programAssignments) {
@@ -3069,6 +3072,7 @@ export const clientRouterRouter = router({
         });
       }
 
+
       return {
         success: true,
         message: input.completed
@@ -3101,6 +3105,7 @@ export const clientRouterRouter = router({
           message: "Only clients can access this endpoint",
         });
       }
+
 
       console.log("🔍 Debug - Client ID:", client.id);
 
@@ -3411,6 +3416,7 @@ export const clientRouterRouter = router({
         orderBy: { date: "asc" },
       });
 
+
       return pendingRequests;
     }),
 
@@ -3585,14 +3591,11 @@ export const clientRouterRouter = router({
         },
       });
 
-      const coachSettingsMap = coachSettings.reduce(
-        (acc, setting) => {
-          acc[setting.userId] =
-            (setting as any)?.clientScheduleAdvanceLimitDays ?? null;
-          return acc;
-        },
-        {} as Record<string, number | null>
-      );
+      const coachSettingsMap = coachSettings.reduce((acc, setting) => {
+        acc[setting.userId] =
+          (setting as any)?.clientScheduleAdvanceLimitDays ?? null;
+        return acc;
+      }, {} as Record<string, number | null>);
 
       // Calculate month start and end dates
       const monthStart = new Date(input.year, input.month, 1);
@@ -3833,6 +3836,7 @@ export const clientRouterRouter = router({
         date: "asc",
       },
     });
+
 
     return pendingRequests;
   }),
@@ -4090,136 +4094,6 @@ export const clientRouterRouter = router({
       }
 
       return deletedEvent;
-    }),
-
-  // Exchange lesson: request to move an existing lesson to a new date/time
-  exchangeLesson: publicProcedure
-    .input(
-      z.object({
-        oldLessonId: z.string(),
-        requestedDate: z.string(),
-        requestedTime: z.string(),
-        reason: z.string().optional(),
-        timeZone: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const { getUser } = getKindeServerSession();
-      const user = await getUser();
-      if (!user?.id) throw new TRPCError({ code: "UNAUTHORIZED" });
-
-      const dbUser = await db.user.findFirst({
-        where: { id: user.id, role: "CLIENT" },
-      });
-      if (!dbUser) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only clients can request lesson exchanges",
-        });
-      }
-
-      const client = await db.client.findFirst({
-        where: { userId: user.id },
-        include: { coach: true },
-      });
-      if (!client) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Client profile not found",
-        });
-      }
-
-      const oldEvent = await db.event.findFirst({
-        where: { id: input.oldLessonId, clientId: client.id },
-      });
-      if (!oldEvent) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Lesson not found or you do not own it",
-        });
-      }
-
-      const targetCoachId = oldEvent.coachId;
-      const dateStr = input.requestedDate;
-      const timeStr = input.requestedTime;
-
-      const timeMatch = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (!timeMatch) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid time format (use e.g. 2:00 PM)",
-        });
-      }
-
-      const [_, hour, minute, period] = timeMatch;
-      let hour24 = parseInt(hour, 10);
-      if (period!.toUpperCase() === "PM" && hour24 !== 12) hour24 += 12;
-      else if (period!.toUpperCase() === "AM" && hour24 === 12) hour24 = 0;
-
-      const fullDateStr = `${dateStr}T${hour24.toString().padStart(2, "0")}:${minute}:00`;
-      const timeZone = input.timeZone || "America/New_York";
-      const utcDateTime = fromZonedTime(fullDateStr, timeZone);
-
-      if (isNaN(utcDateTime.getTime())) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid date/time combination",
-        });
-      }
-
-      const now = new Date();
-      if (utcDateTime <= now) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot request lessons in the past",
-        });
-      }
-
-      const existingLesson = await db.event.findFirst({
-        where: { coachId: targetCoachId, date: utcDateTime },
-      });
-      if (existingLesson) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "This time slot is already booked",
-        });
-      }
-
-      const scheduleRequest = await db.event.create({
-        data: {
-          title: `Exchange Request - ${client.name}`,
-          description:
-            input.reason || "Client requested to exchange lesson time",
-          date: utcDateTime,
-          clientId: client.id,
-          coachId: targetCoachId,
-          status: "PENDING",
-        },
-      });
-
-      await db.event.update({
-        where: { id: input.oldLessonId },
-        data: { status: "CANCELLED" },
-      });
-
-      await db.notification.create({
-        data: {
-          userId: targetCoachId,
-          type: "SCHEDULE_REQUEST",
-          title: "Lesson Exchange Request",
-          message: `${client.name} wants to move their lesson to ${format(utcDateTime, "MMM d, yyyy 'at' h:mm a")}${input.reason ? `: ${input.reason}` : ""}`,
-          data: {
-            eventId: scheduleRequest.id,
-            exchangeFromEventId: input.oldLessonId,
-            clientId: client.id,
-            clientName: client.name,
-            requestedDate: utcDateTime,
-            reason: input.reason,
-          },
-        },
-      });
-
-      return scheduleRequest;
     }),
 
   // Request a schedule change
@@ -4773,9 +4647,7 @@ export const clientRouterRouter = router({
 
         if (!drill) {
           // Drill doesn't exist - log warning but allow submission without drillId
-          console.warn(
-            `Drill ID ${input.drillId} not found, submitting video without drill reference`
-          );
+          console.warn(`Drill ID ${input.drillId} not found, submitting video without drill reference`);
           validDrillId = null;
         } else {
           validDrillId = input.drillId;
@@ -4808,24 +4680,22 @@ export const clientRouterRouter = router({
           drillId: validDrillId,
           videoUrl: input.videoUrl,
         });
-
+        
         // Provide more specific error messages
         if (error.code === "P2002") {
           throw new TRPCError({
             code: "CONFLICT",
-            message:
-              "A video submission with this information already exists. Please try again.",
+            message: "A video submission with this information already exists. Please try again.",
           });
         }
-
+        
         // Handle foreign key constraint violations
         if (error.code === "P2003") {
           const field = error.meta?.field_name || "unknown field";
           if (field.includes("drillId") || field.includes("drill")) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message:
-                "The program drill reference is invalid. The video has been submitted without the drill reference.",
+              message: "The program drill reference is invalid. The video has been submitted without the drill reference.",
             });
           }
           throw new TRPCError({
@@ -4833,12 +4703,11 @@ export const clientRouterRouter = router({
             message: `Invalid reference: ${field}. Please try again.`,
           });
         }
-
+        
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to submit video: ${
-            error.message ||
-            "Please try again or contact support if the problem persists."
+            error.message || "Please try again or contact support if the problem persists."
           }`,
         });
       }
@@ -5173,6 +5042,7 @@ export const clientRouterRouter = router({
         let programName = "";
         let exerciseName = "";
 
+
         // First, try to find if it's a real ProgramDrill ID
         const existingDrill = await db.programDrill.findUnique({
           where: { id: input.drillId },
@@ -5206,6 +5076,7 @@ export const clientRouterRouter = router({
             const parts = input.drillId.split("-routine-");
             const programDrillId = parts[0];
             const exerciseId = parts[1];
+
 
             // Try to find the program drill and exercise
             const programDrill = await db.programDrill.findUnique({
@@ -5271,6 +5142,7 @@ export const clientRouterRouter = router({
               firstDashIndex
             );
             const exerciseId = input.drillId.substring(firstDashIndex + 1);
+
 
             const routineAssignment = await db.routineAssignment.findUnique({
               where: { id: routineAssignmentId },
