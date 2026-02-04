@@ -100,7 +100,10 @@ function HomeContent() {
 
       {/* Account Deleted Success Message */}
       {accountDeleted && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md mx-auto">
+        <div
+          className="fixed left-1/2 transform -translate-x-1/2 z-50 max-w-md mx-auto"
+          style={{ top: "calc(1rem + env(safe-area-inset-top))" }}
+        >
           <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg border border-green-500/20">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-200" />
@@ -115,8 +118,13 @@ function HomeContent() {
         </div>
       )}
 
-      {/* HERO SECTION */}
-      <section className="relative z-10 pt-20 sm:pt-24 md:pt-32 pb-16 sm:pb-20 md:pb-24 bg-gradient-to-br from-[#2A3133] via-[#1a1f20] to-black overflow-hidden">
+      {/* HERO SECTION - safe-area padding so CTAs sit below iPhone notch/status bar */}
+      <section
+        className="relative z-10 pb-16 sm:pb-20 md:pb-24 bg-gradient-to-br from-[#2A3133] via-[#1a1f20] to-black overflow-hidden"
+        style={{
+          paddingTop: "calc(5rem + env(safe-area-inset-top, 0px))",
+        }}
+      >
         {/* Subtle background elements - not too flashy */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-20 left-1/4 w-64 h-64 bg-[#E5B232]/10 rounded-full blur-3xl"></div>

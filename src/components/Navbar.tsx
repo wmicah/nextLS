@@ -61,6 +61,7 @@ const Navbar = () => {
           ? "bg-[#2A3133]/95 backdrop-blur-xl border-b border-white/10 shadow-lg"
           : "bg-[#2A3133]/80 backdrop-blur-lg"
       }`}
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <MaxWidthWrapper>
         <div className="flex h-16 items-center justify-between">

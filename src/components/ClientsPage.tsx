@@ -129,29 +129,37 @@ function QuickMessagePopup({
     }
   };
 
-  // Calculate button position for popup positioning
-  useEffect(() => {
-    if (buttonRef?.current && isOpen) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const popupWidth = 400;
-      const popupHeight = 500;
+  // Popup dimensions must match the actual popup (w-[320px] h-[420px])
+  const POPUP_WIDTH = 320;
+  const POPUP_HEIGHT = 420;
+  const PADDING = 8;
 
-      // Calculate position with viewport boundaries
-      let left = rect.left + rect.width / 2 - popupWidth / 2;
+  // Calculate popup position: aligned with card, always on-screen
+  useEffect(() => {
+    if (!buttonRef?.current || !isOpen) return;
+    const el = buttonRef.current;
+    const run = () => {
+      const rect = el.getBoundingClientRect();
+      // Prefer below and centered under the button
+      let left = rect.left + rect.width / 2 - POPUP_WIDTH / 2;
       let top = rect.bottom + 8;
 
-      // Ensure popup stays within viewport
-      if (left < 8) left = 8;
-      if (left + popupWidth > window.innerWidth - 8) {
-        left = window.innerWidth - popupWidth - 8;
-      }
-      if (top + popupHeight > window.innerHeight - 8) {
-        // Position above the button if there's not enough space below
-        top = rect.top - popupHeight - 8;
+      // Clamp to viewport so popup never goes off-screen
+      left = Math.max(
+        PADDING,
+        Math.min(left, window.innerWidth - POPUP_WIDTH - PADDING)
+      );
+      if (top + POPUP_HEIGHT > window.innerHeight - PADDING) {
+        top = Math.max(PADDING, rect.top - POPUP_HEIGHT - 8);
+      } else if (top < PADDING) {
+        top = PADDING;
       }
 
       setButtonPosition({ top, left });
-    }
+    };
+    // Small delay so layout is settled after open
+    const id = requestAnimationFrame(() => run());
+    return () => cancelAnimationFrame(id);
   }, [isOpen, buttonRef]);
 
   // Animation handling
@@ -2585,7 +2593,6 @@ function ClientsPage({ noSidebar = false }: ClientsPageProps) {
                               {activeTab === "active" && (
                                 <>
                                   <button
-                                    ref={setQuickMessageButtonRef}
                                     onClick={e => {
                                       e.stopPropagation();
                                       openQuickMessage(client, e.currentTarget);
@@ -2953,7 +2960,6 @@ function ClientsPage({ noSidebar = false }: ClientsPageProps) {
                               {activeTab === "active" && (
                                 <>
                                   <button
-                                    ref={setQuickMessageButtonRef}
                                     onClick={e => {
                                       e.stopPropagation();
                                       openQuickMessage(client, e.currentTarget);
