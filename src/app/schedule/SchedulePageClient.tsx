@@ -71,6 +71,13 @@ interface SchedulePageClientProps {
   noSidebar?: boolean;
 }
 
+/** Minimal client type to avoid deep tRPC inference in this file. */
+interface ScheduleClient {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+}
+
 function SchedulePageClient({ noSidebar = false }: SchedulePageClientProps) {
   const wrap = (content: React.ReactNode) =>
     noSidebar ? content : <Sidebar>{content}</Sidebar>;
@@ -197,10 +204,11 @@ function SchedulePageClient({ noSidebar = false }: SchedulePageClientProps) {
 
   // Fetch coach's active clients for scheduling (exclude archived)
   // Include organization clients if coach is in an organization
-  const { data: clients = [] } = trpc.clients.list.useQuery({
+  const { data: clientsRaw = [] } = trpc.clients.list.useQuery({
     archived: false,
     scope: "organization", // Include organization clients if coach is in an organization
   });
+  const clients: ScheduleClient[] = clientsRaw as ScheduleClient[];
 
   // Filter clients based on search term
   const filteredClients = useMemo(() => {
@@ -1802,7 +1810,11 @@ function SchedulePageClient({ noSidebar = false }: SchedulePageClientProps) {
           isOpen={showAddTimeModal}
           onClose={() => setShowAddTimeModal(false)}
           selectedDate={selectedDate || undefined}
-          clients={clients}
+          clients={clients.map(c => ({
+            id: c.id,
+            name: c.name ?? "",
+            email: c.email ?? null,
+          }))}
         />
 
         {/* Schedule Lesson Modal */}

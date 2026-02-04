@@ -69,13 +69,19 @@ export default function AddClientModal({
 
   const utils = trpc.useUtils();
 
-  const addClient = trpc.clients.create.useMutation({
-    onSuccess: newClient => {
+  // Cast procedure to avoid excessively-deep type instantiation
+  const addClient = (trpc.clients.create as any).useMutation({
+    onSuccess: (newClient: {
+      id: string;
+      name: string;
+      email: string | null;
+      [key: string]: unknown;
+    }) => {
       utils.clients.list.invalidate();
       onAddClient({
         ...newClient,
         notes: [], // Add empty notes array to match interface
-      });
+      } as unknown as Client);
       setFormData({
         name: "",
         email: "",
@@ -97,7 +103,7 @@ export default function AddClientModal({
       setIsSubmitting(false);
       onClose();
     },
-    onError: error => {
+    onError: (error: { message?: string }) => {
       console.error("Failed to add client:", error);
       setIsSubmitting(false);
     },

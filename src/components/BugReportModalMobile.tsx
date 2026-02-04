@@ -336,7 +336,6 @@ export default function BugReportModalMobile({
               {/* Image Upload */}
               {!imageUrl && !videoUrl && (
                 <>
-                  {/* @ts-expect-error - effect version conflict workaround */}
                   <UploadButton<OurFileRouter, "bugReportImageUploader">
                     endpoint="bugReportImageUploader"
                     onUploadBegin={() => {
@@ -346,7 +345,7 @@ export default function BugReportModalMobile({
                     onClientUploadComplete={handleFileUploadComplete}
                     onUploadError={handleFileUploadError}
                     content={{
-                        button: ({ ready }: { ready: boolean }) => (
+                      button: ({ ready }: { ready: boolean }) => (
                         <div
                           className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
                             ready
@@ -373,7 +372,6 @@ export default function BugReportModalMobile({
                       ),
                     }}
                   />
-                  {/* @ts-expect-error - effect version conflict workaround */}
                   <UploadButton<OurFileRouter, "feedbackVideoUploader">
                     endpoint="feedbackVideoUploader"
                     onUploadBegin={() => {
@@ -383,7 +381,7 @@ export default function BugReportModalMobile({
                     onClientUploadComplete={handleFileUploadComplete}
                     onUploadError={handleFileUploadError}
                     content={{
-                        button: ({ ready }: { ready: boolean }) => (
+                      button: ({ ready }: { ready: boolean }) => (
                         <div
                           className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
                             ready

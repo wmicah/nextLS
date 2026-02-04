@@ -163,13 +163,14 @@ export const settingsRouter = router({
         where: { userId: user.id },
       });
 
+      type SettingsWithHints = { dismissedClientDetailHints?: unknown } | null;
+      const existingWithHints = existing as SettingsWithHints;
+      const raw = existingWithHints?.dismissedClientDetailHints;
       const current =
-        existing?.dismissedClientDetailHints != null
-          ? Array.isArray(existing.dismissedClientDetailHints)
-            ? (existing.dismissedClientDetailHints as string[])
-            : (JSON.parse(
-                String(existing.dismissedClientDetailHints)
-              ) as string[])
+        raw != null
+          ? Array.isArray(raw)
+            ? (raw as string[])
+            : (JSON.parse(String(raw)) as string[])
           : [];
 
       if (current.includes(input.hintId)) return existing;
@@ -179,15 +180,18 @@ export const settingsRouter = router({
       if (existing) {
         return db.userSettings.update({
           where: { userId: user.id },
-          data: { dismissedClientDetailHints: updated as unknown as any },
+          // Prisma client may be out of date; schema has dismissedClientDetailHints
+          data: { dismissedClientDetailHints: updated } as Parameters<
+            typeof db.userSettings.update
+          >[0]["data"],
         });
       }
 
       return db.userSettings.create({
         data: {
           userId: user.id,
-          dismissedClientDetailHints: updated as unknown as any,
-        },
+          dismissedClientDetailHints: updated,
+        } as Parameters<typeof db.userSettings.create>[0]["data"],
       });
     }),
 

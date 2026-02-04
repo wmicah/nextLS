@@ -348,7 +348,6 @@ export default function BugReportModal({
               {!imageUrl && !videoUrl && (
                 <>
                   <div className="flex-1">
-                    {/* @ts-expect-error - effect version conflict workaround */}
                     <UploadButton<OurFileRouter, "bugReportImageUploader">
                       endpoint="bugReportImageUploader"
                       onUploadBegin={() => {
@@ -401,7 +400,6 @@ export default function BugReportModal({
                     />
                   </div>
                   <div className="flex-1">
-                    {/* @ts-expect-error - effect version conflict workaround */}
                     <UploadButton<OurFileRouter, "feedbackVideoUploader">
                       endpoint="feedbackVideoUploader"
                       onUploadBegin={() => {

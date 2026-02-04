@@ -39,6 +39,15 @@ interface ClientVideoReviewProps {
   videoId: string;
 }
 
+/** Minimal client type to avoid deep tRPC inference from clients.list. */
+interface ClientVideoReviewClient {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  avatar?: string | null;
+  user?: { settings?: { avatarUrl?: string | null } } | null;
+}
+
 export default function ClientVideoReview({ videoId }: ClientVideoReviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -70,7 +79,8 @@ export default function ClientVideoReview({ videoId }: ClientVideoReviewProps) {
     });
 
   // Get coach's clients for sending
-  const { data: coachClients } = trpc.clients.list.useQuery();
+  const { data: coachClientsRaw } = trpc.clients.list.useQuery();
+  const coachClients = coachClientsRaw as ClientVideoReviewClient[] | undefined;
 
   // Get saved annotations
   const { data: savedAnnotations = [], refetch: refetchAnnotations } =
@@ -1380,7 +1390,7 @@ export default function ClientVideoReview({ videoId }: ClientVideoReviewProps) {
                       currentAvatarUrl={
                         client.user?.settings?.avatarUrl || client.avatar
                       }
-                      userName={client.name}
+                      userName={client.name ?? undefined}
                       onAvatarChange={() => {}}
                       size="sm"
                       readOnly={true}

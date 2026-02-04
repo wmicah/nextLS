@@ -49,7 +49,9 @@ import NotesDisplay from "./NotesDisplay";
 import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 // Lazy load heavy modal
-const ClientProfileModal = dynamic(() => import("./ClientProfileModal"), { ssr: false });
+const ClientProfileModal = dynamic(() => import("./ClientProfileModal"), {
+  ssr: false,
+});
 
 interface Client {
   id: string;
@@ -169,7 +171,9 @@ function MobileInviteCodeButton() {
       try {
         // Safari requires HTTPS and user interaction - this is called from a button click
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(generateInviteCode.data.inviteCode);
+          await navigator.clipboard.writeText(
+            generateInviteCode.data.inviteCode
+          );
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         } else {
@@ -258,11 +262,11 @@ function MobileInviteCodeButton() {
           borderColor: COLORS.BORDER_SUBTLE,
           color: COLORS.TEXT_PRIMARY,
         }}
-        onMouseEnter={(e) => {
+        onMouseEnter={e => {
           e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
           e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
         }}
-        onMouseLeave={(e) => {
+        onMouseLeave={e => {
           e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
           e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
         }}
@@ -277,7 +281,7 @@ function MobileInviteCodeButton() {
             style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
             onClick={() => setShowModal(false)}
           />
-          <div 
+          <div
             className="relative w-full max-w-md rounded-lg p-6 shadow-xl border"
             style={{
               backgroundColor: "#1F2426",
@@ -286,17 +290,25 @@ function MobileInviteCodeButton() {
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Key className="h-5 w-5" style={{ color: COLORS.GOLDEN_ACCENT }} />
-                <h3 className="font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>Coach Invite Code</h3>
+                <Key
+                  className="h-5 w-5"
+                  style={{ color: COLORS.GOLDEN_ACCENT }}
+                />
+                <h3
+                  className="font-semibold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Coach Invite Code
+                </h3>
               </div>
               <button
                 onClick={() => setShowModal(false)}
                 className="transition-colors"
                 style={{ color: COLORS.TEXT_MUTED }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.color = COLORS.TEXT_MUTED;
                 }}
               >
@@ -317,12 +329,13 @@ function MobileInviteCodeButton() {
                     backgroundColor: COLORS.GOLDEN_DARK,
                     color: "#FFFFFF",
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     if (!generateInviteCode.isPending) {
-                      e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.GOLDEN_ACCENT;
                     }
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                   }}
                 >
@@ -342,7 +355,10 @@ function MobileInviteCodeButton() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  <p
+                    className="text-sm mb-2"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Share this invite link (recommended)
                   </p>
                   <div className="flex items-center gap-2">
@@ -365,13 +381,15 @@ function MobileInviteCodeButton() {
                         borderColor: COLORS.BORDER_SUBTLE,
                         color: COLORS.TEXT_PRIMARY,
                       }}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={e => {
                         e.currentTarget.style.backgroundColor = "#353A3A";
-                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }}
-                      onMouseLeave={(e) => {
+                      onMouseLeave={e => {
                         e.currentTarget.style.backgroundColor = "#2A2F2F";
-                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
                       }}
                       title="Copy invite link"
                     >
@@ -383,15 +401,24 @@ function MobileInviteCodeButton() {
                     </button>
                   </div>
                   {copiedLink && (
-                    <p className="text-xs flex items-center gap-1 mt-1" style={{ color: COLORS.GREEN_PRIMARY }}>
+                    <p
+                      className="text-xs flex items-center gap-1 mt-1"
+                      style={{ color: COLORS.GREEN_PRIMARY }}
+                    >
                       <Check className="h-3 w-3" />
                       Link copied!
                     </p>
                   )}
                 </div>
 
-                <div className="border-t pt-3" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-                  <p className="text-sm mb-2" style={{ color: COLORS.TEXT_SECONDARY }}>
+                <div
+                  className="border-t pt-3"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                >
+                  <p
+                    className="text-sm mb-2"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Or share this code
                   </p>
                   <div className="flex items-center gap-2">
@@ -410,10 +437,10 @@ function MobileInviteCodeButton() {
                       onClick={() => setIsVisible(!isVisible)}
                       className="p-2 transition-colors"
                       style={{ color: COLORS.TEXT_SECONDARY }}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={e => {
                         e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                       }}
-                      onMouseLeave={(e) => {
+                      onMouseLeave={e => {
                         e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
                       }}
                       title={isVisible ? "Hide code" : "Show code"}
@@ -428,13 +455,15 @@ function MobileInviteCodeButton() {
                         borderColor: COLORS.BORDER_SUBTLE,
                         color: COLORS.TEXT_PRIMARY,
                       }}
-                      onMouseEnter={(e) => {
+                      onMouseEnter={e => {
                         e.currentTarget.style.backgroundColor = "#353A3A";
-                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }}
-                      onMouseLeave={(e) => {
+                      onMouseLeave={e => {
                         e.currentTarget.style.backgroundColor = "#2A2F2F";
-                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
                       }}
                       title="Copy invite code"
                     >
@@ -446,7 +475,10 @@ function MobileInviteCodeButton() {
                     </button>
                   </div>
                   {copied && (
-                    <p className="text-xs flex items-center gap-1 mt-1" style={{ color: COLORS.GREEN_PRIMARY }}>
+                    <p
+                      className="text-xs flex items-center gap-1 mt-1"
+                      style={{ color: COLORS.GREEN_PRIMARY }}
+                    >
                       <Check className="h-3 w-3" />
                       Code copied!
                     </p>
@@ -475,18 +507,18 @@ function MobileRequestsButton({ onOpenModal }: { onOpenModal: () => void }) {
         borderColor: COLORS.BORDER_SUBTLE,
         color: COLORS.TEXT_PRIMARY,
       }}
-      onMouseEnter={(e) => {
+      onMouseEnter={e => {
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
         e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={e => {
         e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
         e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
       }}
     >
       <Mail className="h-4 w-4" />
       {pendingClientRequests.length > 0 && (
-        <span 
+        <span
           className="absolute -top-1 -right-1 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold"
           style={{
             backgroundColor: COLORS.RED_ALERT,
@@ -519,7 +551,6 @@ function MobileClientRequestsModal({
 
   const acceptRequest = trpc.user.acceptClientRequest.useMutation({
     onSuccess: async data => {
-
       // Show success toast
       addToast({
         type: "success",
@@ -565,7 +596,7 @@ function MobileClientRequestsModal({
       // Also invalidate clients list in case client was deleted
       utils.clients.list.invalidate();
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Error rejecting client request:", error);
       addToast({
         type: "error",
@@ -579,12 +610,12 @@ function MobileClientRequestsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
+      <div
         className="absolute inset-0"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
-        onClick={onClose} 
+        onClick={onClose}
       />
-      <div 
+      <div
         className="relative w-full max-w-md rounded-lg p-6 max-h-[80vh] overflow-y-auto border"
         style={{
           backgroundColor: "#1F2426",
@@ -592,15 +623,20 @@ function MobileClientRequestsModal({
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>Client Join Requests</h2>
+          <h2
+            className="text-xl font-bold"
+            style={{ color: COLORS.TEXT_PRIMARY }}
+          >
+            Client Join Requests
+          </h2>
           <button
             onClick={onClose}
             className="transition-colors"
             style={{ color: COLORS.TEXT_MUTED }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.color = COLORS.TEXT_MUTED;
             }}
           >
@@ -610,7 +646,7 @@ function MobileClientRequestsModal({
 
         {notificationsLoading ? (
           <div className="text-center py-8">
-            <div 
+            <div
               className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"
               style={{ borderColor: COLORS.GOLDEN_ACCENT }}
             />
@@ -618,7 +654,10 @@ function MobileClientRequestsModal({
           </div>
         ) : pendingClientRequests.length === 0 ? (
           <div className="text-center py-8">
-            <Mail className="h-12 w-12 mx-auto mb-4" style={{ color: COLORS.TEXT_MUTED }} />
+            <Mail
+              className="h-12 w-12 mx-auto mb-4"
+              style={{ color: COLORS.TEXT_MUTED }}
+            />
             <p style={{ color: COLORS.TEXT_MUTED }}>No pending requests</p>
           </div>
         ) : (
@@ -635,13 +674,22 @@ function MobileClientRequestsModal({
                 >
                   <div className="space-y-3">
                     <div>
-                      <h3 className="font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                      <h3
+                        className="font-semibold"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         {request.name || "Unknown Client"}
                       </h3>
-                      <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
+                      <p
+                        className="text-sm"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
                         {request.email || "No email provided"}
                       </p>
-                      <p className="text-xs mt-1" style={{ color: COLORS.TEXT_MUTED }}>
+                      <p
+                        className="text-xs mt-1"
+                        style={{ color: COLORS.TEXT_MUTED }}
+                      >
                         Requested{" "}
                         {new Date(request.createdAt).toLocaleDateString()}
                       </p>
@@ -649,7 +697,9 @@ function MobileClientRequestsModal({
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
-                          acceptRequest.mutate({ notificationId: request.notificationId });
+                          acceptRequest.mutate({
+                            notificationId: request.notificationId,
+                          });
                         }}
                         disabled={
                           acceptRequest.isPending || rejectRequest.isPending
@@ -659,13 +709,18 @@ function MobileClientRequestsModal({
                           backgroundColor: COLORS.GREEN_DARK,
                           color: "#FFFFFF",
                         }}
-                        onMouseEnter={(e) => {
-                          if (!acceptRequest.isPending && !rejectRequest.isPending) {
-                            e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                        onMouseEnter={e => {
+                          if (
+                            !acceptRequest.isPending &&
+                            !rejectRequest.isPending
+                          ) {
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.GREEN_PRIMARY;
                           }
                         }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.GREEN_DARK;
                         }}
                       >
                         <Check className="h-4 w-4" />
@@ -673,7 +728,9 @@ function MobileClientRequestsModal({
                       </button>
                       <button
                         onClick={() => {
-                          rejectRequest.mutate({ notificationId: request.notificationId });
+                          rejectRequest.mutate({
+                            notificationId: request.notificationId,
+                          });
                         }}
                         disabled={
                           acceptRequest.isPending || rejectRequest.isPending
@@ -683,13 +740,18 @@ function MobileClientRequestsModal({
                           backgroundColor: COLORS.RED_DARK,
                           color: "#FFFFFF",
                         }}
-                        onMouseEnter={(e) => {
-                          if (!acceptRequest.isPending && !rejectRequest.isPending) {
-                            e.currentTarget.style.backgroundColor = COLORS.RED_ALERT;
+                        onMouseEnter={e => {
+                          if (
+                            !acceptRequest.isPending &&
+                            !rejectRequest.isPending
+                          ) {
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.RED_ALERT;
                           }
                         }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = COLORS.RED_DARK;
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor =
+                            COLORS.RED_DARK;
                         }}
                       >
                         <XCircle className="h-4 w-4" />
@@ -712,11 +774,11 @@ function MobileClientRequestsModal({
               borderColor: COLORS.BORDER_SUBTLE,
               color: COLORS.TEXT_PRIMARY,
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = "#353A3A";
               e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.backgroundColor = "#2A2F2F";
               e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
             }}
@@ -978,10 +1040,10 @@ export default function MobileClientsPage() {
 
   // Filter clients by search term
   const filteredClients = clients.filter(
-      (client: Client) =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.email &&
-          client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    (client: Client) =>
+      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.email &&
+        client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Sort clients using the shared utility
@@ -1059,12 +1121,18 @@ export default function MobileClientsPage() {
 
   // Debug: Log final sorted order when sorting by dueDate
   if (process.env.NODE_ENV === "development" && sortBy === "dueDate") {
-    console.log("[FINAL SORT ORDER]", filteredAndSortedClients.slice(0, 15).map((c, i) => ({
-      position: i + 1,
-      name: c.name,
-      programCount: c.programAssignments?.filter(p => !p.completed && !p.completedAt).length || 0,
-      routineCount: c.routineAssignments?.filter(r => !r.completedAt).length || 0,
-    })));
+    console.log(
+      "[FINAL SORT ORDER]",
+      filteredAndSortedClients.slice(0, 15).map((c, i) => ({
+        position: i + 1,
+        name: c.name,
+        programCount:
+          c.programAssignments?.filter(p => !p.completed && !p.completedAt)
+            .length || 0,
+        routineCount:
+          c.routineAssignments?.filter(r => !r.completedAt).length || 0,
+      }))
+    );
   }
 
   // Calculate stats
@@ -1092,20 +1160,28 @@ export default function MobileClientsPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
       {/* Mobile Header */}
-      <div 
+      <div
         className="sticky top-0 z-50 border-b px-4"
-        style={{ 
+        style={{
           paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
           paddingBottom: "0.75rem",
           backgroundColor: COLORS.BACKGROUND_DARK,
-          borderColor: COLORS.BORDER_SUBTLE
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>Your Athletes</h1>
+            <h1
+              className="text-lg font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Your Athletes
+            </h1>
             <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
               {activeTab === "active"
                 ? activeClients > 0
@@ -1114,10 +1190,10 @@ export default function MobileClientsPage() {
                     }`
                   : "No active athletes"
                 : archivedClients > 0
-                ? `${archivedClients} archived athlete${
-                    archivedClients === 1 ? "" : "s"
-                  }`
-                : "No archived athletes"}
+                  ? `${archivedClients} archived athlete${
+                      archivedClients === 1 ? "" : "s"
+                    }`
+                  : "No archived athletes"}
             </p>
           </div>
           <div className="flex items-center gap-1.5">
@@ -1125,19 +1201,25 @@ export default function MobileClientsPage() {
               onClick={toggleBulkMode}
               className="p-1.5 rounded-lg border transition-all duration-200"
               style={{
-                backgroundColor: isBulkMode ? COLORS.GOLDEN_ACCENT : COLORS.BACKGROUND_CARD,
-                borderColor: isBulkMode ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                backgroundColor: isBulkMode
+                  ? COLORS.GOLDEN_ACCENT
+                  : COLORS.BACKGROUND_CARD,
+                borderColor: isBulkMode
+                  ? COLORS.GOLDEN_ACCENT
+                  : COLORS.BORDER_SUBTLE,
                 color: isBulkMode ? "#FFFFFF" : COLORS.TEXT_PRIMARY,
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 if (!isBulkMode) {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                   e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                 }
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 if (!isBulkMode) {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                   e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                 }
               }}
@@ -1151,10 +1233,13 @@ export default function MobileClientsPage() {
             <MobileNavigation currentPage="clients" />
           </div>
         </div>
-        
+
         {/* Search Bar - Integrated into Header */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 z-10" style={{ color: COLORS.TEXT_MUTED }} />
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 z-10"
+            style={{ color: COLORS.TEXT_MUTED }}
+          />
           <input
             type="text"
             placeholder="Search athletes..."
@@ -1164,7 +1249,7 @@ export default function MobileClientsPage() {
             style={{
               backgroundColor: COLORS.BACKGROUND_CARD,
               borderColor: COLORS.BORDER_SUBTLE,
-              color: COLORS.TEXT_PRIMARY
+              color: COLORS.TEXT_PRIMARY,
             }}
           />
         </div>
@@ -1173,7 +1258,13 @@ export default function MobileClientsPage() {
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-4">
         {/* Tabs */}
-        <div className="flex space-x-1 p-1 rounded-xl border" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+        <div
+          className="flex space-x-1 p-1 rounded-xl border"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           <button
             onClick={() => setActiveTab("active")}
             className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
@@ -1191,8 +1282,13 @@ export default function MobileClientsPage() {
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
                 style={{
                   backgroundColor:
-                    activeTab === "active" ? "#FFFFFF" : COLORS.BACKGROUND_CARD_HOVER,
-                  color: activeTab === "active" ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_PRIMARY,
+                    activeTab === "active"
+                      ? "#FFFFFF"
+                      : COLORS.BACKGROUND_CARD_HOVER,
+                  color:
+                    activeTab === "active"
+                      ? COLORS.GOLDEN_ACCENT
+                      : COLORS.TEXT_PRIMARY,
                 }}
               >
                 {activeClientsData.length}
@@ -1207,7 +1303,8 @@ export default function MobileClientsPage() {
             style={{
               backgroundColor:
                 activeTab === "archived" ? COLORS.GOLDEN_ACCENT : "transparent",
-              color: activeTab === "archived" ? "#FFFFFF" : COLORS.TEXT_SECONDARY,
+              color:
+                activeTab === "archived" ? "#FFFFFF" : COLORS.TEXT_SECONDARY,
             }}
           >
             <div className="flex items-center justify-center gap-2">
@@ -1216,8 +1313,13 @@ export default function MobileClientsPage() {
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
                 style={{
                   backgroundColor:
-                    activeTab === "archived" ? "#FFFFFF" : COLORS.BACKGROUND_CARD_HOVER,
-                  color: activeTab === "archived" ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_PRIMARY,
+                    activeTab === "archived"
+                      ? "#FFFFFF"
+                      : COLORS.BACKGROUND_CARD_HOVER,
+                  color:
+                    activeTab === "archived"
+                      ? COLORS.GOLDEN_ACCENT
+                      : COLORS.TEXT_PRIMARY,
                 }}
               >
                 {archivedClientsData.length}
@@ -1227,9 +1329,14 @@ export default function MobileClientsPage() {
         </div>
 
         {/* Filters */}
-        <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+        <div
+          className="rounded-lg border p-4"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           <div className="space-y-3">
-
             {/* Filters Row */}
             <div className="flex gap-2">
               {/* Sort Dropdown */}
@@ -1240,7 +1347,7 @@ export default function MobileClientsPage() {
                 style={{
                   backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
                   borderColor: COLORS.BORDER_SUBTLE,
-                  color: COLORS.TEXT_PRIMARY
+                  color: COLORS.TEXT_PRIMARY,
                 }}
               >
                 <option value="name">
@@ -1269,7 +1376,7 @@ export default function MobileClientsPage() {
                 style={{
                   backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
                   borderColor: COLORS.BORDER_SUBTLE,
-                  color: COLORS.TEXT_PRIMARY
+                  color: COLORS.TEXT_PRIMARY,
                 }}
                 title={
                   sortOrder === "asc" ? "Sort ascending" : "Sort descending"
@@ -1283,13 +1390,20 @@ export default function MobileClientsPage() {
               </button>
 
               {/* View Mode Toggle */}
-              <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
+              <div
+                className="flex rounded-lg border overflow-hidden"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
                 <button
                   onClick={() => setViewMode("grid")}
                   className="p-2 transition-all duration-200"
                   style={{
-                    backgroundColor: viewMode === "grid" ? COLORS.GOLDEN_ACCENT : COLORS.BACKGROUND_CARD_HOVER,
-                    color: viewMode === "grid" ? "#FFFFFF" : COLORS.TEXT_PRIMARY
+                    backgroundColor:
+                      viewMode === "grid"
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.BACKGROUND_CARD_HOVER,
+                    color:
+                      viewMode === "grid" ? "#FFFFFF" : COLORS.TEXT_PRIMARY,
                   }}
                   title="Grid View"
                 >
@@ -1299,8 +1413,12 @@ export default function MobileClientsPage() {
                   onClick={() => setViewMode("list")}
                   className="p-2 transition-all duration-200"
                   style={{
-                    backgroundColor: viewMode === "list" ? COLORS.GOLDEN_ACCENT : COLORS.BACKGROUND_CARD_HOVER,
-                    color: viewMode === "list" ? "#FFFFFF" : COLORS.TEXT_PRIMARY
+                    backgroundColor:
+                      viewMode === "list"
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.BACKGROUND_CARD_HOVER,
+                    color:
+                      viewMode === "list" ? "#FFFFFF" : COLORS.TEXT_PRIMARY,
                   }}
                   title="List View"
                 >
@@ -1313,13 +1431,28 @@ export default function MobileClientsPage() {
 
         {/* Bulk Actions Toolbar */}
         {isBulkMode && (
-          <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+          <div
+            className="rounded-lg border p-4"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}>
-                  <Users className="h-3 w-3" style={{ color: COLORS.TEXT_PRIMARY }} />
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+                >
+                  <Users
+                    className="h-3 w-3"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  />
                 </div>
-                <span className="text-sm font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   {selectedClients.size > 0
                     ? `${selectedClients.size} client${
                         selectedClients.size === 1 ? "" : "s"
@@ -1335,12 +1468,13 @@ export default function MobileClientsPage() {
                   style={{
                     backgroundColor: COLORS.GOLDEN_DARK,
                     color: "#FFFFFF",
-                    borderColor: COLORS.BORDER_SUBTLE
+                    borderColor: COLORS.BORDER_SUBTLE,
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.GOLDEN_ACCENT;
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
                   }}
                 >
@@ -1353,7 +1487,7 @@ export default function MobileClientsPage() {
                     style={{
                       backgroundColor: "transparent",
                       color: COLORS.TEXT_SECONDARY,
-                      borderColor: COLORS.BORDER_SUBTLE
+                      borderColor: COLORS.BORDER_SUBTLE,
                     }}
                   >
                     Clear
@@ -1370,10 +1504,11 @@ export default function MobileClientsPage() {
                       backgroundColor: COLORS.GREEN_DARK,
                       color: "#FFFFFF",
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = COLORS.GREEN_PRIMARY;
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.GREEN_PRIMARY;
                     }}
-                    onMouseLeave={(e) => {
+                    onMouseLeave={e => {
                       e.currentTarget.style.backgroundColor = COLORS.GREEN_DARK;
                     }}
                   >
@@ -1388,11 +1523,13 @@ export default function MobileClientsPage() {
                         backgroundColor: COLORS.GOLDEN_DARK,
                         color: "#FFFFFF",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.GOLDEN_ACCENT;
                       }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.GOLDEN_DARK;
                       }}
                     >
                       <Archive className="h-3.5 w-3.5" />
@@ -1426,15 +1563,15 @@ export default function MobileClientsPage() {
               {searchTerm
                 ? "No athletes found"
                 : activeTab === "active"
-                ? "No active athletes"
-                : "No archived athletes"}
+                  ? "No active athletes"
+                  : "No archived athletes"}
             </h3>
             <p className="mb-6 max-w-sm mx-auto text-[#ABA4AA]">
               {searchTerm
                 ? `No athletes match "${searchTerm}". Try a different search term.`
                 : activeTab === "active"
-                ? "Athletes will appear here when they request to join your coaching program."
-                : "No athletes have been archived yet."}
+                  ? "Athletes will appear here when they request to join your coaching program."
+                  : "No athletes have been archived yet."}
             </p>
             {searchTerm && (
               <button
@@ -1458,23 +1595,28 @@ export default function MobileClientsPage() {
                       backgroundColor: COLORS.BACKGROUND_CARD,
                       borderColor: COLORS.BORDER_SUBTLE,
                     }}
-                    onMouseEnter={(e) => {
+                    onMouseEnter={e => {
                       // Only apply hover on non-touch devices
                       if (window.matchMedia("(hover: hover)").matches) {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }
                     }}
-                    onMouseLeave={(e) => {
+                    onMouseLeave={e => {
                       // Only apply hover on non-touch devices
                       if (window.matchMedia("(hover: hover)").matches) {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
-                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD;
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
                       }
                     }}
-                    onTouchStart={(e) => {
+                    onTouchStart={e => {
                       // Prevent hover state on touch
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD;
                       e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     }}
                     onClick={() => {
@@ -1493,8 +1635,12 @@ export default function MobileClientsPage() {
                             }}
                             className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200"
                             style={{
-                              backgroundColor: selectedClients.has(client.id) ? COLORS.GOLDEN_ACCENT : "transparent",
-                              borderColor: selectedClients.has(client.id) ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                              backgroundColor: selectedClients.has(client.id)
+                                ? COLORS.GOLDEN_ACCENT
+                                : "transparent",
+                              borderColor: selectedClients.has(client.id)
+                                ? COLORS.GOLDEN_ACCENT
+                                : COLORS.BORDER_SUBTLE,
                             }}
                           >
                             {selectedClients.has(client.id) && (
@@ -1513,11 +1659,20 @@ export default function MobileClientsPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h3 className="text-sm font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+                            <h3
+                              className="text-sm font-semibold"
+                              style={{ color: COLORS.TEXT_PRIMARY }}
+                            >
                               {client.name}
                             </h3>
                             {isValidLessonDate(client.nextLessonDate) && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0" style={{ backgroundColor: COLORS.GREEN_DARK, color: "#FFFFFF" }}>
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0"
+                                style={{
+                                  backgroundColor: COLORS.GREEN_DARK,
+                                  color: "#FFFFFF",
+                                }}
+                              >
                                 <Calendar className="h-2.5 w-2.5 mr-0.5" />
                                 {format(
                                   new Date(client.nextLessonDate!),
@@ -1526,7 +1681,10 @@ export default function MobileClientsPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs truncate" style={{ color: COLORS.TEXT_SECONDARY }}>
+                          <p
+                            className="text-xs truncate"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             {client.email || "No email"}
                           </p>
                         </div>
@@ -1536,19 +1694,19 @@ export default function MobileClientsPage() {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            router.push(
-                              `/messages?clientId=${client.userId || client.id}`
-                            );
+                            router.push(`/messages?clientId=${client.id}`);
                           }}
                           className="p-1.5 rounded transition-colors"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Send message"
                         >
@@ -1561,13 +1719,15 @@ export default function MobileClientsPage() {
                           }}
                           className="p-1.5 rounded transition-colors"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Add feedback"
                         >
@@ -1581,13 +1741,15 @@ export default function MobileClientsPage() {
                           }}
                           className="p-1.5 rounded transition-colors"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Edit client"
                         >
@@ -1605,15 +1767,18 @@ export default function MobileClientsPage() {
                           disabled={archivingClientId === client.id}
                           className="p-1.5 rounded transition-colors disabled:opacity-50"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             if (!archivingClientId) {
-                              e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                              e.currentTarget.style.color =
+                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.backgroundColor =
+                                COLORS.BACKGROUND_CARD_HOVER;
                             }
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title={
                             activeTab === "active"
@@ -1622,7 +1787,10 @@ export default function MobileClientsPage() {
                           }
                         >
                           {archivingClientId === client.id ? (
-                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2" style={{ borderColor: COLORS.GOLDEN_ACCENT }} />
+                            <div
+                              className="animate-spin rounded-full h-3.5 w-3.5 border-b-2"
+                              style={{ borderColor: COLORS.GOLDEN_ACCENT }}
+                            />
                           ) : (
                             <Archive className="h-3.5 w-3.5" />
                           )}
@@ -1663,23 +1831,28 @@ export default function MobileClientsPage() {
                       backgroundColor: COLORS.BACKGROUND_CARD,
                       borderColor: COLORS.BORDER_SUBTLE,
                     }}
-                    onMouseEnter={(e) => {
+                    onMouseEnter={e => {
                       // Only apply hover on non-touch devices
                       if (window.matchMedia("(hover: hover)").matches) {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
-                        e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD_HOVER;
+                        e.currentTarget.style.borderColor =
+                          COLORS.GOLDEN_ACCENT;
                       }
                     }}
-                    onMouseLeave={(e) => {
+                    onMouseLeave={e => {
                       // Only apply hover on non-touch devices
                       if (window.matchMedia("(hover: hover)").matches) {
-                        e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
-                        e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                        e.currentTarget.style.backgroundColor =
+                          COLORS.BACKGROUND_CARD;
+                        e.currentTarget.style.borderColor =
+                          COLORS.BORDER_SUBTLE;
                       }
                     }}
-                    onTouchStart={(e) => {
+                    onTouchStart={e => {
                       // Prevent hover state on touch
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD;
                       e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
                     }}
                     onClick={() => {
@@ -1698,8 +1871,12 @@ export default function MobileClientsPage() {
                             }}
                             className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0"
                             style={{
-                              backgroundColor: selectedClients.has(client.id) ? COLORS.GOLDEN_ACCENT : "transparent",
-                              borderColor: selectedClients.has(client.id) ? COLORS.GOLDEN_ACCENT : COLORS.BORDER_SUBTLE,
+                              backgroundColor: selectedClients.has(client.id)
+                                ? COLORS.GOLDEN_ACCENT
+                                : "transparent",
+                              borderColor: selectedClients.has(client.id)
+                                ? COLORS.GOLDEN_ACCENT
+                                : COLORS.BORDER_SUBTLE,
                             }}
                           >
                             {selectedClients.has(client.id) && (
@@ -1718,15 +1895,28 @@ export default function MobileClientsPage() {
                           className="flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-semibold mb-0.5 truncate" style={{ color: COLORS.TEXT_PRIMARY }}>
+                          <h3
+                            className="text-sm font-semibold mb-0.5 truncate"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             {client.name}
                           </h3>
-                          <p className="text-xs mb-0.5 truncate" style={{ color: COLORS.TEXT_SECONDARY }}>
+                          <p
+                            className="text-xs mb-0.5 truncate"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             {client.email || "No email"}
                           </p>
                           {isValidLessonDate(client.nextLessonDate) && (
-                            <p className="text-[10px] truncate" style={{ color: COLORS.TEXT_MUTED }}>
-                              Next: {format(new Date(client.nextLessonDate!), "MMM d")}
+                            <p
+                              className="text-[10px] truncate"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                            >
+                              Next:{" "}
+                              {format(
+                                new Date(client.nextLessonDate!),
+                                "MMM d"
+                              )}
                             </p>
                           )}
                         </div>
@@ -1735,19 +1925,19 @@ export default function MobileClientsPage() {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            router.push(
-                              `/messages?clientId=${client.userId || client.id}`
-                            );
+                            router.push(`/messages?clientId=${client.id}`);
                           }}
                           className="p-1.5 rounded transition-colors"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Send message"
                         >
@@ -1760,13 +1950,15 @@ export default function MobileClientsPage() {
                           }}
                           className="p-1.5 rounded transition-colors"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Add feedback"
                         >
@@ -1780,13 +1972,15 @@ export default function MobileClientsPage() {
                           }}
                           className="p-1.5 rounded transition-colors"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                            e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                            e.currentTarget.style.backgroundColor =
+                              COLORS.BACKGROUND_CARD_HOVER;
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title="Edit client"
                         >
@@ -1804,15 +1998,18 @@ export default function MobileClientsPage() {
                           disabled={archivingClientId === client.id}
                           className="p-1.5 rounded transition-colors disabled:opacity-50"
                           style={{ color: COLORS.TEXT_SECONDARY }}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             if (!archivingClientId) {
-                              e.currentTarget.style.color = COLORS.GOLDEN_ACCENT;
-                              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                              e.currentTarget.style.color =
+                                COLORS.GOLDEN_ACCENT;
+                              e.currentTarget.style.backgroundColor =
+                                COLORS.BACKGROUND_CARD_HOVER;
                             }
                           }}
-                          onMouseLeave={(e) => {
+                          onMouseLeave={e => {
                             e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                            e.currentTarget.style.backgroundColor = "transparent";
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
                           }}
                           title={
                             activeTab === "active"
@@ -1821,7 +2018,10 @@ export default function MobileClientsPage() {
                           }
                         >
                           {archivingClientId === client.id ? (
-                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2" style={{ borderColor: COLORS.GOLDEN_ACCENT }} />
+                            <div
+                              className="animate-spin rounded-full h-3.5 w-3.5 border-b-2"
+                              style={{ borderColor: COLORS.GOLDEN_ACCENT }}
+                            />
                           ) : (
                             <Archive className="h-3.5 w-3.5" />
                           )}
@@ -1836,20 +2036,25 @@ export default function MobileClientsPage() {
                             disabled={deleteClient.isPending}
                             className="p-1.5 rounded transition-colors disabled:opacity-50"
                             style={{ color: COLORS.RED_ALERT }}
-                            onMouseEnter={(e) => {
+                            onMouseEnter={e => {
                               if (!deleteClient.isPending) {
                                 e.currentTarget.style.color = COLORS.RED_DARK;
-                                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                                e.currentTarget.style.backgroundColor =
+                                  COLORS.BACKGROUND_CARD_HOVER;
                               }
                             }}
-                            onMouseLeave={(e) => {
+                            onMouseLeave={e => {
                               e.currentTarget.style.color = COLORS.RED_ALERT;
-                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
                             }}
                             title="Permanently delete client"
                           >
                             {deleteClient.isPending ? (
-                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2" style={{ borderColor: COLORS.RED_ALERT }} />
+                              <div
+                                className="animate-spin rounded-full h-3.5 w-3.5 border-b-2"
+                                style={{ borderColor: COLORS.RED_ALERT }}
+                              />
                             ) : (
                               <Trash2 className="h-3.5 w-3.5" />
                             )}

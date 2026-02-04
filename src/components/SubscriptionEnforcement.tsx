@@ -197,10 +197,17 @@ function ClientManagementModal({
   const router = useRouter();
   const utils = trpc.useUtils();
 
+  /** Minimal client type to avoid deep tRPC inference. */
+  type SubEnforcementClient = {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  };
   // Get clients list
-  const { data: clients, isLoading } = trpc.clients.list.useQuery({
+  const { data: clientsRaw, isLoading } = trpc.clients.list.useQuery({
     archived: false,
   });
+  const clients = clientsRaw as SubEnforcementClient[] | undefined;
 
   // Get current restrictions to check if we're below limit after archiving
   const { data: restrictions } =

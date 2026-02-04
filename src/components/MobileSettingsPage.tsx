@@ -23,6 +23,32 @@ import { useMobileDetection } from "@/lib/mobile-detection";
 import { pushNotificationService } from "@/lib/pushNotifications";
 import { useRouter } from "next/navigation";
 
+/** Minimal settings type to avoid deep tRPC inference from getSettings. */
+interface MobileSettingsShape {
+  id?: string;
+  phone?: string | null;
+  location?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  soundNotifications?: boolean;
+  newClientNotifications?: boolean;
+  messageNotifications?: boolean;
+  scheduleNotifications?: boolean;
+  defaultWelcomeMessage?: string | null;
+  messageRetentionDays?: number;
+  maxFileSizeMB?: number;
+  defaultLessonDuration?: number;
+  autoArchiveDays?: number;
+  requireClientEmail?: boolean;
+  timezone?: string;
+  workingDays?: string[] | string | unknown;
+  clientScheduleAdvanceLimitDays?: number;
+  compactSidebar?: boolean;
+  showAnimations?: boolean;
+}
+
 export default function MobileSettingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
@@ -77,8 +103,12 @@ export default function MobileSettingsPage() {
     trpc.user.getProfile.useQuery();
 
   // Get user settings
-  const { data: userSettings, refetch: refetchSettings } =
+  const { data: userSettingsRaw, refetch: refetchSettings } =
     trpc.settings.getSettings.useQuery();
+  const userSettings = userSettingsRaw as
+    | MobileSettingsShape
+    | null
+    | undefined;
 
   // Settings mutations
   const updateSettingsMutation = trpc.settings.updateSettings.useMutation({
@@ -108,26 +138,35 @@ export default function MobileSettingsPage() {
 
       setNotificationData(prev => ({
         ...prev,
-        emailNotifications: userSettings.emailNotifications,
-        pushNotifications: userSettings.pushNotifications,
-        soundNotifications: userSettings.soundNotifications,
-        newClientNotifications: userSettings.newClientNotifications,
-        messageNotifications: userSettings.messageNotifications,
-        scheduleNotifications: userSettings.scheduleNotifications,
+        emailNotifications:
+          userSettings.emailNotifications ?? prev.emailNotifications,
+        pushNotifications:
+          userSettings.pushNotifications ?? prev.pushNotifications,
+        soundNotifications:
+          userSettings.soundNotifications ?? prev.soundNotifications,
+        newClientNotifications:
+          userSettings.newClientNotifications ?? prev.newClientNotifications,
+        messageNotifications:
+          userSettings.messageNotifications ?? prev.messageNotifications,
+        scheduleNotifications:
+          userSettings.scheduleNotifications ?? prev.scheduleNotifications,
       }));
 
       setMessagingData(prev => ({
         ...prev,
         defaultWelcomeMessage: userSettings.defaultWelcomeMessage || "",
-        messageRetentionDays: userSettings.messageRetentionDays,
-        maxFileSizeMB: userSettings.maxFileSizeMB,
+        messageRetentionDays:
+          userSettings.messageRetentionDays ?? prev.messageRetentionDays,
+        maxFileSizeMB: userSettings.maxFileSizeMB ?? prev.maxFileSizeMB,
       }));
 
       setClientData(prev => ({
         ...prev,
-        defaultLessonDuration: userSettings.defaultLessonDuration,
-        autoArchiveDays: userSettings.autoArchiveDays,
-        requireClientEmail: userSettings.requireClientEmail,
+        defaultLessonDuration:
+          userSettings.defaultLessonDuration ?? prev.defaultLessonDuration,
+        autoArchiveDays: userSettings.autoArchiveDays ?? prev.autoArchiveDays,
+        requireClientEmail:
+          userSettings.requireClientEmail ?? prev.requireClientEmail,
       }));
 
       let workingDays: string[] = [
@@ -155,7 +194,7 @@ export default function MobileSettingsPage() {
 
       setScheduleData(prev => ({
         ...prev,
-        timezone: userSettings.timezone,
+        timezone: userSettings.timezone ?? prev.timezone,
         workingDays,
         clientScheduleAdvanceLimitDays:
           userSettings.clientScheduleAdvanceLimitDays ??
@@ -164,8 +203,8 @@ export default function MobileSettingsPage() {
 
       setAppearanceData(prev => ({
         ...prev,
-        compactSidebar: userSettings.compactSidebar,
-        showAnimations: userSettings.showAnimations,
+        compactSidebar: userSettings.compactSidebar ?? prev.compactSidebar,
+        showAnimations: userSettings.showAnimations ?? prev.showAnimations,
       }));
     }
   }, [userSettings?.id, currentUser?.id]);

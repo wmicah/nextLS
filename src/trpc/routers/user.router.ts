@@ -1137,11 +1137,13 @@ export const userRouter = router({
         where: { deletedAt: { gte: oneMonthAgo } },
       }),
       db.accountDeletionLog.groupBy({
-        by: ["userRole"],
+        by: ["userRole"] as unknown as [
+          Prisma.AccountDeletionLogScalarFieldEnum,
+        ],
         _count: true,
       }),
       db.accountDeletionLog.groupBy({
-        by: ["reason"],
+        by: ["reason"] as unknown as [Prisma.AccountDeletionLogScalarFieldEnum],
         _count: true,
       }),
       db.accountDeletionLog.findMany({
@@ -1153,14 +1155,16 @@ export const userRouter = router({
           userRole: true,
           reason: true,
           deletedAt: true,
-        },
+        } as Prisma.AccountDeletionLogSelect,
       }),
     ]);
 
     // Map role counts: { COACH: n, CLIENT: m, no_role: k }
     const deletionsByRole: Record<string, number> = {};
     for (const row of roleCounts) {
-      const key = row.userRole ?? "no_role";
+      const key =
+        (row as { userRole?: string | null; _count: number }).userRole ??
+        "no_role";
       deletionsByRole[key] = row._count;
     }
 

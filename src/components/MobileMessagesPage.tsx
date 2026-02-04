@@ -37,6 +37,14 @@ interface MobileMessagesPageProps {
   // Add props here if needed in the future
 }
 
+/** Minimal message type to avoid deep tRPC inference. */
+interface MobileMessage {
+  id: string;
+  createdAt: string | Date;
+  content?: string | null;
+  sender: { id: string };
+}
+
 export default function MobileMessagesPage({}: MobileMessagesPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -235,7 +243,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
     });
 
   // Get messages for selected conversation
-  const { data: messages = [], refetch: refetchMessages } =
+  const { data: messagesRaw = [], refetch: refetchMessages } =
     trpc.messaging.getMessages.useQuery(
       { conversationId: selectedConversation! },
       {
@@ -246,6 +254,7 @@ export default function MobileMessagesPage({}: MobileMessagesPageProps) {
         staleTime: 2 * 60 * 1000, // Cache for 2 minutes
       }
     );
+  const messages: MobileMessage[] = messagesRaw as MobileMessage[];
 
   // Optimized unread count with smart caching
   const { data: unreadCount = 0 } = trpc.messaging.getUnreadCount.useQuery(

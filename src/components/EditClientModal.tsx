@@ -104,10 +104,29 @@ export default function EditClientModal({
     );
   }, [client]);
 
-  const updateClient = trpc.clients.update.useMutation({
+  const clientId = client.id;
+  // Cast procedure to avoid excessively-deep type instantiation
+  type UpdateClientMutate = (input: {
+    id: string;
+    name?: string;
+    email?: string | null;
+    phone?: string | null;
+    notes?: string | null;
+    age?: number | null;
+    height?: string | null;
+    customFields?: Record<string, string | number | boolean> | null;
+  }) => void;
+  const updateClient = (
+    trpc.clients.update as {
+      useMutation: (opts: unknown) => {
+        mutate: UpdateClientMutate;
+        isPending: boolean;
+      };
+    }
+  ).useMutation({
     onSuccess: () => {
       utils.clients.list.invalidate();
-      utils.clients.getById.invalidate({ id: client.id });
+      utils.clients.getById.invalidate({ id: clientId });
       addToast({
         type: "success",
         title: "Client updated",
@@ -116,7 +135,7 @@ export default function EditClientModal({
       setIsSubmitting(false);
       onClose();
     },
-    onError: error => {
+    onError: (error: { message: string }) => {
       console.error("Failed to update client:", error);
       addToast({
         type: "error",

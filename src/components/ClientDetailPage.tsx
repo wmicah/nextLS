@@ -616,7 +616,12 @@ function ClientDetailPage({
     }
   );
   const dismissedHints: string[] = (() => {
-    const raw = userSettings?.dismissedClientDetailHints;
+    const raw = (
+      userSettings as
+        | { dismissedClientDetailHints?: unknown }
+        | null
+        | undefined
+    )?.dismissedClientDetailHints;
     if (raw == null) return [];
     if (Array.isArray(raw)) return raw as string[];
     try {

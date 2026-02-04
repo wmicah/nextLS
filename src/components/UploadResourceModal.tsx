@@ -93,7 +93,6 @@ export default function UploadResourceModal({
 
   const uploadMutation = trpc.library.upload.useMutation({
     onSuccess: data => {
-
       // Invalidate and refetch library queries to show new data
       utils.library.list.invalidate();
       utils.library.getStats.invalidate();
@@ -179,7 +178,10 @@ export default function UploadResourceModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.7)" }}
+    >
       <div
         className="rounded-lg p-4 w-full max-w-xl border max-h-[90vh] overflow-y-auto shadow-lg"
         style={{
@@ -188,7 +190,10 @@ export default function UploadResourceModal({
         }}
       >
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>
+          <h2
+            className="text-lg font-bold"
+            style={{ color: COLORS.TEXT_PRIMARY }}
+          >
             Upload Resource
           </h2>
           <button
@@ -196,7 +201,8 @@ export default function UploadResourceModal({
             className="p-1.5 rounded-md transition-all duration-200"
             style={{ color: COLORS.TEXT_SECONDARY }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
             }}
             onMouseLeave={e => {
@@ -211,16 +217,21 @@ export default function UploadResourceModal({
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* File Upload Section */}
           <div>
-            <label className="block text-xs mb-1.5" style={{ color: COLORS.TEXT_SECONDARY }}>
+            <label
+              className="block text-xs mb-1.5"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+            >
               File Upload *
             </label>
 
             {!uploadedFile && !isUploading ? (
               <div
                 className="border-2 border-dashed rounded-md p-4 text-center"
-                style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
               >
-                {/* @ts-expect-error - effect version conflict workaround */}
                 <UploadButton<OurFileRouter, "videoUploader">
                   endpoint="videoUploader"
                   onBeforeUploadBegin={(files: File[]) => {
@@ -268,9 +279,8 @@ export default function UploadResourceModal({
                           type: file.type,
                         });
 
-                        const thumbnailDataUrl = await generateThumbnail(
-                          videoFile
-                        );
+                        const thumbnailDataUrl =
+                          await generateThumbnail(videoFile);
                         setThumbnail(thumbnailDataUrl);
                       } catch (error) {
                         console.error("Error generating thumbnail:", error);
@@ -310,17 +320,26 @@ export default function UploadResourceModal({
             ) : isUploading ? (
               <div
                 className="border-2 border-dashed rounded-md p-4 text-center"
-                style={{ borderColor: COLORS.BORDER_SUBTLE, backgroundColor: COLORS.BACKGROUND_CARD }}
+                style={{
+                  borderColor: COLORS.BORDER_SUBTLE,
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                }}
               >
                 <div className="flex flex-col items-center justify-center gap-2">
                   <div
                     className="animate-spin rounded-full h-8 w-8 border-b-2"
                     style={{ borderColor: COLORS.GOLDEN_ACCENT }}
                   />
-                  <p style={{ color: COLORS.TEXT_PRIMARY }} className="font-medium text-xs">
+                  <p
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                    className="font-medium text-xs"
+                  >
                     Uploading file...
                   </p>
-                  <p style={{ color: COLORS.TEXT_SECONDARY }} className="text-xs">
+                  <p
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                    className="text-xs"
+                  >
                     Please wait, do not close this window
                   </p>
                 </div>
@@ -335,12 +354,21 @@ export default function UploadResourceModal({
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" style={{ color: COLORS.GREEN_PRIMARY }} />
+                    <CheckCircle
+                      className="h-4 w-4"
+                      style={{ color: COLORS.GREEN_PRIMARY }}
+                    />
                     <div>
-                      <p style={{ color: COLORS.TEXT_PRIMARY }} className="font-medium text-xs">
+                      <p
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                        className="font-medium text-xs"
+                      >
                         {uploadedFile.name}
                       </p>
-                      <p style={{ color: COLORS.TEXT_SECONDARY }} className="text-[10px]">
+                      <p
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                        className="text-[10px]"
+                      >
                         {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
@@ -354,7 +382,8 @@ export default function UploadResourceModal({
                     className="p-1 rounded-md transition-all duration-200"
                     style={{ color: COLORS.TEXT_SECONDARY }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                      e.currentTarget.style.backgroundColor =
+                        COLORS.BACKGROUND_CARD_HOVER;
                       e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
                     }}
                     onMouseLeave={e => {
@@ -369,7 +398,10 @@ export default function UploadResourceModal({
                 {/* Thumbnail Preview */}
                 {thumbnail && (
                   <div className="mt-2">
-                    <p style={{ color: COLORS.TEXT_SECONDARY }} className="text-xs mb-1.5">
+                    <p
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                      className="text-xs mb-1.5"
+                    >
                       Generated Thumbnail:
                     </p>
                     <img
@@ -386,7 +418,10 @@ export default function UploadResourceModal({
 
           {/* Rest of form fields remain the same */}
           <div>
-            <label className="block text-xs mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+            <label
+              className="block text-xs mb-1"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+            >
               Title *
             </label>
             <input
@@ -411,7 +446,10 @@ export default function UploadResourceModal({
           </div>
 
           <div>
-            <label className="block text-xs mb-1" style={{ color: COLORS.TEXT_SECONDARY }}>
+            <label
+              className="block text-xs mb-1"
+              style={{ color: COLORS.TEXT_SECONDARY }}
+            >
               Description
             </label>
             <textarea
@@ -463,20 +501,32 @@ export default function UploadResourceModal({
                   }}
                   disabled={isSubmitting || showCustomInput}
                 >
-                  <option value="" style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_SECONDARY }}>
+                  <option
+                    value=""
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_SECONDARY,
+                    }}
+                  >
                     Select a category...
                   </option>
 
                   {/* Standard Categories */}
                   <optgroup
                     label="Standard Categories"
-                    style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                   >
                     {DEFAULT_CATEGORIES.map(cat => (
                       <option
                         key={cat}
                         value={cat}
-                        style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
+                        style={{
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          color: COLORS.TEXT_PRIMARY,
+                        }}
                       >
                         {cat}
                       </option>
@@ -489,7 +539,10 @@ export default function UploadResourceModal({
                   ).length > 0 && (
                     <optgroup
                       label="Your Categories"
-                      style={{ backgroundColor: COLORS.BACKGROUND_DARK, color: COLORS.TEXT_PRIMARY }}
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
                     >
                       {categoriesData
                         .filter(cat => !DEFAULT_CATEGORIES.includes(cat.name))
@@ -573,11 +626,13 @@ export default function UploadResourceModal({
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD_HOVER;
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
-                    e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_DARK;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_DARK;
                   }}
                 >
                   <ChevronLeft className="h-3 w-3" />
@@ -598,7 +653,8 @@ export default function UploadResourceModal({
                 color: COLORS.TEXT_SECONDARY,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
               }}
               onMouseLeave={e => {

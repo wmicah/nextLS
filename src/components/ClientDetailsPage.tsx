@@ -32,6 +32,20 @@ interface ClientDetailsPageProps {
   noSidebar?: boolean;
 }
 
+/** Minimal client type to avoid deep tRPC inference from getById. */
+interface ClientDetailsClient {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  userId?: string | null;
+  createdAt?: string | Date;
+  customFields?: Record<string, string | number | boolean> | null;
+  age?: number | null;
+  height?: string | null;
+  notes?: unknown;
+}
+
 export default function ClientDetailsPage({
   clientId,
   noSidebar = false,
@@ -54,10 +68,11 @@ export default function ClientDetailsPage({
   const utils = trpc.useUtils();
 
   const {
-    data: client,
+    data: clientRaw,
     isLoading,
     error,
   } = trpc.clients.getById.useQuery({ id: clientId });
+  const client = clientRaw as ClientDetailsClient | null | undefined;
   const { data: clientWorkouts = [] } =
     trpc.workouts.getClientWorkouts.useQuery({
       clientId: clientId,
@@ -805,12 +820,12 @@ export default function ClientDetailsPage({
                   className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all duration-200 hover:bg-opacity-80 hover:scale-105 hover:shadow-lg cursor-pointer border border-transparent hover:border-sky-500/30"
                   style={{ backgroundColor: "#4A5A70" }}
                   onClick={() => {
-                    // Navigate to messaging page with this client
-                    if (client?.userId) {
-                      router.push(`/messages?clientId=${client.userId}`);
+                    // Navigate to messaging page: API expects Client record id (client.id), not userId
+                    if (client?.id) {
+                      router.push(`/messages?clientId=${client.id}`);
                     } else {
                       alert(
-                        "This client hasn't signed up yet. They need to create an account before you can message them."
+                        "Unable to open conversation. Client information is missing."
                       );
                     }
                   }}

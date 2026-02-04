@@ -17,6 +17,14 @@ interface TimeSwapProps {
   onClose: () => void;
 }
 
+/** Minimal client type to avoid deep tRPC inference. */
+interface TimeSwapClient {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  coach?: { name?: string | null } | null;
+}
+
 export default function TimeSwap({ onClose }: TimeSwapProps) {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedRequesterEvent, setSelectedRequesterEvent] = useState<
@@ -30,8 +38,10 @@ export default function TimeSwap({ onClose }: TimeSwapProps) {
   >("select-client");
 
   // Queries
-  const { data: availableClients = [], isLoading: clientsLoading } =
+  const { data: availableClientsRaw = [], isLoading: clientsLoading } =
     trpc.timeSwap.getAvailableClients.useQuery();
+  const availableClients: TimeSwapClient[] =
+    availableClientsRaw as TimeSwapClient[];
 
   const { data: targetEvents = [], isLoading: eventsLoading } =
     trpc.timeSwap.getClientEvents.useQuery(

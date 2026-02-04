@@ -335,7 +335,6 @@ export default function MessageFileUpload({
 
             <div className="flex flex-col items-center">
               <div className={uploading ? "hidden" : ""}>
-                {/* @ts-expect-error - effect version conflict workaround */}
                 <UploadButton<OurFileRouter, "messageAttachmentUploader">
                   endpoint="messageAttachmentUploader"
                   onClientUploadComplete={handleUploadComplete}
