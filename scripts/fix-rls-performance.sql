@@ -84,6 +84,7 @@ CREATE OR REPLACE FUNCTION public.ensure_inbox_row()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = 'public'
 AS $$
 DECLARE
   user_id uuid := (SELECT auth.uid());

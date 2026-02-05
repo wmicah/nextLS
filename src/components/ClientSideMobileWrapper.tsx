@@ -215,8 +215,15 @@ export default function ClientSideMobileWrapper({
     return null;
   }
 
-  // Layout mode: sidebar provided by layout, children = page content (sidebar persists across navigation)
+  // Layout mode: sidebar on desktop; on mobile, page components use their own MobileNavigation + MobileBottomNavigation
   if (variant === "coach") {
+    if (isMobile) {
+      return (
+        <ErrorBoundary fallback={<ComponentErrorFallback />}>
+          {children}
+        </ErrorBoundary>
+      );
+    }
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
         <Sidebar>{children}</Sidebar>
