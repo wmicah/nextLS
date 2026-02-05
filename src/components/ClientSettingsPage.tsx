@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import { pushNotificationService } from "@/lib/pushNotifications";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 function ClientSettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -180,68 +181,55 @@ function ClientSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-      {/* Hero Header */}
-      <div className="mb-6 md:mb-8">
-        <div className="rounded-xl md:rounded-2xl border relative overflow-hidden group">
-          <div
-            className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-            style={{
-              background:
-                "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-            }}
-          />
-          <div className="relative p-4 md:p-8 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0">
-              <div className="flex items-center gap-3 md:gap-4">
-                <div>
-                  <h1
-                    className="text-2xl md:text-4xl font-bold mb-1 md:mb-2"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    Settings
-                  </h1>
-                  <div
-                    className="flex items-center gap-2 text-sm md:text-lg"
-                    style={{ color: "#ABA4AA" }}
-                  >
-                    <div className="h-4 w-4 md:h-5 md:w-5 rounded-full bg-gray-500 flex items-center justify-center">
-                      <SettingsIcon className="h-2 w-2 md:h-3 md:w-3 text-white" />
-                    </div>
-                    <span>Customize your training experience</span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-left md:text-right">
-                <div
-                  className="text-lg md:text-2xl font-bold"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {currentUser?.name || "Athlete"}
-                </div>
-                <div
-                  className="text-xs md:text-sm"
-                  style={{ color: "#ABA4AA" }}
-                >
-                  Training Settings
-                </div>
-              </div>
+    <div
+      className="flex flex-col flex-1 min-h-0"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
+      {/* Simple Header - matches client messages/notifications */}
+      <div
+        className="flex-shrink-0 border-b px-4 sm:px-6 py-4"
+        style={{ borderColor: COLORS.BORDER_SUBTLE }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{
+                backgroundColor: getGoldenAccent(0.2),
+                color: COLORS.GOLDEN_ACCENT,
+              }}
+            >
+              <SettingsIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <h1
+                className="text-xl font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Settings
+              </h1>
+              <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
+                {currentUser?.name || "Athlete"} · Account preferences
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Settings Content */}
-      <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
+      <div className="flex flex-col lg:flex-row gap-4 md:gap-6 p-4 sm:px-6 overflow-y-auto min-h-0">
         {/* Settings Sidebar */}
         <div className="w-full lg:w-80 lg:flex-shrink-0">
           <div
-            className="rounded-xl md:rounded-2xl border p-4 md:p-6"
-            style={{ backgroundColor: "#1E1E1E", borderColor: "#2a2a2a" }}
+            className="rounded-xl border p-4 md:p-6"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <h2
-              className="text-lg md:text-xl font-bold mb-4 md:mb-6"
-              style={{ color: "#ffffff" }}
+              className="text-lg font-bold mb-4"
+              style={{ color: COLORS.TEXT_PRIMARY }}
             >
               Settings
             </h2>
@@ -250,17 +238,26 @@ function ClientSettingsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center justify-center lg:justify-start gap-2 lg:gap-3 px-2 lg:px-4 py-2 lg:py-3 rounded-lg lg:rounded-xl text-center lg:text-left transition-all duration-200 touch-manipulation ${
-                    activeTab === tab.id
-                      ? "bg-gray-500/10 border border-gray-500/20"
-                      : "hover:bg-gray-500/5"
+                  className={`w-full flex items-center justify-center lg:justify-start gap-2 lg:gap-3 px-2 lg:px-4 py-3 rounded-lg text-center lg:text-left transition-all duration-200 touch-manipulation min-h-[44px] ${
+                    activeTab === tab.id ? "" : "hover:opacity-90"
                   }`}
                   style={{
-                    color: activeTab === tab.id ? "#ffffff" : "#9ca3af",
+                    backgroundColor:
+                      activeTab === tab.id
+                        ? getGoldenAccent(0.15)
+                        : "transparent",
+                    color:
+                      activeTab === tab.id
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.TEXT_SECONDARY,
+                    border:
+                      activeTab === tab.id
+                        ? `1px solid ${getGoldenAccent(0.3)}`
+                        : "1px solid transparent",
                   }}
                 >
                   {tab.icon}
-                  <span className="font-medium text-xs lg:text-base">
+                  <span className="font-medium text-xs lg:text-sm">
                     {tab.name}
                   </span>
                 </button>
@@ -270,17 +267,20 @@ function ClientSettingsPage() {
         </div>
 
         {/* Settings Panel */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div
-            className="rounded-xl md:rounded-2xl border p-4 md:p-8"
-            style={{ backgroundColor: "#1E1E1E", borderColor: "#2a2a2a" }}
+            className="rounded-xl border p-4 md:p-8"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             {/* Profile Settings */}
             {activeTab === "profile" && (
               <div>
                 <h3
                   className="text-xl md:text-2xl font-bold mb-4 md:mb-6"
-                  style={{ color: "#ffffff" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Profile Settings
                 </h3>
@@ -289,7 +289,7 @@ function ClientSettingsPage() {
                   <div>
                     <label
                       className="block text-sm font-medium mb-3"
-                      style={{ color: "#9ca3af" }}
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                     >
                       Profile Picture
                     </label>
@@ -306,10 +306,16 @@ function ClientSettingsPage() {
                         size="lg"
                       />
                       <div className="flex flex-col gap-2">
-                        <p className="text-sm" style={{ color: "#9ca3af" }}>
+                        <p
+                          className="text-sm"
+                          style={{ color: COLORS.TEXT_SECONDARY }}
+                        >
                           Click on your profile picture to upload a new one
                         </p>
-                        <p className="text-xs" style={{ color: "#6b7280" }}>
+                        <p
+                          className="text-xs"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
                           Supports JPG, PNG up to 4MB
                         </p>
                       </div>
@@ -321,7 +327,7 @@ function ClientSettingsPage() {
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Full Name
                       </label>
@@ -334,11 +340,11 @@ function ClientSettingsPage() {
                             name: e.target.value,
                           }))
                         }
-                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                        className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 min-h-[44px]"
                         style={{
-                          backgroundColor: "#2a2a2a",
-                          borderColor: "#374151",
-                          color: "#ffffff",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           border: "1px solid",
                         }}
                         placeholder="Enter your full name"
@@ -347,7 +353,7 @@ function ClientSettingsPage() {
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Email
                       </label>
@@ -355,11 +361,11 @@ function ClientSettingsPage() {
                         type="email"
                         value={currentUser?.email || ""}
                         disabled
-                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 opacity-50"
+                        className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 opacity-50 min-h-[44px]"
                         style={{
-                          backgroundColor: "#2a2a2a",
-                          borderColor: "#374151",
-                          color: "#ffffff",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           border: "1px solid",
                         }}
                         placeholder="Enter your email"
@@ -368,7 +374,7 @@ function ClientSettingsPage() {
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Phone Number
                       </label>
@@ -381,11 +387,11 @@ function ClientSettingsPage() {
                             phone: e.target.value,
                           }))
                         }
-                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                        className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 min-h-[44px]"
                         style={{
-                          backgroundColor: "#2a2a2a",
-                          borderColor: "#374151",
-                          color: "#ffffff",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           border: "1px solid",
                         }}
                         placeholder="Enter your phone number"
@@ -394,7 +400,7 @@ function ClientSettingsPage() {
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Location
                       </label>
@@ -407,11 +413,11 @@ function ClientSettingsPage() {
                             location: e.target.value,
                           }))
                         }
-                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                        className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 min-h-[44px]"
                         style={{
-                          backgroundColor: "#2a2a2a",
-                          borderColor: "#374151",
-                          color: "#ffffff",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           border: "1px solid",
                         }}
                         placeholder="Enter your location"
@@ -423,7 +429,7 @@ function ClientSettingsPage() {
                   <div>
                     <label
                       className="block text-sm font-medium mb-2"
-                      style={{ color: "#9ca3af" }}
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                     >
                       Bio
                     </label>
@@ -436,11 +442,11 @@ function ClientSettingsPage() {
                           bio: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 resize-none"
+                      className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 resize-none"
                       style={{
-                        backgroundColor: "#2a2a2a",
-                        borderColor: "#374151",
-                        color: "#ffffff",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                         border: "1px solid",
                       }}
                       placeholder="Tell your coach about yourself..."
@@ -454,8 +460,8 @@ function ClientSettingsPage() {
             {activeTab === "notifications" && (
               <div>
                 <h3
-                  className="text-2xl font-bold mb-6"
-                  style={{ color: "#ffffff" }}
+                  className="text-xl md:text-2xl font-bold mb-4 md:mb-6"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Notification Settings
                 </h3>
@@ -478,12 +484,6 @@ function ClientSettingsPage() {
                         description: "Play sounds for notifications",
                       },
                       {
-                        key: "programNotifications",
-                        label: "Program Updates",
-                        description:
-                          "Notifications about your training program",
-                      },
-                      {
                         key: "messageNotifications",
                         label: "Message Notifications",
                         description: "Notifications from your coach",
@@ -496,14 +496,20 @@ function ClientSettingsPage() {
                     ].map(notification => (
                       <div
                         key={notification.key}
-                        className="flex items-center justify-between p-4 rounded-xl"
-                        style={{ backgroundColor: "#2a2a2a" }}
+                        className="flex items-center justify-between p-4 rounded-xl min-h-[44px]"
+                        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                       >
                         <div>
-                          <h4 className="font-medium text-white">
+                          <h4
+                            className="font-medium"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             {notification.label}
                           </h4>
-                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                          <p
+                            className="text-sm"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             {notification.description}
                           </p>
                         </div>
@@ -574,7 +580,8 @@ function ClientSettingsPage() {
                               [key]: checked,
                             }));
                           }}
-                          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                          className="w-5 h-5 rounded accent-[var(--golden)]"
+                          style={{ accentColor: COLORS.GOLDEN_ACCENT }}
                         />
                       </div>
                     ))}
@@ -587,8 +594,8 @@ function ClientSettingsPage() {
             {activeTab === "training" && (
               <div>
                 <h3
-                  className="text-2xl font-bold mb-6"
-                  style={{ color: "#ffffff" }}
+                  className="text-xl md:text-2xl font-bold mb-4 md:mb-6"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Training Preferences
                 </h3>
@@ -597,7 +604,7 @@ function ClientSettingsPage() {
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Preferred Workout Time
                       </label>
@@ -609,11 +616,11 @@ function ClientSettingsPage() {
                             preferredWorkoutTime: e.target.value,
                           }))
                         }
-                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                        className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 min-h-[44px]"
                         style={{
-                          backgroundColor: "#2a2a2a",
-                          borderColor: "#374151",
-                          color: "#ffffff",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           border: "1px solid",
                         }}
                       >
@@ -626,7 +633,7 @@ function ClientSettingsPage() {
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Workout Duration (minutes)
                       </label>
@@ -639,11 +646,11 @@ function ClientSettingsPage() {
                             workoutDuration: parseInt(e.target.value) || 60,
                           }))
                         }
-                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                        className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 min-h-[44px]"
                         style={{
-                          backgroundColor: "#2a2a2a",
-                          borderColor: "#374151",
-                          color: "#ffffff",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           border: "1px solid",
                         }}
                         placeholder="60"
@@ -652,7 +659,7 @@ function ClientSettingsPage() {
                     <div>
                       <label
                         className="block text-sm font-medium mb-2"
-                        style={{ color: "#9ca3af" }}
+                        style={{ color: COLORS.TEXT_SECONDARY }}
                       >
                         Experience Level
                       </label>
@@ -664,11 +671,11 @@ function ClientSettingsPage() {
                             experienceLevel: e.target.value,
                           }))
                         }
-                        className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                        className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 min-h-[44px]"
                         style={{
-                          backgroundColor: "#2a2a2a",
-                          borderColor: "#374151",
-                          color: "#ffffff",
+                          backgroundColor: COLORS.BACKGROUND_DARK,
+                          borderColor: COLORS.BORDER_SUBTLE,
+                          color: COLORS.TEXT_PRIMARY,
                           border: "1px solid",
                         }}
                       >
@@ -683,7 +690,7 @@ function ClientSettingsPage() {
                   <div>
                     <label
                       className="block text-sm font-medium mb-2"
-                      style={{ color: "#9ca3af" }}
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                     >
                       Training Goals
                     </label>
@@ -696,11 +703,11 @@ function ClientSettingsPage() {
                           goals: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 resize-none"
+                      className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 resize-none"
                       style={{
-                        backgroundColor: "#2a2a2a",
-                        borderColor: "#374151",
-                        color: "#ffffff",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                         border: "1px solid",
                       }}
                       placeholder="Describe your training goals..."
@@ -710,7 +717,7 @@ function ClientSettingsPage() {
                   <div>
                     <label
                       className="block text-sm font-medium mb-2"
-                      style={{ color: "#9ca3af" }}
+                      style={{ color: COLORS.TEXT_SECONDARY }}
                     >
                       Injuries or Limitations
                     </label>
@@ -723,11 +730,11 @@ function ClientSettingsPage() {
                           injuries: e.target.value,
                         }))
                       }
-                      className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 resize-none"
+                      className="w-full px-4 py-3 rounded-xl text-base transition-all duration-200 resize-none"
                       style={{
-                        backgroundColor: "#2a2a2a",
-                        borderColor: "#374151",
-                        color: "#ffffff",
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        color: COLORS.TEXT_PRIMARY,
                         border: "1px solid",
                       }}
                       placeholder="List any injuries or physical limitations..."
@@ -741,8 +748,8 @@ function ClientSettingsPage() {
             {activeTab === "appearance" && (
               <div>
                 <h3
-                  className="text-2xl font-bold mb-6"
-                  style={{ color: "#ffffff" }}
+                  className="text-xl md:text-2xl font-bold mb-4 md:mb-6"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Appearance Settings
                 </h3>
@@ -767,14 +774,20 @@ function ClientSettingsPage() {
                     ].map(setting => (
                       <div
                         key={setting.key}
-                        className="flex items-center justify-between p-4 rounded-xl"
-                        style={{ backgroundColor: "#2a2a2a" }}
+                        className="flex items-center justify-between p-4 rounded-xl min-h-[44px]"
+                        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
                       >
                         <div>
-                          <h4 className="font-medium text-white">
+                          <h4
+                            className="font-medium"
+                            style={{ color: COLORS.TEXT_PRIMARY }}
+                          >
                             {setting.label}
                           </h4>
-                          <p className="text-sm" style={{ color: "#9ca3af" }}>
+                          <p
+                            className="text-sm"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             {setting.description}
                           </p>
                         </div>
@@ -792,7 +805,8 @@ function ClientSettingsPage() {
                             }))
                           }
                           disabled={setting.key === "darkMode"}
-                          className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 disabled:opacity-50"
+                          className="w-5 h-5 rounded disabled:opacity-50"
+                          style={{ accentColor: COLORS.GOLDEN_ACCENT }}
                         />
                       </div>
                     ))}
@@ -804,23 +818,29 @@ function ClientSettingsPage() {
             {/* Save Button */}
             <div
               className="mt-8 pt-6 border-t"
-              style={{ borderColor: "#2a2a2a" }}
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
             >
               <div className="flex justify-between items-center">
                 {saveSuccess && (
                   <div
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                    style={{ backgroundColor: "#10b981", color: "#ffffff" }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl min-h-[44px]"
+                    style={{
+                      backgroundColor: COLORS.GREEN_PRIMARY,
+                      color: COLORS.BACKGROUND_DARK,
+                    }}
                   >
-                    <Save className="w-4 h-4" />
+                    <Save className="w-4 h-4 flex-shrink-0" />
                     Settings saved successfully!
                   </div>
                 )}
                 <button
                   onClick={handleSave}
                   disabled={isLoading}
-                  className="px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                  style={{ backgroundColor: "#374151", color: "#ffffff" }}
+                  className="px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-200 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg min-h-[44px] touch-manipulation"
+                  style={{
+                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                    color: COLORS.BACKGROUND_DARK,
+                  }}
                 >
                   {isLoading ? (
                     <>

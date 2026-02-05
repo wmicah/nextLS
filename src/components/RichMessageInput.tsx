@@ -56,15 +56,15 @@ export default function RichMessageInput({
   useEffect(() => {
     const checkMobile = () => {
       // Check for touch capability (primary input is touch)
-      const hasTouch = window.matchMedia('(pointer: coarse)').matches;
+      const hasTouch = window.matchMedia("(pointer: coarse)").matches;
       // Also check screen width as a fallback
       const isSmallScreen = window.innerWidth < 768;
       setIsMobile(hasTouch || isSmallScreen);
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Auto-resize textarea
@@ -166,10 +166,12 @@ export default function RichMessageInput({
                       color: "#ffffff",
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.8)";
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(239, 68, 68, 0.8)";
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(0, 0, 0, 0.5)";
                     }}
                     title="Remove file"
                   >
@@ -189,14 +191,17 @@ export default function RichMessageInput({
                   </button>
                 )}
               </div>
-              <div className="p-3 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-                <div 
+              <div
+                className="p-3 border-t"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <div
                   className="text-sm font-medium truncate"
                   style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   {selectedFile.uploadData.attachmentName}
                 </div>
-                <div 
+                <div
                   className="text-xs mt-1"
                   style={{ color: COLORS.TEXT_MUTED }}
                 >
@@ -225,10 +230,12 @@ export default function RichMessageInput({
                       color: "#ffffff",
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.8)";
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(239, 68, 68, 0.8)";
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(0, 0, 0, 0.5)";
                     }}
                     title="Remove file"
                   >
@@ -248,14 +255,17 @@ export default function RichMessageInput({
                   </button>
                 )}
               </div>
-              <div className="p-3 border-t" style={{ borderColor: COLORS.BORDER_SUBTLE }}>
-                <div 
+              <div
+                className="p-3 border-t"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
+                <div
                   className="text-sm font-medium truncate"
                   style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   {selectedFile.uploadData.attachmentName}
                 </div>
-                <div 
+                <div
                   className="text-xs mt-1"
                   style={{ color: COLORS.TEXT_MUTED }}
                 >
@@ -266,28 +276,25 @@ export default function RichMessageInput({
           ) : (
             <div className="flex items-center justify-between p-3">
               <div className="flex items-center gap-3">
-                <div 
+                <div
                   className="w-12 h-12 rounded-lg flex items-center justify-center"
-                  style={{ 
+                  style={{
                     backgroundColor: COLORS.BACKGROUND_CARD_HOVER,
                   }}
                 >
-                  <Paperclip 
-                    className="h-6 w-6" 
+                  <Paperclip
+                    className="h-6 w-6"
                     style={{ color: COLORS.TEXT_SECONDARY }}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div 
+                  <div
                     className="text-sm font-medium truncate"
                     style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {selectedFile.uploadData.attachmentName}
                   </div>
-                  <div 
-                    className="text-xs"
-                    style={{ color: COLORS.TEXT_MUTED }}
-                  >
+                  <div className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     {selectedFile.uploadData.attachmentType} • Ready to send
                   </div>
                 </div>
@@ -301,7 +308,8 @@ export default function RichMessageInput({
                     color: COLORS.TEXT_MUTED,
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+                    e.currentTarget.style.backgroundColor =
+                      "rgba(239, 68, 68, 0.2)";
                     e.currentTarget.style.color = COLORS.RED_ALERT;
                   }}
                   onMouseLeave={e => {
@@ -340,7 +348,8 @@ export default function RichMessageInput({
             style={{ color: COLORS.TEXT_SECONDARY }}
             onMouseEnter={e => {
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
             }}
             onMouseLeave={e => {
               e.currentTarget.style.color = COLORS.TEXT_SECONDARY;
@@ -374,7 +383,8 @@ export default function RichMessageInput({
               ref={textareaRef}
               rows={1}
               value={value}
-              onChange={e => onChange(e.target.value)}
+              maxLength={10000}
+              onChange={e => onChange(e.target.value.slice(0, 10000))}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               disabled={disabled || isPending}
@@ -391,7 +401,8 @@ export default function RichMessageInput({
               }}
               onFocus={e => {
                 e.currentTarget.style.borderColor = getGoldenAccent(0.3);
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
               }}
               onBlur={e => {
                 e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
@@ -402,7 +413,7 @@ export default function RichMessageInput({
 
           {/* Formatting hint - only show when focused or has content */}
           {value.trim() && !showPreview && (
-            <div 
+            <div
               className="absolute bottom-1 right-1 text-xs"
               style={{ color: COLORS.TEXT_MUTED }}
             >
@@ -410,7 +421,9 @@ export default function RichMessageInput({
               value.includes("__") ||
               value.includes("*") ||
               value.includes("_") ? (
-                <span style={{ color: COLORS.GOLDEN_ACCENT }}>Rich text detected</span>
+                <span style={{ color: COLORS.GOLDEN_ACCENT }}>
+                  Rich text detected
+                </span>
               ) : null}
             </div>
           )}
@@ -421,13 +434,18 @@ export default function RichMessageInput({
           onClick={() => setShowFormatting(!showFormatting)}
           className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
           style={{
-            color: showFormatting ? COLORS.GOLDEN_ACCENT : COLORS.TEXT_SECONDARY,
-            backgroundColor: showFormatting ? getGoldenAccent(0.2) : "transparent",
+            color: showFormatting
+              ? COLORS.GOLDEN_ACCENT
+              : COLORS.TEXT_SECONDARY,
+            backgroundColor: showFormatting
+              ? getGoldenAccent(0.2)
+              : "transparent",
           }}
           onMouseEnter={e => {
             if (!showFormatting) {
               e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-              e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+              e.currentTarget.style.backgroundColor =
+                COLORS.BACKGROUND_CARD_HOVER;
             }
           }}
           onMouseLeave={e => {
@@ -448,12 +466,15 @@ export default function RichMessageInput({
             className="p-2 rounded-lg transition-all duration-200 hover:scale-105"
             style={{
               color: showPreview ? COLORS.GREEN_PRIMARY : COLORS.TEXT_SECONDARY,
-              backgroundColor: showPreview ? getGoldenAccent(0.2) : "transparent",
+              backgroundColor: showPreview
+                ? getGoldenAccent(0.2)
+                : "transparent",
             }}
             onMouseEnter={e => {
               if (!showPreview) {
                 e.currentTarget.style.color = COLORS.TEXT_PRIMARY;
-                e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                e.currentTarget.style.backgroundColor =
+                  COLORS.BACKGROUND_CARD_HOVER;
               }
             }}
             onMouseLeave={e => {

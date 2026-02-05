@@ -2,20 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { trpc } from "@/app/_trpc/client";
-import {
-  User,
-  Bell,
-  MessageSquare,
-  Target,
-  Calendar,
-  Palette,
-  Save,
-  Settings as SettingsIcon,
-  Activity,
-  Clock,
-  Home,
-  ChevronLeft,
-} from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import ProfilePictureUploader from "@/components/ProfilePictureUploader";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
@@ -26,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { pushNotificationService } from "@/lib/pushNotifications";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 import {
   Select,
   SelectContent,
@@ -169,67 +157,90 @@ export default function MobileClientSettingsPage() {
   };
 
   const tabs = [
-    { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
-    {
-      id: "notifications",
-      label: "Notifications",
-      icon: <Bell className="h-4 w-4" />,
-    },
-    { id: "training", label: "Training", icon: <Target className="h-4 w-4" /> },
-    {
-      id: "appearance",
-      label: "Appearance",
-      icon: <Palette className="h-4 w-4" />,
-    },
+    { id: "profile", label: "Profile" },
+    { id: "notifications", label: "Notifications" },
+    { id: "training", label: "Training" },
+    { id: "appearance", label: "Appearance" },
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
       {/* Mobile Header */}
-      <div 
-        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
-        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+      <div
+        className="sticky top-0 z-50 border-b px-4 pb-3"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+          paddingTop: "calc(0.75rem + env(safe-area-inset-top))",
+        }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => router.push("/client-dashboard")}
-              className="p-2 rounded-lg hover:bg-[#4A5A70] transition-colors"
-              style={{ minWidth: "44px", minHeight: "44px" }}
+              className="p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+              style={{
+                minWidth: 44,
+                minHeight: 44,
+                backgroundColor: "transparent",
+                color: COLORS.TEXT_PRIMARY,
+              }}
               aria-label="Back to dashboard"
             >
-              <ChevronLeft className="h-5 w-5 text-white" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
-            >
-              <SettingsIcon className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Settings</h1>
-              <p className="text-xs text-gray-400">Account preferences</p>
+            <div className="min-w-0">
+              <h1
+                className="text-lg font-bold truncate"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Settings
+              </h1>
+              <p
+                className="text-sm truncate"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
+                Account preferences
+              </p>
             </div>
           </div>
           <MobileClientNavigation currentPage="settings" />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="p-4 pb-20 space-y-6">
+      {/* Main Content - bottom padding clears bottom nav + safe area */}
+      <div
+        className="p-4 space-y-6"
+        style={{
+          paddingBottom:
+            "max(5rem, calc(5rem + env(safe-area-inset-bottom, 0px)))",
+        }}
+      >
         {/* Tab Navigation */}
         <div className="grid grid-cols-2 gap-2">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`p-3 rounded-lg transition-colors flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? "bg-[#4A5A70] text-white"
-                  : "bg-[#353A3A] text-[#C3BCC2] hover:bg-[#4A5A70] hover:text-white"
-              }`}
+              className="p-3 rounded-lg transition-colors flex items-center gap-2 min-h-[44px] touch-manipulation"
+              style={{
+                backgroundColor:
+                  activeTab === tab.id
+                    ? getGoldenAccent(0.2)
+                    : COLORS.BACKGROUND_CARD,
+                color:
+                  activeTab === tab.id
+                    ? COLORS.GOLDEN_ACCENT
+                    : COLORS.TEXT_SECONDARY,
+                border:
+                  activeTab === tab.id
+                    ? `1px solid ${getGoldenAccent(0.3)}`
+                    : "1px solid transparent",
+              }}
             >
-              {tab.icon}
               <span className="text-sm font-medium">{tab.label}</span>
             </button>
           ))}
@@ -238,8 +249,11 @@ export default function MobileClientSettingsPage() {
         {/* Profile Tab */}
         {activeTab === "profile" && (
           <div
-            className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            className="p-4 rounded-lg border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <div className="space-y-4">
               <div className="text-center">
@@ -252,7 +266,10 @@ export default function MobileClientSettingsPage() {
                   size="lg"
                   readOnly={false}
                 />
-                <p className="text-sm text-[#ABA4AA] mt-2">
+                <p
+                  className="text-sm mt-2"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                >
                   Tap to change profile picture
                 </p>
               </div>
@@ -261,7 +278,8 @@ export default function MobileClientSettingsPage() {
                 <div>
                   <Label
                     htmlFor="name"
-                    className="text-[#C3BCC2] text-sm font-medium"
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
                     Full Name
                   </Label>
@@ -274,15 +292,22 @@ export default function MobileClientSettingsPage() {
                         name: e.target.value,
                       }))
                     }
-                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    className="mt-1 text-base min-h-[44px]"
                     placeholder="Enter your full name"
+                    style={{
+                      fontSize: 16,
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                   />
                 </div>
 
                 <div>
                   <Label
                     htmlFor="phone"
-                    className="text-[#C3BCC2] text-sm font-medium"
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
                     Phone Number
                   </Label>
@@ -295,15 +320,22 @@ export default function MobileClientSettingsPage() {
                         phone: e.target.value,
                       }))
                     }
-                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    className="mt-1 text-base min-h-[44px]"
                     placeholder="Enter your phone number"
+                    style={{
+                      fontSize: 16,
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                   />
                 </div>
 
                 <div>
                   <Label
                     htmlFor="location"
-                    className="text-[#C3BCC2] text-sm font-medium"
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
                     Location
                   </Label>
@@ -316,15 +348,22 @@ export default function MobileClientSettingsPage() {
                         location: e.target.value,
                       }))
                     }
-                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    className="mt-1 text-base min-h-[44px]"
                     placeholder="Enter your location"
+                    style={{
+                      fontSize: 16,
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                   />
                 </div>
 
                 <div>
                   <Label
                     htmlFor="bio"
-                    className="text-[#C3BCC2] text-sm font-medium"
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
                   >
                     Bio
                   </Label>
@@ -334,9 +373,14 @@ export default function MobileClientSettingsPage() {
                     onChange={e =>
                       setProfileData(prev => ({ ...prev, bio: e.target.value }))
                     }
-                    className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                    className="mt-1 text-base"
                     placeholder="Tell us about yourself..."
                     rows={3}
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
                   />
                 </div>
               </div>
@@ -344,7 +388,11 @@ export default function MobileClientSettingsPage() {
               <Button
                 onClick={handleSaveProfile}
                 disabled={isLoading}
-                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+                className="w-full min-h-[44px] touch-manipulation"
+                style={{
+                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                  color: COLORS.BACKGROUND_DARK,
+                }}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
@@ -352,15 +400,15 @@ export default function MobileClientSettingsPage() {
                     Saving...
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <Save className="h-4 w-4" />
-                    Save Profile
-                  </div>
+                  <>Save Profile</>
                 )}
               </Button>
 
               {saveSuccess && (
-                <div className="text-center text-green-400 text-sm">
+                <div
+                  className="text-center text-sm"
+                  style={{ color: COLORS.GREEN_PRIMARY }}
+                >
                   Profile saved successfully!
                 </div>
               )}
@@ -371,16 +419,22 @@ export default function MobileClientSettingsPage() {
         {/* Notifications Tab */}
         {activeTab === "notifications" && (
           <div
-            className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            className="p-4 rounded-lg border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Email Notifications
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Receive email updates
                   </p>
                 </div>
@@ -395,12 +449,15 @@ export default function MobileClientSettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Push Notifications
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Receive push notifications
                   </p>
                 </div>
@@ -418,7 +475,8 @@ export default function MobileClientSettingsPage() {
                         ) {
                           // Request permission if not already granted
                           if (Notification.permission === "default") {
-                            const permission = await Notification.requestPermission();
+                            const permission =
+                              await Notification.requestPermission();
                             if (permission !== "granted") {
                               alert(
                                 "Push notifications require browser permission. Please enable notifications in your browser settings."
@@ -445,7 +503,10 @@ export default function MobileClientSettingsPage() {
                           return;
                         }
                       } catch (error: any) {
-                        console.error("Error enabling push notifications:", error);
+                        console.error(
+                          "Error enabling push notifications:",
+                          error
+                        );
                         alert(
                           "Failed to enable push notifications. Please check your browser settings."
                         );
@@ -462,12 +523,15 @@ export default function MobileClientSettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Sound Notifications
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Play sounds for notifications
                   </p>
                 </div>
@@ -482,12 +546,15 @@ export default function MobileClientSettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Message Notifications
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Notify about new messages
                   </p>
                 </div>
@@ -502,12 +569,15 @@ export default function MobileClientSettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Schedule Notifications
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Notify about schedule changes
                   </p>
                 </div>
@@ -525,18 +595,19 @@ export default function MobileClientSettingsPage() {
               <Button
                 onClick={handleSaveSettings}
                 disabled={isLoading}
-                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+                className="w-full min-h-[44px] touch-manipulation"
+                style={{
+                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                  color: COLORS.BACKGROUND_DARK,
+                }}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
                     Saving...
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <Save className="h-4 w-4" />
-                    Save Notifications
-                  </div>
+                  <>Save Notifications</>
                 )}
               </Button>
             </div>
@@ -546,12 +617,18 @@ export default function MobileClientSettingsPage() {
         {/* Training Tab */}
         {activeTab === "training" && (
           <div
-            className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            className="p-4 rounded-lg border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <div className="space-y-4">
               <div>
-                <Label className="text-[#C3BCC2] text-sm font-medium">
+                <Label
+                  className="text-sm font-medium"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
                   Preferred Workout Time
                 </Label>
                 <Select
@@ -563,7 +640,14 @@ export default function MobileClientSettingsPage() {
                     }))
                   }
                 >
-                  <SelectTrigger className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2]">
+                  <SelectTrigger
+                    className="mt-1 min-h-[44px] text-base"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -575,7 +659,10 @@ export default function MobileClientSettingsPage() {
               </div>
 
               <div>
-                <Label className="text-[#C3BCC2] text-sm font-medium">
+                <Label
+                  className="text-sm font-medium"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
                   Workout Duration (minutes)
                 </Label>
                 <Input
@@ -587,13 +674,22 @@ export default function MobileClientSettingsPage() {
                       workoutDuration: parseInt(e.target.value) || 60,
                     }))
                   }
-                  className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                  className="mt-1 text-base min-h-[44px]"
                   placeholder="60"
+                  style={{
+                    fontSize: 16,
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
                 />
               </div>
 
               <div>
-                <Label className="text-[#C3BCC2] text-sm font-medium">
+                <Label
+                  className="text-sm font-medium"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                >
                   Experience Level
                 </Label>
                 <Select
@@ -605,7 +701,14 @@ export default function MobileClientSettingsPage() {
                     }))
                   }
                 >
-                  <SelectTrigger className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2]">
+                  <SelectTrigger
+                    className="mt-1 min-h-[44px] text-base"
+                    style={{
+                      backgroundColor: COLORS.BACKGROUND_DARK,
+                      borderColor: COLORS.BORDER_SUBTLE,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -619,7 +722,8 @@ export default function MobileClientSettingsPage() {
               <div>
                 <Label
                   htmlFor="goals"
-                  className="text-[#C3BCC2] text-sm font-medium"
+                  className="text-sm font-medium"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
                   Training Goals
                 </Label>
@@ -632,16 +736,22 @@ export default function MobileClientSettingsPage() {
                       goals: e.target.value,
                     }))
                   }
-                  className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                  className="mt-1 text-base"
                   placeholder="What are your training goals?"
                   rows={3}
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
                 />
               </div>
 
               <div>
                 <Label
                   htmlFor="injuries"
-                  className="text-[#C3BCC2] text-sm font-medium"
+                  className="text-sm font-medium"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
                   Injuries or Limitations
                 </Label>
@@ -654,27 +764,33 @@ export default function MobileClientSettingsPage() {
                       injuries: e.target.value,
                     }))
                   }
-                  className="mt-1 bg-[#353A3A] border-[#606364] text-[#C3BCC2] placeholder-[#ABA4AA] focus:ring-[#4A5A70]"
+                  className="mt-1 text-base"
                   placeholder="Any injuries or limitations we should know about?"
                   rows={3}
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                  }}
                 />
               </div>
 
               <Button
                 onClick={handleSaveSettings}
                 disabled={isLoading}
-                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+                className="w-full min-h-[44px] touch-manipulation"
+                style={{
+                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                  color: COLORS.BACKGROUND_DARK,
+                }}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
                     Saving...
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <Save className="h-4 w-4" />
-                    Save Training Info
-                  </div>
+                  <>Save Training Info</>
                 )}
               </Button>
             </div>
@@ -684,16 +800,22 @@ export default function MobileClientSettingsPage() {
         {/* Appearance Tab */}
         {activeTab === "appearance" && (
           <div
-            className="p-4 rounded-lg border-2"
-            style={{ backgroundColor: "#1F2426", borderColor: "#4A5A70" }}
+            className="p-4 rounded-lg border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Compact Sidebar
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Use a more compact sidebar layout
                   </p>
                 </div>
@@ -708,12 +830,15 @@ export default function MobileClientSettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Show Animations
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Enable UI animations and transitions
                   </p>
                 </div>
@@ -728,12 +853,15 @@ export default function MobileClientSettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px] py-2">
                 <div>
-                  <Label className="text-[#C3BCC2] text-sm font-medium">
+                  <Label
+                    className="text-sm font-medium"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Dark Mode
                   </Label>
-                  <p className="text-xs text-[#ABA4AA]">
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Use dark theme (always enabled on mobile)
                   </p>
                 </div>
@@ -748,18 +876,19 @@ export default function MobileClientSettingsPage() {
               <Button
                 onClick={handleSaveSettings}
                 disabled={isLoading}
-                className="w-full bg-[#4A5A70] hover:bg-[#606364] text-white"
+                className="w-full min-h-[44px] touch-manipulation"
+                style={{
+                  backgroundColor: COLORS.GOLDEN_ACCENT,
+                  color: COLORS.BACKGROUND_DARK,
+                }}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
                     Saving...
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <Save className="h-4 w-4" />
-                    Save Appearance
-                  </div>
+                  <>Save Appearance</>
                 )}
               </Button>
             </div>
@@ -767,7 +896,10 @@ export default function MobileClientSettingsPage() {
         )}
 
         {saveSuccess && (
-          <div className="text-center text-green-400 text-sm">
+          <div
+            className="text-center text-sm"
+            style={{ color: COLORS.GREEN_PRIMARY }}
+          >
             Settings saved successfully!
           </div>
         )}

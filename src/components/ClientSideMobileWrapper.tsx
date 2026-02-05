@@ -7,7 +7,7 @@ import { ReactNode, Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ComponentErrorFallback } from "@/components/ErrorFallback";
 import Sidebar from "@/components/Sidebar";
-import ClientSidebar from "@/components/ClientSidebar";
+import ClientTopNav from "@/components/ClientTopNav";
 
 // Loading skeleton component for page transitions (not used anymore, but kept for reference)
 // const PageSkeleton = () => (
@@ -224,9 +224,19 @@ export default function ClientSideMobileWrapper({
     );
   }
   if (variant === "client") {
+    // No sidebar: desktop uses top nav only, mobile pages have their own header + bottom nav
+    if (isMobile) {
+      return (
+        <ErrorBoundary fallback={<ComponentErrorFallback />}>
+          <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+            {children}
+          </div>
+        </ErrorBoundary>
+      );
+    }
     return (
       <ErrorBoundary fallback={<ComponentErrorFallback />}>
-        <ClientSidebar>{children}</ClientSidebar>
+        <ClientTopNav>{children}</ClientTopNav>
       </ErrorBoundary>
     );
   }

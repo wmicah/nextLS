@@ -18,8 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import ProfilePictureUploader from "./ProfilePictureUploader";
-import MessagePopup from "./MessagePopup";
-import NotificationPopup from "./NotificationPopup";
 import { COLORS } from "@/lib/colors";
 
 interface ClientTopNavProps {
@@ -29,12 +27,6 @@ interface ClientTopNavProps {
 function ClientTopNav({ children }: ClientTopNavProps) {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [showRecentMessages, setShowRecentMessages] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const messagesButtonRef = useRef<HTMLButtonElement>(null);
-  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
 
   // Get user data
   const { data: authData } = trpc.authCallback.useQuery();
@@ -70,13 +62,11 @@ function ClientTopNav({ children }: ClientTopNavProps) {
   };
 
   const handleMessages = () => {
-    setShowRecentMessages(!showRecentMessages);
-    setShowNotifications(false);
+    router.push("/client-messages");
   };
 
   const handleNotifications = () => {
-    setShowNotifications(!showNotifications);
-    setShowRecentMessages(false);
+    router.push("/client-notifications");
   };
 
   const handleDashboard = () => {
@@ -186,7 +176,6 @@ function ClientTopNav({ children }: ClientTopNavProps) {
 
                 {/* Messages */}
                 <button
-                  ref={messagesButtonRef}
                   onClick={handleMessages}
                   className="relative p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
                   style={{
@@ -218,7 +207,6 @@ function ClientTopNav({ children }: ClientTopNavProps) {
 
                 {/* Notifications */}
                 <button
-                  ref={notificationsButtonRef}
                   onClick={handleNotifications}
                   className="relative p-2.5 rounded-lg transition-all duration-200 touch-manipulation"
                   style={{
@@ -538,39 +526,17 @@ function ClientTopNav({ children }: ClientTopNavProps) {
         )}
       </nav>
 
-      {/* Main Content - Scrollable area */}
+      {/* Main Content - flex so child pages can fill height and manage their own scroll */}
       <main
-        className="flex-1 w-full"
+        className="flex-1 w-full flex flex-col min-h-0 overflow-y-auto overflow-x-hidden"
         style={{
-          minHeight: 0,
-          overflowY: "auto",
-          overflowX: "hidden",
-          WebkitOverflowScrolling: "touch", // Smooth scrolling on iOS
-          overscrollBehavior: "contain", // Prevent overscroll bounce within this container
-          touchAction: "pan-y", // Allow vertical scrolling only
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          touchAction: "pan-y",
         }}
       >
         {children}
       </main>
-
-      {/* Message Popup */}
-      {showRecentMessages && (
-        <MessagePopup
-          isOpen={showRecentMessages}
-          onClose={() => setShowRecentMessages(false)}
-          buttonRef={messagesButtonRef}
-        />
-      )}
-
-      {/* Notification Popup */}
-      {showNotifications && (
-        <NotificationPopup
-          isOpen={showNotifications}
-          onClose={() => setShowNotifications(false)}
-          buttonRef={notificationsButtonRef}
-          position="below"
-        />
-      )}
     </div>
   );
 }

@@ -4,8 +4,16 @@ import { useState } from "react";
 import { MessageCircle, Bell, AlertCircle } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 import BugReportModalMobile from "./BugReportModalMobile";
+import { COLORS } from "@/lib/colors";
 
-export default function MobileClientBottomNavigation() {
+interface MobileClientBottomNavigationProps {
+  /** When true, show Bug Report on the left (e.g. on messages page only) */
+  bugReportOnLeft?: boolean;
+}
+
+export default function MobileClientBottomNavigation({
+  bugReportOnLeft = false,
+}: MobileClientBottomNavigationProps = {}) {
   const [showBugReport, setShowBugReport] = useState(false);
 
   // Get unread counts - will update via Supabase Realtime
@@ -27,63 +35,110 @@ export default function MobileClientBottomNavigation() {
     });
 
   return (
-    <div 
-      className="fixed bottom-0 left-0 right-0 z-40 bg-[#353A3A] border-t border-[#606364] shadow-lg"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    <div
+      className="fixed bottom-0 left-0 right-0 z-40 border-t shadow-lg"
+      style={{
+        paddingBottom: "env(safe-area-inset-bottom)",
+        backgroundColor: COLORS.BACKGROUND_DARK,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
     >
-      <div className="flex items-center justify-around py-2">
-        {/* Notifications */}
+      <div className="flex items-center justify-around py-2 px-1">
+        {bugReportOnLeft && (
+          <button
+            onClick={() => setShowBugReport(true)}
+            className="flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[52px] flex-1 max-w-[120px] p-2 rounded-lg transition-all duration-200 active:scale-95 relative"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+          >
+            <div className="relative">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-medium truncate w-full text-center">
+              Report Bug
+            </span>
+          </button>
+        )}
+
+        {/* Notifications - short label so it doesn't truncate */}
         <button
           onClick={() => (window.location.href = "/client-notifications")}
-          className="flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-200 hover:bg-[#4A5A70] active:scale-95 relative"
+          className="flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[52px] flex-1 max-w-[120px] p-2 rounded-lg transition-all duration-200 active:scale-95 relative"
+          style={{ color: COLORS.TEXT_SECONDARY }}
         >
           <div className="relative">
-            <Bell className="h-6 w-6 text-white" />
+            <Bell className="h-6 w-6" />
             {!notificationsLoading && unreadNotifications > 0 && (
-              <div className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white shadow-lg bg-red-500">
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold px-1"
+                style={{
+                  backgroundColor: COLORS.RED_ALERT,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+              >
                 {unreadNotifications > 99 ? "99+" : unreadNotifications}
-              </div>
+              </span>
             )}
             {notificationsLoading && (
-              <div className="absolute -top-1 -right-1 text-xs text-gray-400">
+              <span
+                className="absolute -top-0.5 -right-0.5 text-[10px]"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
                 ...
-              </div>
+              </span>
             )}
           </div>
-          <span className="text-xs text-gray-400">Notifications</span>
+          <span className="text-[11px] font-medium truncate w-full text-center">
+            Alerts
+          </span>
         </button>
 
         {/* Messages */}
         <button
           onClick={() => (window.location.href = "/client-messages")}
-          className="flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-200 hover:bg-[#4A5A70] active:scale-95 relative"
+          className="flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[52px] flex-1 max-w-[120px] p-2 rounded-lg transition-all duration-200 active:scale-95 relative"
+          style={{ color: COLORS.TEXT_SECONDARY }}
         >
           <div className="relative">
-            <MessageCircle className="h-6 w-6 text-white" />
+            <MessageCircle className="h-6 w-6" />
             {!messagesLoading && unreadMessages > 0 && (
-              <div className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white shadow-lg bg-red-500">
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold px-1"
+                style={{
+                  backgroundColor: COLORS.RED_ALERT,
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+              >
                 {unreadMessages > 99 ? "99+" : unreadMessages}
-              </div>
+              </span>
             )}
             {messagesLoading && (
-              <div className="absolute -top-1 -right-1 text-xs text-gray-400">
+              <span
+                className="absolute -top-0.5 -right-0.5 text-[10px]"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
                 ...
-              </div>
+              </span>
             )}
           </div>
-          <span className="text-xs text-gray-400">Messages</span>
+          <span className="text-[11px] font-medium truncate w-full text-center">
+            Messages
+          </span>
         </button>
 
-        {/* Bug Report */}
-        <button
-          onClick={() => setShowBugReport(true)}
-          className="flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-200 hover:bg-[#4A5A70] active:scale-95 relative"
-        >
-          <div className="relative">
-            <AlertCircle className="h-6 w-6 text-white" />
-          </div>
-          <span className="text-xs text-gray-400">Report Bug</span>
-        </button>
+        {!bugReportOnLeft && (
+          <button
+            onClick={() => setShowBugReport(true)}
+            className="flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[52px] flex-1 max-w-[120px] p-2 rounded-lg transition-all duration-200 active:scale-95 relative"
+            style={{ color: COLORS.TEXT_SECONDARY }}
+          >
+            <div className="relative">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <span className="text-[11px] font-medium truncate w-full text-center">
+              Report Bug
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Bug Report Modal */}

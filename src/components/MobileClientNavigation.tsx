@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Menu,
   X,
   Home,
   Calendar,
   MessageCircle,
-  Settings,
   Bell,
-  User,
+  Settings,
   LogOut,
   Check,
 } from "lucide-react";
 import { trpc } from "@/app/_trpc/client";
 import ProfilePictureUploader from "./ProfilePictureUploader";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface MobileClientNavigationProps {
   currentPage?: string;
@@ -27,7 +27,6 @@ export default function MobileClientNavigation({
   const [isOpen, setIsOpen] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   const logoutButtonRef = useRef<HTMLButtonElement>(null);
 
   // Get current user info
@@ -68,9 +67,18 @@ export default function MobileClientNavigation({
     };
   }, [showLogout]);
 
+  const { data: unreadNotifications = 0 } =
+    trpc.notifications.getUnreadCount.useQuery(undefined, {
+      staleTime: 30 * 1000,
+    });
+  const { data: unreadMessages = 0 } = trpc.messaging.getUnreadCount.useQuery(
+    undefined,
+    { staleTime: 30 * 1000 }
+  );
+
   const navigationItems = [
     {
-      name: "Dashboard",
+      name: "My Program",
       href: "/client-dashboard",
       icon: <Home className="h-5 w-5" />,
       description: "Program & progress",
@@ -79,19 +87,27 @@ export default function MobileClientNavigation({
       name: "Schedule",
       href: "/client-schedule",
       icon: <Calendar className="h-5 w-5" />,
-      description: "Training calendar",
+      description: "Lessons & calendar",
     },
     {
       name: "Messages",
       href: "/client-messages",
       icon: <MessageCircle className="h-5 w-5" />,
-      description: "Coach communication",
+      description: "Chat with coach",
+      badge: unreadMessages,
+    },
+    {
+      name: "Alerts",
+      href: "/client-notifications",
+      icon: <Bell className="h-5 w-5" />,
+      description: "Notifications",
+      badge: unreadNotifications,
     },
     {
       name: "Settings",
       href: "/client-settings",
       icon: <Settings className="h-5 w-5" />,
-      description: "Account settings",
+      description: "Account & preferences",
     },
   ];
 
@@ -107,70 +123,129 @@ export default function MobileClientNavigation({
     <>
       {/* Hamburger Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="p-2 rounded-lg hover:bg-[#4A5A70] transition-colors"
-        style={{ minWidth: "44px", minHeight: "44px" }}
+        className="p-2 rounded-lg transition-colors touch-manipulation"
+        style={{
+          minWidth: 44,
+          minHeight: 44,
+          color: COLORS.TEXT_PRIMARY,
+          backgroundColor: "transparent",
+        }}
+        aria-label="Open menu"
       >
-        <Menu className="h-6 w-6" style={{ color: "#C3BCC2" }} />
+        <Menu className="h-6 w-6" />
       </button>
 
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Navigation Panel */}
       <div
-        className={`fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-y-0" : "-translate-y-full"
-        }`}
-        style={{ 
-          backgroundColor: "#2A3133",
-          paddingTop: "env(safe-area-inset-top)"
+        className={`fixed top-0 left-0 right-0 z-[101] transform transition-transform duration-300 ease-in-out max-h-[100dvh] flex flex-col overflow-hidden`}
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          paddingTop: "env(safe-area-inset-top)",
+          transform: isOpen ? "translateY(0)" : "translateY(-100%)",
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#606364]">
-          <div className="flex items-center gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-white">Athlete Menu</h2>
-              <p className="text-xs text-gray-400">Navigation & settings</p>
-            </div>
+        <div
+          className="flex items-center justify-between p-4 border-b flex-shrink-0"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+        >
+          <div className="min-w-0">
+            <h2
+              className="text-lg font-bold truncate"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Menu
+            </h2>
+            <p
+              className="text-sm truncate"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
+              Navigation & settings
+            </p>
           </div>
           <button
+            type="button"
             onClick={() => setIsOpen(false)}
-            className="p-2 rounded-lg hover:bg-[#4A5A70] transition-colors"
-            style={{ minWidth: "44px", minHeight: "44px" }}
+            className="p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+            style={{
+              minWidth: 44,
+              minHeight: 44,
+              color: COLORS.TEXT_PRIMARY,
+            }}
+            aria-label="Close menu"
           >
-            <X className="h-6 w-6" style={{ color: "#C3BCC2" }} />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <div className="p-4">
+        {/* Navigation Items - scrollable */}
+        <div className="p-4 overflow-y-auto flex-1 min-h-0">
           <div className="grid grid-cols-2 gap-3">
             {navigationItems.map(item => (
               <a
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`p-3 rounded-lg transition-all duration-200 ${
-                  isActive(item.href)
-                    ? "bg-[#4A5A70] text-white shadow-lg"
-                    : "bg-[#353A3A] text-[#C3BCC2] hover:bg-[#4A5A70] hover:text-white"
-                }`}
-                style={{ minHeight: "70px" }}
+                className="p-4 rounded-xl transition-all duration-200 touch-manipulation flex flex-col items-center text-center min-h-[88px] justify-center relative"
+                style={{
+                  backgroundColor: isActive(item.href)
+                    ? getGoldenAccent(0.15)
+                    : COLORS.BACKGROUND_CARD,
+                  color: isActive(item.href)
+                    ? COLORS.GOLDEN_ACCENT
+                    : COLORS.TEXT_PRIMARY,
+                  borderWidth: 1,
+                  borderStyle: "solid",
+                  borderColor: isActive(item.href)
+                    ? getGoldenAccent(0.35)
+                    : COLORS.BORDER_SUBTLE,
+                }}
               >
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className="p-2 rounded-lg">
-                    <div className="w-6 h-2">{item.icon}</div>
+                {typeof item.badge === "number" && item.badge > 0 && (
+                  <span
+                    className="absolute top-2 right-2 min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center text-[10px] font-bold"
+                    style={{
+                      backgroundColor: COLORS.RED_ALERT,
+                      color: COLORS.TEXT_PRIMARY,
+                    }}
+                  >
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                )}
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="p-2 flex items-center justify-center"
+                    style={{
+                      color: isActive(item.href)
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.TEXT_SECONDARY,
+                    }}
+                  >
+                    {"icon" in item && item.icon}
                   </div>
                   <div>
-                    <div className="font-semibold text-sm">{item.name}</div>
-                    <div className="text-xs opacity-75">{item.description}</div>
+                    <div className="font-semibold text-base">{item.name}</div>
+                    <div
+                      className="text-sm mt-0.5"
+                      style={{
+                        color: isActive(item.href)
+                          ? COLORS.TEXT_SECONDARY
+                          : COLORS.TEXT_MUTED,
+                      }}
+                    >
+                      {item.description}
+                    </div>
                   </div>
                 </div>
               </a>
@@ -179,10 +254,25 @@ export default function MobileClientNavigation({
         </div>
 
         {/* User Profile Footer */}
-        <div className="p-4 border-t border-[#606364]">
-          <div className="bg-[#2A2F2F] border border-[#606364] rounded-lg p-3">
+        <div
+          className="p-4 border-t flex-shrink-0"
+          style={{
+            borderColor: COLORS.BORDER_SUBTLE,
+            paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+          }}
+        >
+          <div
+            className="rounded-xl p-4 border"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
             <div className="flex items-center gap-3">
-              <div className="border border-white/20 rounded-full p-0.5">
+              <div
+                className="rounded-full flex-shrink-0 border-2 p-0.5"
+                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+              >
                 <ProfilePictureUploader
                   currentAvatarUrl={userSettings?.avatarUrl || null}
                   userName={currentUser?.name || currentUser?.email || "User"}
@@ -192,14 +282,23 @@ export default function MobileClientNavigation({
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
+                <p
+                  className="text-base font-medium truncate"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   {currentUser?.name || currentUser?.email || "User"}
                 </p>
-                <p className="text-xs text-gray-400 truncate">Athlete</p>
+                <p
+                  className="text-sm truncate"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                >
+                  Athlete
+                </p>
               </div>
 
               <button
                 ref={logoutButtonRef}
+                type="button"
                 onClick={() => {
                   if (showLogout) {
                     handleLogout();
@@ -207,26 +306,22 @@ export default function MobileClientNavigation({
                     setShowLogout(true);
                   }
                 }}
-                className={`rounded-full p-2 transition-all duration-300 ${
-                  showLogout
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-[#4A5A70] hover:bg-[#606364] text-white"
-                }`}
+                className="rounded-full p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center transition-all duration-300 touch-manipulation"
+                style={{
+                  backgroundColor: showLogout
+                    ? COLORS.GREEN_PRIMARY
+                    : getGoldenAccent(0.2),
+                  color: showLogout
+                    ? COLORS.BACKGROUND_DARK
+                    : COLORS.GOLDEN_ACCENT,
+                }}
               >
-                <div className="relative w-4 h-4">
+                <div className="relative w-5 h-5">
                   <LogOut
-                    className={`absolute inset-0 w-4 h-4 transition-all duration-300 ${
-                      showLogout
-                        ? "opacity-0 rotate-180 scale-0"
-                        : "opacity-100 rotate-0 scale-100"
-                    }`}
+                    className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${showLogout ? "opacity-0 rotate-180 scale-0" : "opacity-100 rotate-0 scale-100"}`}
                   />
                   <Check
-                    className={`absolute inset-0 w-4 h-4 transition-all duration-300 ${
-                      showLogout
-                        ? "opacity-100 rotate-0 scale-100"
-                        : "opacity-0 rotate-180 scale-0"
-                    }`}
+                    className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${showLogout ? "opacity-100 rotate-0 scale-100" : "opacity-0 rotate-180 scale-0"}`}
                   />
                 </div>
               </button>

@@ -75,7 +75,7 @@ const navLinks = [
 
 const bottomLinks = [
   { name: "Settings", icon: <FiSettings />, href: "/client-settings" },
-  { name: "Notifications", icon: <FiBell />, href: "/notifications" },
+  { name: "Notifications", icon: <FiBell />, href: "/client-notifications" },
   { name: "Search", icon: <FiSearch />, href: "/search" },
 ];
 
@@ -308,9 +308,9 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    // On mobile, navigate directly to notifications page
+    // On mobile, navigate directly to client notifications page
     if (isMobile) {
-      router.push("/notifications");
+      router.push("/client-notifications");
       return;
     }
 
@@ -419,13 +419,14 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
         <button
           onClick={handleMobileLogoutClick}
           disabled={isLoggingOut}
-          className={`fixed top-4 right-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl text-white border backdrop-blur-sm ${
+          className={`fixed right-4 z-50 md:hidden p-3 rounded-xl transition-all duration-300 hover:scale-110 shadow-xl text-white border backdrop-blur-sm ${
             mobileLogoutConfirm
               ? "bg-gradient-to-br from-green-600 to-green-700 border-green-500"
               : "bg-gradient-to-br from-red-600 to-red-700 border-red-500"
           }`}
           aria-label={mobileLogoutConfirm ? "Confirm logout" : "Logout"}
           style={{
+            top: "max(1rem, calc(1rem + env(safe-area-inset-top, 0px)))",
             boxShadow: mobileLogoutConfirm
               ? "0 8px 32px rgba(34, 197, 94, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)"
               : "0 8px 32px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
@@ -1580,17 +1581,25 @@ export default function ClientSidebar({ user, children }: ClientSidebarProps) {
         </div>
       </aside>
 
-      {/* Main Content Area - improved mobile responsiveness */}
+      {/* Main Content Area - improved mobile responsiveness + safe area */}
       <div
         className={`flex-1 transition-all duration-500 ease-in-out ${
           isOpen ? "ml-0 md:ml-20 lg:ml-64" : "ml-0 md:ml-20"
         }`}
         style={{
           padding: "1rem",
-          paddingTop: "5rem", // Space for mobile hamburger button
+          paddingTop: "max(5rem, calc(5rem + env(safe-area-inset-top, 0px)))",
         }}
       >
-        <div className="max-w-full mx-auto pb-20">{children}</div>
+        <div
+          className="max-w-full mx-auto"
+          style={{
+            paddingBottom:
+              "max(5rem, calc(5rem + env(safe-area-inset-bottom, 0px)))",
+          }}
+        >
+          {children}
+        </div>
       </div>
 
       {/* Add custom keyframes for animations - improved mobile animations */}

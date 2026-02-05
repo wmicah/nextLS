@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMobileDetection } from "@/lib/mobile-detection";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface NotificationsPageProps {}
 
@@ -282,9 +283,11 @@ export default function NotificationsPage({}: NotificationsPageProps) {
     [filteredNotifications]
   );
 
-  // Handle notification click using smart routing
+  // Handle notification click using smart routing (client routes when viewer is client)
   const handleNotificationClickWrapper = (notification: any) => {
-    handleNotificationClick(notification, router, markAsReadMutation);
+    handleNotificationClick(notification, router, markAsReadMutation, {
+      forClient: !isCoach,
+    });
   };
 
   // Handle bulk actions
@@ -341,35 +344,61 @@ export default function NotificationsPage({}: NotificationsPageProps) {
   const filterCounts = getFilterCounts();
 
   return (
-    <div className="flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-[#2A3133] border-b border-[#606364] px-6 py-4 shadow-lg">
+    <div
+      className="flex flex-col flex-1 min-h-0"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
+      {/* Header - matches client messages simple header */}
+      <div
+        className="sticky top-0 z-20 flex-shrink-0 border-b px-4 sm:px-6 py-4 shadow-sm"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             {isMobile && (
               <button
                 onClick={() => router.back()}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-700"
-                style={{ color: "#C3BCC2" }}
+                className="p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
+                style={{
+                  color: COLORS.TEXT_PRIMARY,
+                }}
+                aria-label="Back"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Bell className="h-6 w-6" style={{ color: "#C3BCC2" }} />
+                <Bell
+                  className="h-6 w-6"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                />
                 {unreadCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  <div
+                    className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
+                    style={{ backgroundColor: COLORS.RED_ALERT }}
+                  />
                 )}
               </div>
               <div>
                 <h1
                   className="text-xl font-semibold"
-                  style={{ color: "#C3BCC2" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Notifications
                 </h1>
-                <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                <p
+                  className="text-sm"
+                  style={{
+                    color:
+                      unreadCount > 0
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.TEXT_MUTED,
+                  }}
+                >
                   {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
                 </p>
               </div>
@@ -379,14 +408,17 @@ export default function NotificationsPage({}: NotificationsPageProps) {
           <div className="flex items-center gap-2">
             {selectedNotifications.length > 0 && (
               <div className="flex items-center gap-2 mr-4">
-                <span className="text-sm" style={{ color: "#ABA4AA" }}>
+                <span className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
                   {selectedNotifications.length} selected
                 </span>
                 <button
                   onClick={handleBulkMarkAsRead}
                   disabled={markAsReadMutation.isPending}
-                  className="px-3 py-2 rounded-lg transition-colors hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2"
-                  style={{ color: "#C3BCC2" }}
+                  className="px-3 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 min-h-[44px]"
+                  style={{
+                    color: COLORS.TEXT_PRIMARY,
+                    backgroundColor: getGoldenAccent(0.15),
+                  }}
                 >
                   <Check className="h-4 w-4" />
                   <span className="text-sm">Mark Read</span>
@@ -398,8 +430,11 @@ export default function NotificationsPage({}: NotificationsPageProps) {
               <button
                 onClick={() => markAllAsReadMutation.mutate()}
                 disabled={markAllAsReadMutation.isPending}
-                className="px-4 py-2 rounded-lg transition-colors hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2"
-                style={{ color: "#C3BCC2" }}
+                className="px-4 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 min-h-[44px]"
+                style={{
+                  color: COLORS.GOLDEN_ACCENT,
+                  backgroundColor: getGoldenAccent(0.15),
+                }}
               >
                 <CheckCheck className="h-4 w-4" />
                 <span className="text-sm">Mark All Read</span>
@@ -408,8 +443,9 @@ export default function NotificationsPage({}: NotificationsPageProps) {
 
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="p-2 rounded-lg transition-colors hover:bg-gray-700"
-              style={{ color: "#C3BCC2" }}
+              className="p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px]"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+              aria-label="Settings"
             >
               <Settings className="h-5 w-5" />
             </button>
@@ -429,11 +465,11 @@ export default function NotificationsPage({}: NotificationsPageProps) {
               placeholder="Search notifications..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2"
               style={{
-                backgroundColor: "#1A1D1E",
-                borderColor: "#606364",
-                color: "#C3BCC2",
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                borderColor: COLORS.BORDER_SUBTLE,
+                color: COLORS.TEXT_PRIMARY,
               }}
             />
           </div>
@@ -469,8 +505,9 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                     : "text-gray-500 hover:text-white hover:bg-gray-600"
                 }`}
                 style={{
-                  backgroundColor: filter === key ? "#4A5A70" : "transparent",
-                  color: filter === key ? "#FFFFFF" : "#9CA3AF",
+                  backgroundColor:
+                    filter === key ? COLORS.GOLDEN_ACCENT : "transparent",
+                  color: filter === key ? "#000000" : COLORS.TEXT_SECONDARY,
                 }}
               >
                 {label} ({count})
@@ -540,8 +577,8 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                 {searchQuery
                   ? "No notifications found"
                   : filter === "unread"
-                  ? "No unread notifications"
-                  : "No notifications yet"}
+                    ? "No unread notifications"
+                    : "No notifications yet"}
               </h3>
               <p
                 className="text-sm text-center max-w-md"
@@ -550,8 +587,8 @@ export default function NotificationsPage({}: NotificationsPageProps) {
                 {searchQuery
                   ? "Try adjusting your search terms"
                   : filter === "unread"
-                  ? "You're all caught up! New notifications will appear here."
-                  : "You'll see notifications here when they arrive."}
+                    ? "You're all caught up! New notifications will appear here."
+                    : "You'll see notifications here when they arrive."}
               </p>
             </div>
           </div>

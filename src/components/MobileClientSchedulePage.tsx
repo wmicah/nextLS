@@ -3,18 +3,13 @@
 import { useState } from "react";
 import { trpc } from "@/app/_trpc/client";
 import {
-  Calendar,
-  Clock,
+  AlertCircle,
   ChevronLeft,
   ChevronRight,
   CheckCircle,
   XCircle,
-  AlertCircle,
   ArrowRightLeft,
   Loader2,
-  Home,
-  Users,
-  Plus,
   X,
 } from "lucide-react";
 import {
@@ -37,6 +32,7 @@ import {
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 import MobileSwapRequests from "./MobileSwapRequests";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 export default function MobileClientSchedulePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -49,7 +45,8 @@ export default function MobileClientSchedulePage() {
   const [requestReason, setRequestReason] = useState("");
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
   const [showExchangeOptions, setShowExchangeOptions] = useState(false);
-  const [selectedLessonToExchange, setSelectedLessonToExchange] = useState<any>(null);
+  const [selectedLessonToExchange, setSelectedLessonToExchange] =
+    useState<any>(null);
 
   // Fetch all schedule data for current and adjacent months
   const { data: coachSchedule = [] } =
@@ -302,7 +299,9 @@ export default function MobileClientSchedulePage() {
       setRequestReason("");
       utils.clientRouter.getCoachScheduleForClient.refetch();
       utils.clientRouter.getClientLessons.refetch();
-      alert("Exchange request sent! Your old lesson has been removed. If the coach rejects the new time, your old lesson will be restored.");
+      alert(
+        "Exchange request sent! Your old lesson has been removed. If the coach rejects the new time, your old lesson will be restored."
+      );
     },
     onError: (error: any) => {
       alert(`Error: ${error.message}`);
@@ -517,11 +516,23 @@ export default function MobileClientSchedulePage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return <CheckCircle className="h-4 w-4 text-blue-400" />;
+        return (
+          <CheckCircle
+            className="h-4 w-4"
+            style={{ color: COLORS.BLUE_PRIMARY }}
+          />
+        );
       case "DECLINED":
-        return <XCircle className="h-4 w-4 text-red-400" />;
+        return (
+          <XCircle className="h-4 w-4" style={{ color: COLORS.RED_ALERT }} />
+        );
       case "PENDING":
-        return <AlertCircle className="h-4 w-4 text-yellow-400" />;
+        return (
+          <AlertCircle
+            className="h-4 w-4"
+            style={{ color: COLORS.GOLDEN_ACCENT }}
+          />
+        );
       default:
         return null;
     }
@@ -530,13 +541,13 @@ export default function MobileClientSchedulePage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMED":
-        return "bg-blue-500/40 text-blue-100 border-blue-400";
+        return "bg-blue-500/20 text-blue-100 border-blue-400";
       case "DECLINED":
-        return "bg-red-500/40 text-red-100 border-red-400";
+        return "bg-red-500/20 text-red-100 border-red-400";
       case "PENDING":
-        return "bg-yellow-500/40 text-yellow-100 border-yellow-400";
+        return "bg-amber-500/20 text-amber-100 border-amber-400";
       default:
-        return "bg-blue-500/40 text-blue-100 border-blue-400";
+        return "bg-blue-500/20 text-blue-100 border-blue-400";
     }
   };
 
@@ -599,67 +610,94 @@ export default function MobileClientSchedulePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
+    <div
+      className="min-h-[100dvh]"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_DARK,
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
       {/* Mobile Header */}
-      <div 
-        className="sticky top-0 z-50 bg-gradient-to-r from-[#2A3133] to-[#353A3A] border-b border-[#4A5A70] px-4 pb-4 shadow-lg"
-        style={{ paddingTop: `calc(1rem + env(safe-area-inset-top))` }}
+      <div
+        className="sticky top-0 z-50 border-b px-4 pb-4"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+          paddingTop: "max(0.75rem, calc(0.75rem + env(safe-area-inset-top)))",
+        }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4A5A70] to-[#606364] flex items-center justify-center shadow-md">
-              <Calendar className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">My Schedule</h1>
-              <p className="text-sm text-gray-300">View & request lessons</p>
-            </div>
+          <div>
+            <h1
+              className="text-xl font-bold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              My Schedule
+            </h1>
+            <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
+              View & request lessons
+            </p>
           </div>
           <MobileClientNavigation currentPage="schedule" />
         </div>
       </div>
 
       {/* Main Content */}
-      <div 
+      <div
         className="p-4 space-y-6"
-        style={{ 
-          paddingBottom: "max(5rem, calc(5rem + env(safe-area-inset-bottom)))", // Account for bottom nav + safe area
+        style={{
+          paddingBottom:
+            "max(5rem, calc(5rem + env(safe-area-inset-bottom, 0px)))",
         }}
       >
         {/* Coach / Organization Working Hours */}
         {isInOrganization && organizationCoaches.length > 0 ? (
-          <div className="p-4 rounded-xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl space-y-3">
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-sky-400" />
-              <h2 className="text-lg font-semibold text-white">
-                Organization Coaches&apos; Hours
-              </h2>
-            </div>
+          <div
+            className="p-4 rounded-xl border shadow-xl space-y-3"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            <h2
+              className="text-lg font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Organization Coaches&apos; Hours
+            </h2>
             <div className="space-y-2">
               {organizationCoaches.map(coach => (
                 <div
                   key={coach.id}
                   className="p-3 rounded-lg border"
                   style={{
-                    backgroundColor: "#2A3133",
-                    borderColor: "#4A5A70",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-1.5">
                     <span
-                      className={`inline-block w-2.5 h-2.5 rounded-full ${getCoachColor(
-                        coach.id
-                      )}`}
+                      className={`inline-block w-2.5 h-2.5 rounded-full ${getCoachColor(coach.id)}`}
                     />
-                    <h3 className="text-sm font-semibold text-white">
+                    <h3
+                      className="text-sm font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       {coach.name || "Coach"}
                     </h3>
                   </div>
-                  <p className="text-xs text-gray-300">
+                  <p
+                    className="text-xs"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     {(coach.workingHoursStart as string) || "9:00 AM"} -{" "}
                     {(coach.workingHoursEnd as string) || "6:00 PM"}
                   </p>
-                  <p className="text-[11px] text-gray-400 mt-1">
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
                     {coach.workingDays && coach.workingDays.length > 0
                       ? coach.workingDays.join(", ")
                       : "Monday - Sunday"}
@@ -669,18 +707,27 @@ export default function MobileClientSchedulePage() {
             </div>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
-            <div className="flex items-center gap-3 mb-2">
-              <Clock className="h-5 w-5 text-sky-400" />
-              <h2 className="text-lg font-semibold text-white">
-                Coach&apos;s Working Hours
-              </h2>
-            </div>
-            <p className="text-gray-300 text-sm">
+          <div
+            className="p-4 rounded-xl border shadow-xl"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            <h2
+              className="text-lg font-semibold mb-2"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Coach&apos;s Working Hours
+            </h2>
+            <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
               {workingProfile.startTime} - {workingProfile.endTime}
             </p>
             {workingProfile.customWorkingHours && (
-              <p className="text-xs text-emerald-300 mt-1">
+              <p
+                className="text-xs mt-1"
+                style={{ color: COLORS.GREEN_PRIMARY }}
+              >
                 Custom daily hours enabled
               </p>
             )}
@@ -688,7 +735,11 @@ export default function MobileClientSchedulePage() {
               {workingProfile.workingDays.map((day: string) => (
                 <span
                   key={day}
-                  className="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-xs"
+                  className="px-2 py-1 rounded text-xs"
+                  style={{
+                    backgroundColor: getGoldenAccent(0.15),
+                    color: COLORS.GOLDEN_ACCENT,
+                  }}
                 >
                   {day.slice(0, 3)}
                 </span>
@@ -697,45 +748,67 @@ export default function MobileClientSchedulePage() {
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Action Buttons - touch-friendly */}
         <div className="flex gap-3">
           <button
+            type="button"
             onClick={() => setShowSwitchRequests(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-md"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold min-h-[44px] touch-manipulation"
+            style={{
+              backgroundColor: COLORS.GOLDEN_ACCENT,
+              color: COLORS.BACKGROUND_DARK,
+            }}
           >
-            <Users className="h-4 w-4" />
             Switch Requests
           </button>
         </div>
 
         {/* Upcoming Lessons Preview */}
         {upcomingLessons.length > 0 && (
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Upcoming Lessons
-                </h2>
-                <p className="text-xs text-[#ABA4AA]">
-                  Next {Math.min(upcomingLessons.length, 2)} scheduled sessions
-                </p>
-              </div>
-            </div>
+          <div
+            className="p-4 rounded-xl border space-y-3"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
+          >
+            <h2
+              className="text-lg font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Upcoming Lessons
+            </h2>
+            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+              Next {Math.min(upcomingLessons.length, 2)} scheduled sessions
+            </p>
             <div className="space-y-3">
               {upcomingLessonsPreview.map(lesson => (
                 <div
                   key={lesson.id}
-                  className="p-3 rounded-lg border border-[#4A5A70] bg-[#2A3133] flex items-center justify-between shadow-inner"
+                  className="p-3 rounded-lg border flex items-center justify-between"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
                 >
                   <div>
-                    <p className="text-sm font-semibold text-white">
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
                       {format(new Date(lesson.date), "EEE, MMM d")}
                     </p>
-                    <p className="text-xs text-[#C3BCC2]">
+                    <p
+                      className="text-xs"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       {format(new Date(lesson.date), "h:mm a")}
                     </p>
                     {lesson.title && (
-                      <p className="text-xs text-[#ABA4AA] mt-1 line-clamp-1">
+                      <p
+                        className="text-xs mt-1 line-clamp-1"
+                        style={{ color: COLORS.TEXT_MUTED }}
+                      >
                         {lesson.title}
                       </p>
                     )}
@@ -747,7 +820,11 @@ export default function MobileClientSchedulePage() {
                         ignoreAdvanceLimit: true,
                       });
                     }}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 bg-[#4A5A70] text-[#C3BCC2] hover:bg-[#606364]"
+                    className="text-sm font-semibold px-3 py-2 rounded-lg min-h-[44px] touch-manipulation transition-opacity active:opacity-90"
+                    style={{
+                      backgroundColor: getGoldenAccent(0.2),
+                      color: COLORS.GOLDEN_ACCENT,
+                    }}
                   >
                     View Day
                   </button>
@@ -755,39 +832,72 @@ export default function MobileClientSchedulePage() {
               ))}
             </div>
             {remainingUpcomingLessons > 0 && (
-              <div className="text-center text-xs text-[#ABA4AA]">
+              <p
+                className="text-center text-xs"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
                 +{remainingUpcomingLessons} more scheduled lesson
                 {remainingUpcomingLessons === 1 ? "" : "s"}
-              </div>
+              </p>
             )}
           </div>
         )}
 
         {/* Calendar */}
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#1F2426] to-[#2A3133] border border-[#4A5A70] shadow-xl">
+        <div
+          className="p-4 sm:p-6 rounded-xl border"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           {/* Month Navigation */}
-          <div className="flex items-center justify-between p-4 mb-6 rounded-xl bg-gradient-to-r from-[#353A3A] to-[#40454A] shadow-inner">
+          <div
+            className="flex items-center justify-between p-4 mb-4 rounded-xl"
+            style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+          >
             <button
+              type="button"
               onClick={() => navigateMonth("prev")}
-              className="p-3 rounded-xl bg-[#4A5A70] hover:bg-[#606364] transition-all duration-200 shadow-md hover:shadow-lg"
+              className="p-3 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation transition-opacity active:opacity-90"
+              style={{
+                backgroundColor: getGoldenAccent(0.2),
+                color: COLORS.GOLDEN_ACCENT,
+              }}
             >
-              <ChevronLeft className="h-5 w-5 text-white" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-2xl font-bold text-white">
+            <h3
+              className="text-xl sm:text-2xl font-bold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
               {format(currentMonth, "MMMM yyyy")}
             </h3>
             <button
+              type="button"
               onClick={() => navigateMonth("next")}
-              className="p-3 rounded-xl bg-[#4A5A70] hover:bg-[#606364] transition-all duration-200 shadow-md hover:shadow-lg"
+              className="p-3 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation transition-opacity active:opacity-90"
+              style={{
+                backgroundColor: getGoldenAccent(0.2),
+                color: COLORS.GOLDEN_ACCENT,
+              }}
             >
-              <ChevronRight className="h-5 w-5 text-white" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
 
           {scheduleAdvanceLimitDays && scheduleAdvanceLimitDays > 0 && (
-            <div className="px-4 py-3 mb-4 bg-[#1F2426] border border-[#4A5A70] rounded-xl text-xs text-gray-300">
+            <div
+              className="px-4 py-3 mb-4 rounded-xl text-sm"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                borderColor: COLORS.BORDER_SUBTLE,
+                borderWidth: 1,
+                color: COLORS.TEXT_SECONDARY,
+              }}
+            >
               You can request lessons up to{" "}
-              <span className="font-semibold text-white">
+              <span style={{ color: COLORS.TEXT_PRIMARY, fontWeight: 600 }}>
                 {scheduleAdvanceLimitDays} days
               </span>{" "}
               in advance.
@@ -799,7 +909,11 @@ export default function MobileClientSchedulePage() {
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
               <div
                 key={day}
-                className="text-center text-sm font-bold text-[#ABA4AA] py-3 bg-[#353A3A] rounded-lg"
+                className="text-center text-sm font-semibold py-2 rounded-lg"
+                style={{
+                  color: COLORS.TEXT_MUTED,
+                  backgroundColor: COLORS.BACKGROUND_DARK,
+                }}
               >
                 {day.slice(0, 1)}
               </div>
@@ -864,33 +978,64 @@ export default function MobileClientSchedulePage() {
                     }
                   }}
                   className={`
-                    aspect-square flex flex-col items-center justify-between text-xs rounded-xl transition-all duration-200 relative border-2 p-1 shadow-md hover:shadow-lg overflow-hidden
-                    ${
-                      isToday
-                        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-400 shadow-blue-500/30 font-bold"
-                        : isPast
-                        ? "text-gray-500 bg-gray-700/30 border-gray-600"
-                        : !isWorkingDay
-                        ? "text-orange-400 bg-orange-500/10 border-orange-500/30"
-                        : isBeyondLimit
-                        ? "text-gray-500 bg-gray-700/30 border-gray-600"
-                        : isCurrentMonth
-                        ? "text-white bg-gradient-to-br from-[#4A5A70] to-[#606364] border-[#4A5A70] hover:from-[#606364] hover:to-[#4A5A70]"
-                        : "text-gray-600 bg-gradient-to-br from-gray-900/30 to-gray-800/20 border-gray-700"
-                    }
+                    aspect-square flex flex-col items-center justify-between text-xs rounded-xl transition-all duration-200 relative border-2 p-1 overflow-hidden touch-manipulation
                     ${
                       canOpenDay
-                        ? "cursor-pointer active:scale-95"
+                        ? "cursor-pointer active:scale-[0.98]"
                         : "cursor-not-allowed opacity-60"
                     }
-                    ${isSelected ? "ring-2 ring-offset-1 ring-blue-300" : ""}
                   `}
+                  style={{
+                    ...(isToday
+                      ? {
+                          background: `linear-gradient(135deg, ${COLORS.BLUE_PRIMARY}, ${COLORS.BLUE_DARK})`,
+                          color: COLORS.TEXT_PRIMARY,
+                          borderColor: COLORS.BLUE_PRIMARY,
+                          fontWeight: 700,
+                        }
+                      : isPast
+                        ? {
+                            color: COLORS.TEXT_MUTED,
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            borderColor: COLORS.BORDER_SUBTLE,
+                          }
+                        : !isWorkingDay
+                          ? {
+                              color: COLORS.GOLDEN_ACCENT,
+                              backgroundColor: getGoldenAccent(0.1),
+                              borderColor: getGoldenAccent(0.3),
+                            }
+                          : isBeyondLimit
+                            ? {
+                                color: COLORS.TEXT_MUTED,
+                                backgroundColor: "rgba(255,255,255,0.04)",
+                                borderColor: COLORS.BORDER_SUBTLE,
+                              }
+                            : isCurrentMonth
+                              ? {
+                                  color: COLORS.TEXT_PRIMARY,
+                                  backgroundColor: isSelected
+                                    ? getGoldenAccent(0.25)
+                                    : COLORS.BACKGROUND_DARK,
+                                  borderColor: isSelected
+                                    ? COLORS.GOLDEN_ACCENT
+                                    : COLORS.BORDER_SUBTLE,
+                                }
+                              : {
+                                  color: COLORS.TEXT_MUTED,
+                                  backgroundColor: "rgba(255,255,255,0.02)",
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                }),
+                    ...(isSelected && !isToday && isCurrentMonth
+                      ? { boxShadow: `0 0 0 2px ${getGoldenAccent(0.5)}` }
+                      : {}),
+                  }}
                   title={
                     isBeyondLimit && scheduleAdvanceLimitDays
                       ? `This date is beyond your coach's scheduling window (${scheduleAdvanceLimitDays} day limit).`
                       : isBeyondLimit
-                      ? "This date is beyond your coach's scheduling window."
-                      : undefined
+                        ? "This date is beyond your coach's scheduling window."
+                        : undefined
                   }
                 >
                   <div className="w-full flex items-start justify-between text-[11px] font-semibold">
@@ -932,22 +1077,37 @@ export default function MobileClientSchedulePage() {
         </div>
       </div>
 
-      {/* Day Overview Modal */}
+      {/* Day Overview Modal - fully opaque, no transparency */}
       {showDayOverviewModal && selectedDate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+        >
           <div
-            className="rounded-2xl shadow-xl border w-full max-w-md max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+            className="rounded-xl border w-full max-w-md max-h-[90vh] overflow-y-auto"
+            style={{
+              backgroundColor: "#1c1f20",
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
           >
             <div
               className="sticky top-0 border-b px-4 py-4 flex items-center justify-between"
-              style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+              style={{
+                backgroundColor: "#1c1f20",
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
             >
               <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2
+                  className="text-xl font-bold"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   {format(selectedDate, "MMM d, yyyy")}
                 </h2>
-                <p className="text-gray-400 text-xs">
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: COLORS.TEXT_MUTED }}
+                >
                   {(() => {
                     const hours = getWorkingHoursForDate(selectedDate);
                     return hours.isWorkingDay
@@ -957,6 +1117,7 @@ export default function MobileClientSchedulePage() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setShowDayOverviewModal(false);
                   setSelectedDate(null);
@@ -964,8 +1125,12 @@ export default function MobileClientSchedulePage() {
                   setSelectedTimeSlot(null);
                   setRequestReason("");
                 }}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-700"
-                style={{ color: "#C3BCC2" }}
+                className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+                style={{
+                  color: COLORS.TEXT_SECONDARY,
+                  backgroundColor: "transparent",
+                }}
+                aria-label="Close"
               >
                 <XCircle className="h-5 w-5" />
               </button>
@@ -1007,11 +1172,15 @@ export default function MobileClientSchedulePage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-6 bg-gray-800/30 rounded-lg">
-                      <Calendar className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">
-                        No lessons scheduled
-                      </p>
+                    <div
+                      className="text-center py-6 rounded-lg"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        color: COLORS.TEXT_MUTED,
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      No lessons scheduled
                     </div>
                   );
                 })()}
@@ -1019,8 +1188,11 @@ export default function MobileClientSchedulePage() {
 
               {/* Coach's Lessons */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Coach's Scheduled Lessons
+                <h3
+                  className="text-lg font-semibold mb-3"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
+                  Coach&apos;s Scheduled Lessons
                 </h3>
                 {(() => {
                   const coachDayLessons = getLessonsForDate(selectedDate);
@@ -1065,7 +1237,10 @@ export default function MobileClientSchedulePage() {
                             className="space-y-2"
                           >
                             {isInOrganization && coachId !== "_default" && (
-                              <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-sky-200">
+                              <div
+                                className="flex items-center gap-2 text-xs uppercase tracking-wide"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              >
                                 <span
                                   className={`inline-block w-2 h-2 rounded-full ${getCoachColor(
                                     coachId
@@ -1079,13 +1254,23 @@ export default function MobileClientSchedulePage() {
                               return (
                                 <div
                                   key={`${lesson.id}-${lessonIndex}`}
-                                  className="flex items-center justify-between p-3 rounded-lg border bg-sky-500/10 border-sky-500/20"
+                                  className="flex items-center justify-between p-3 rounded-lg border"
+                                  style={{
+                                    backgroundColor: getGoldenAccent(0.08),
+                                    borderColor: getGoldenAccent(0.25),
+                                  }}
                                 >
                                   <div className="flex-1">
-                                    <div className="font-medium text-sky-300 text-sm">
+                                    <div
+                                      className="font-medium text-sm"
+                                      style={{ color: COLORS.TEXT_PRIMARY }}
+                                    >
                                       {format(new Date(lesson.date), "h:mm a")}
                                     </div>
-                                    <div className="text-xs text-sky-200">
+                                    <div
+                                      className="text-xs"
+                                      style={{ color: COLORS.TEXT_MUTED }}
+                                    >
                                       Client
                                     </div>
                                   </div>
@@ -1093,14 +1278,18 @@ export default function MobileClientSchedulePage() {
                                     upcomingLessons.length > 0 &&
                                     !hasPendingRequestWithTarget(lesson) && (
                                       <button
+                                        type="button"
                                         onClick={() => {
-                                          // Always show selection modal to choose which lesson to switch
                                           setSelectedSwitchLesson(lesson);
                                         }}
                                         disabled={
                                           createSwitchRequestMutation.isPending
                                         }
-                                        className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold min-h-[44px] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                                        style={{
+                                          backgroundColor: COLORS.GOLDEN_ACCENT,
+                                          color: COLORS.BACKGROUND_DARK,
+                                        }}
                                       >
                                         {createSwitchRequestMutation.isPending ? (
                                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -1112,7 +1301,13 @@ export default function MobileClientSchedulePage() {
                                     )}
                                   {!isPast &&
                                     hasPendingRequestWithTarget(lesson) && (
-                                      <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
+                                      <span
+                                        className="text-xs font-medium px-2 py-1 rounded"
+                                        style={{
+                                          color: COLORS.GOLDEN_ACCENT,
+                                          backgroundColor: getGoldenAccent(0.2),
+                                        }}
+                                      >
                                         Pending
                                       </span>
                                     )}
@@ -1124,11 +1319,15 @@ export default function MobileClientSchedulePage() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-center py-6 bg-gray-800/30 rounded-lg">
-                      <Users className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">
-                        No other lessons scheduled
-                      </p>
+                    <div
+                      className="text-center py-6 rounded-lg"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        color: COLORS.TEXT_MUTED,
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      No other lessons scheduled
                     </div>
                   );
                 })()}
@@ -1136,18 +1335,22 @@ export default function MobileClientSchedulePage() {
 
               {/* Available Time Slots */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-3">
+                <h3
+                  className="text-lg font-semibold mb-3"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   Available Time Slots
-                  {isInOrganization && (
-                    <span className="block text-xs text-[#ABA4AA] font-normal mt-1">
-                      {selectedCoachId
-                        ? `Coach: ${
-                            getWorkingProfile(selectedCoachId).coachName
-                          }`
-                        : "Select a coach to view available times"}
-                    </span>
-                  )}
                 </h3>
+                {isInOrganization && (
+                  <p
+                    className="text-xs mt-1 mb-2"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
+                    {selectedCoachId
+                      ? `Coach: ${getWorkingProfile(selectedCoachId).coachName}`
+                      : "Select a coach to view available times"}
+                  </p>
+                )}
                 {(() => {
                   const workingCoaches = getCoachesWorkingOnDate(selectedDate);
                   const effectiveCoachId =
@@ -1182,42 +1385,64 @@ export default function MobileClientSchedulePage() {
                   if (isInOrganization) {
                     if (workingCoaches.length === 0) {
                       return (
-                        <div className="text-center py-6 bg-gray-800/30 rounded-lg">
-                          <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                          <p className="text-gray-400 text-sm">
-                            No coaches are scheduled to work this day.
-                          </p>
+                        <div
+                          className="text-center py-6 rounded-lg"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            color: COLORS.TEXT_MUTED,
+                            fontSize: "0.875rem",
+                          }}
+                        >
+                          No coaches are scheduled to work this day.
                         </div>
                       );
                     }
 
                     if (!effectiveCoachId || availableSlots.length === 0) {
                       return (
-                        <div className="text-center py-6 bg-gray-800/30 rounded-lg">
-                          <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-                          <p className="text-gray-400 text-sm">
+                        <div
+                          className="text-center py-6 rounded-lg"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            color: COLORS.TEXT_MUTED,
+                            fontSize: "0.875rem",
+                          }}
+                        >
+                          <p className="mb-3">
                             No available time slots for{" "}
                             {activeCoachProfile.coachName}.
                           </p>
-                          <div className="space-y-2 mt-3">
-                            <p className="text-gray-500 text-xs">
-                              Try a different coach:
-                            </p>
-                            <div className="flex flex-wrap gap-2 justify-center">
-                              {workingCoaches.map(coach => (
-                                <button
-                                  key={coach.id}
-                                  onClick={() => setSelectedCoachId(coach.id)}
-                                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 border ${
+                          <p
+                            className="text-xs mb-2"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
+                            Try a different coach:
+                          </p>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {workingCoaches.map(coach => (
+                              <button
+                                key={coach.id}
+                                type="button"
+                                onClick={() => setSelectedCoachId(coach.id)}
+                                className="px-3 py-2 rounded-lg text-sm font-semibold min-h-[44px] touch-manipulation border"
+                                style={{
+                                  backgroundColor:
                                     coach.id === effectiveCoachId
-                                      ? "bg-sky-500/20 border-sky-500 text-sky-100"
-                                      : "bg-[#2A2F2F] text-gray-200 border-[#606364] hover:bg-[#353A3A]"
-                                  }`}
-                                >
-                                  {coach.name || "Coach"}
-                                </button>
-                              ))}
-                            </div>
+                                      ? getGoldenAccent(0.2)
+                                      : COLORS.BACKGROUND_DARK,
+                                  color:
+                                    coach.id === effectiveCoachId
+                                      ? COLORS.GOLDEN_ACCENT
+                                      : COLORS.TEXT_SECONDARY,
+                                  borderColor:
+                                    coach.id === effectiveCoachId
+                                      ? COLORS.GOLDEN_ACCENT
+                                      : COLORS.BORDER_SUBTLE,
+                                }}
+                              >
+                                {coach.name || "Coach"}
+                              </button>
+                            ))}
                           </div>
                         </div>
                       );
@@ -1231,25 +1456,36 @@ export default function MobileClientSchedulePage() {
                           {workingCoaches.map(coach => (
                             <button
                               key={coach.id}
+                              type="button"
                               onClick={() => setSelectedCoachId(coach.id)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 border ${
-                                coach.id === effectiveCoachId
-                                  ? "bg-sky-500/20 border-sky-500 text-sky-100"
-                                  : "bg-[#2A2F2F] text-gray-200 border-[#606364] hover:bg-[#353A3A]"
-                              }`}
+                              className="px-3 py-2 rounded-lg text-sm font-semibold min-h-[44px] touch-manipulation border"
+                              style={{
+                                backgroundColor:
+                                  coach.id === effectiveCoachId
+                                    ? getGoldenAccent(0.2)
+                                    : COLORS.BACKGROUND_DARK,
+                                color:
+                                  coach.id === effectiveCoachId
+                                    ? COLORS.GOLDEN_ACCENT
+                                    : COLORS.TEXT_SECONDARY,
+                                borderColor:
+                                  coach.id === effectiveCoachId
+                                    ? COLORS.GOLDEN_ACCENT
+                                    : COLORS.BORDER_SUBTLE,
+                              }}
                             >
                               {coach.name || "Coach"}
                             </button>
                           ))}
                         </div>
                       )}
-                      <div 
+                      <div
                         className="grid grid-cols-3 gap-2"
-                        style={{ 
-                          pointerEvents: "auto", 
-                          position: "relative", 
+                        style={{
+                          pointerEvents: "auto",
+                          position: "relative",
                           zIndex: 20,
-                          touchAction: "manipulation"
+                          touchAction: "manipulation",
                         }}
                       >
                         {availableSlots.map((slot, index) => (
@@ -1257,22 +1493,22 @@ export default function MobileClientSchedulePage() {
                             key={`time-slot-${index}-${slot}`}
                             role="button"
                             tabIndex={0}
-                            onClick={(e) => {
+                            onClick={e => {
                               e.preventDefault();
                               e.stopPropagation();
                               setSelectedTimeSlot(slot);
                             }}
-                            onTouchStart={(e) => {
+                            onTouchStart={e => {
                               e.stopPropagation();
                             }}
-                            onTouchEnd={(e) => {
+                            onTouchEnd={e => {
                               e.stopPropagation();
                               setSelectedTimeSlot(slot);
                             }}
-                            onKeyDown={(e) => {
+                            onKeyDown={e => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                              setSelectedTimeSlot(slot);
+                                setSelectedTimeSlot(slot);
                               }
                             }}
                             className={`px-3 py-1.5 rounded-lg border text-center transition-all duration-200 text-xs touch-manipulation select-none ${
@@ -1281,12 +1517,19 @@ export default function MobileClientSchedulePage() {
                                 : "hover:bg-blue-500/20 hover:border-blue-400 active:bg-blue-500/30"
                             }`}
                             style={{
-                              backgroundColor: selectedTimeSlot === slot ? "#3B82F6" : "#2A2F2F",
-                              borderColor: selectedTimeSlot === slot ? "#60A5FA" : "#606364",
-                              color: "#FFFFFF",
+                              backgroundColor:
+                                selectedTimeSlot === slot
+                                  ? COLORS.BLUE_PRIMARY
+                                  : COLORS.BACKGROUND_DARK,
+                              borderColor:
+                                selectedTimeSlot === slot
+                                  ? COLORS.BLUE_PRIMARY
+                                  : COLORS.BORDER_SUBTLE,
+                              color: COLORS.TEXT_PRIMARY,
                               pointerEvents: "auto",
                               cursor: "pointer",
-                              WebkitTapHighlightColor: "rgba(59, 130, 246, 0.3)",
+                              WebkitTapHighlightColor:
+                                "rgba(59, 130, 246, 0.3)",
                               touchAction: "manipulation",
                               userSelect: "none",
                               WebkitUserSelect: "none",
@@ -1298,35 +1541,55 @@ export default function MobileClientSchedulePage() {
                           </div>
                         ))}
                       </div>
-                      
+
                       {/* Request/Exchange Options - Show when time slot is selected */}
                       {selectedTimeSlot && (
                         <div className="mt-4 space-y-3">
                           {!showExchangeOptions ? (
                             <>
                               <button
+                                type="button"
                                 onClick={() => {
-                                  if (!selectedDate || !selectedTimeSlot) return;
-                                  
-                                  // Time slot is already in "h:mm AM/PM" format, use it directly
+                                  if (!selectedDate || !selectedTimeSlot)
+                                    return;
+
                                   const timeString = selectedTimeSlot;
-                                  
+                                  const coachName =
+                                    activeCoachProfile?.coachName ||
+                                    "your coach";
+                                  const confirmed = window.confirm(
+                                    `Request ${timeString} on ${format(
+                                      selectedDate,
+                                      "MMM d, yyyy"
+                                    )} with ${coachName}?`
+                                  );
+                                  if (!confirmed) return;
+
                                   const timeZone = getUserTimezone();
-                                  
+
                                   requestScheduleChangeMutation.mutate({
-                                    requestedDate: format(selectedDate, "yyyy-MM-dd"),
+                                    requestedDate: format(
+                                      selectedDate,
+                                      "yyyy-MM-dd"
+                                    ),
                                     requestedTime: timeString,
-                                    reason: requestReason || "Client requested time change",
+                                    reason:
+                                      requestReason ||
+                                      "Client requested time change",
                                     timeZone: timeZone,
+                                    ...(effectiveCoachId
+                                      ? { coachId: effectiveCoachId }
+                                      : {}),
                                   });
                                 }}
-                                disabled={requestScheduleChangeMutation.isPending}
-                                className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                disabled={
+                                  requestScheduleChangeMutation.isPending
+                                }
+                                className="w-full px-4 py-3 rounded-lg font-semibold min-h-[44px] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 border"
                                 style={{
-                                  backgroundColor: "#2A2F2F",
-                                  borderColor: "#606364",
-                                  color: "#FFFFFF",
-                                  border: "1px solid #606364",
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_PRIMARY,
                                 }}
                               >
                                 {requestScheduleChangeMutation.isPending ? (
@@ -1338,20 +1601,23 @@ export default function MobileClientSchedulePage() {
                                   "Request"
                                 )}
                               </button>
-                              
+
                               {allClientLessons.filter((lesson: any) => {
                                 const lessonDate = new Date(lesson.date);
-                                return lessonDate > new Date() && lesson.status === "CONFIRMED";
+                                return (
+                                  lessonDate > new Date() &&
+                                  lesson.status === "CONFIRMED"
+                                );
                               }).length > 0 && (
                                 <button
+                                  type="button"
                                   onClick={() => setShowExchangeOptions(true)}
-                                  className="w-full px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-                                  style={{ 
-                                    backgroundColor: "#D4AF37",
-                                    color: "#000",
+                                  className="w-full px-4 py-3 rounded-lg font-semibold min-h-[44px] touch-manipulation transition-colors flex items-center justify-center gap-2"
+                                  style={{
+                                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                                    color: COLORS.BACKGROUND_DARK,
                                   }}
                                 >
-                                  <ArrowRightLeft className="h-5 w-5" />
                                   Exchange
                                 </button>
                               )}
@@ -1366,64 +1632,100 @@ export default function MobileClientSchedulePage() {
                                 {allClientLessons
                                   .filter((lesson: any) => {
                                     const lessonDate = new Date(lesson.date);
-                                    return lessonDate > new Date() && lesson.status === "CONFIRMED";
+                                    return (
+                                      lessonDate > new Date() &&
+                                      lesson.status === "CONFIRMED"
+                                    );
                                   })
                                   .map((lesson: any) => {
                                     const lessonDate = new Date(lesson.date);
                                     return (
                                       <button
                                         key={lesson.id}
-                                        onClick={() => setSelectedLessonToExchange(lesson)}
+                                        onClick={() =>
+                                          setSelectedLessonToExchange(lesson)
+                                        }
                                         className="w-full p-3 rounded-lg border text-left transition-colors"
                                         style={{
-                                          backgroundColor: selectedLessonToExchange?.id === lesson.id
-                                            ? "rgba(212, 175, 55, 0.1)"
-                                            : "#2A2F2F",
-                                          borderColor: selectedLessonToExchange?.id === lesson.id
-                                            ? "#D4AF37"
-                                            : "#606364",
-                                          color: "#FFFFFF",
+                                          backgroundColor:
+                                            selectedLessonToExchange?.id ===
+                                            lesson.id
+                                              ? getGoldenAccent(0.15)
+                                              : COLORS.BACKGROUND_DARK,
+                                          borderColor:
+                                            selectedLessonToExchange?.id ===
+                                            lesson.id
+                                              ? COLORS.GOLDEN_ACCENT
+                                              : COLORS.BORDER_SUBTLE,
+                                          color: COLORS.TEXT_PRIMARY,
                                         }}
                                       >
                                         <div className="flex items-center justify-between">
                                           <div>
-                                            <p className="font-medium">{lesson.title}</p>
-                                            <p className="text-sm text-gray-400">
-                                              {format(lessonDate, "EEEE, MMMM d")} at {format(lessonDate, "h:mm a")}
+                                            <p className="font-medium">
+                                              {lesson.title}
+                                            </p>
+                                            <p
+                                              className="text-sm"
+                                              style={{
+                                                color: COLORS.TEXT_MUTED,
+                                              }}
+                                            >
+                                              {format(
+                                                lessonDate,
+                                                "EEEE, MMMM d"
+                                              )}{" "}
+                                              at {format(lessonDate, "h:mm a")}
                                             </p>
                                           </div>
-                                          {selectedLessonToExchange?.id === lesson.id && (
-                                            <CheckCircle className="h-5 w-5" style={{ color: "#D4AF37" }} />
+                                          {selectedLessonToExchange?.id ===
+                                            lesson.id && (
+                                            <CheckCircle
+                                              className="h-5 w-5"
+                                              style={{
+                                                color: COLORS.GOLDEN_ACCENT,
+                                              }}
+                                            />
                                           )}
                                         </div>
                                       </button>
                                     );
                                   })}
                               </div>
-                              
+
                               {selectedLessonToExchange ? (
                                 <button
                                   onClick={() => {
-                                    if (!selectedDate || !selectedTimeSlot || !selectedLessonToExchange) return;
-                                    
+                                    if (
+                                      !selectedDate ||
+                                      !selectedTimeSlot ||
+                                      !selectedLessonToExchange
+                                    )
+                                      return;
+
                                     // Time slot is already in "h:mm AM/PM" format, use it directly
                                     const timeString = selectedTimeSlot;
-                                    
+
                                     const timeZone = getUserTimezone();
-                                    
+
                                     exchangeLessonMutation.mutate({
                                       oldLessonId: selectedLessonToExchange.id,
-                                      requestedDate: format(selectedDate, "yyyy-MM-dd"),
+                                      requestedDate: format(
+                                        selectedDate,
+                                        "yyyy-MM-dd"
+                                      ),
                                       requestedTime: timeString,
-                                      reason: requestReason || "Client requested to exchange lesson time",
+                                      reason:
+                                        requestReason ||
+                                        "Client requested to exchange lesson time",
                                       timeZone: timeZone,
                                     });
                                   }}
                                   disabled={exchangeLessonMutation.isPending}
-                                  className="w-full px-4 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                                  style={{ 
-                                    backgroundColor: "#D4AF37",
-                                    color: "#000",
+                                  className="w-full px-4 py-3 rounded-lg font-semibold min-h-[44px] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                                  style={{
+                                    backgroundColor: COLORS.GOLDEN_ACCENT,
+                                    color: COLORS.BACKGROUND_DARK,
                                   }}
                                 >
                                   {exchangeLessonMutation.isPending ? (
@@ -1439,28 +1741,29 @@ export default function MobileClientSchedulePage() {
                                   )}
                                 </button>
                               ) : (
-                                <div className="p-3 rounded-lg border text-sm text-center"
+                                <div
+                                  className="p-3 rounded-lg border text-sm text-center"
                                   style={{
-                                    backgroundColor: "#2A2F2F",
-                                    borderColor: "#606364",
-                                    color: "#9CA3AF",
+                                    backgroundColor: COLORS.BACKGROUND_DARK,
+                                    borderColor: COLORS.BORDER_SUBTLE,
+                                    color: COLORS.TEXT_MUTED,
                                   }}
                                 >
                                   Select a lesson above to exchange
                                 </div>
                               )}
-                              
+
                               <button
+                                type="button"
                                 onClick={() => {
                                   setShowExchangeOptions(false);
                                   setSelectedLessonToExchange(null);
                                 }}
-                                className="w-full px-4 py-3 rounded-lg font-medium transition-colors"
+                                className="w-full px-4 py-3 rounded-lg font-medium min-h-[44px] touch-manipulation border"
                                 style={{
-                                  backgroundColor: "#2A2F2F",
-                                  borderColor: "#606364",
-                                  color: "#9CA3AF",
-                                  border: "1px solid #606364",
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  color: COLORS.TEXT_SECONDARY,
                                 }}
                               >
                                 Back
@@ -1471,21 +1774,30 @@ export default function MobileClientSchedulePage() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-center py-6 bg-gray-800/30 rounded-lg">
-                      <Clock className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+                    <div
+                      className="text-center py-6 rounded-lg"
+                      style={{
+                        backgroundColor: COLORS.BACKGROUND_DARK,
+                        color: COLORS.TEXT_MUTED,
+                        fontSize: "0.875rem",
+                      }}
+                    >
                       {beyondLimit ? (
                         <>
-                          <p className="text-gray-400 text-sm">
+                          <p>
                             This date is beyond {activeCoachProfile.coachName}
                             &apos;s scheduling window.
                           </p>
-                          <p className="text-gray-500 text-xs">
+                          <p
+                            className="text-xs mt-1"
+                            style={{ color: COLORS.TEXT_SECONDARY }}
+                          >
                             Please choose an earlier date.
                           </p>
                         </>
                       ) : (
                         <div className="space-y-2">
-                          <p className="text-gray-400 text-sm">
+                          <p>
                             No available time slots for{" "}
                             {activeCoachProfile.coachName}.
                           </p>
@@ -1494,14 +1806,25 @@ export default function MobileClientSchedulePage() {
                               {workingCoaches.map(coach => (
                                 <button
                                   key={coach.id}
+                                  type="button"
                                   onClick={() => setSelectedCoachId(coach.id)}
-                                  className="px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 bg-[#2A2F2F] text-gray-200 border border-[#606364] hover:bg-[#353A3A]"
+                                  className="px-3 py-2 rounded-lg text-sm font-semibold min-h-[44px] touch-manipulation border"
+                                  style={{
+                                    backgroundColor: COLORS.BACKGROUND_DARK,
+                                    color: COLORS.TEXT_SECONDARY,
+                                    borderColor: COLORS.BORDER_SUBTLE,
+                                  }}
                                 >
                                   {coach.name || "Coach"} has availability
                                 </button>
                               ))}
                               {workingCoaches.length === 0 && (
-                                <p className="text-gray-500 text-xs">
+                                <p
+                                  className="text-xs mt-1"
+                                  style={{
+                                    color: COLORS.TEXT_SECONDARY,
+                                  }}
+                                >
                                   No other coaches are working this day.
                                 </p>
                               )}
@@ -1520,27 +1843,47 @@ export default function MobileClientSchedulePage() {
 
       {/* Lesson Selection Modal for Swap */}
       {selectedSwitchLesson && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+        >
           <div
-            className="relative w-full max-w-md bg-[#2A3133] border border-[#404545] rounded-xl shadow-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+            className="relative w-full max-w-md rounded-xl border max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
+            style={{
+              backgroundColor: COLORS.BACKGROUND_CARD,
+              borderColor: COLORS.BORDER_SUBTLE,
+            }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-[#404545] bg-[#404449]">
+            <div
+              className="px-4 sm:px-6 py-3 sm:py-4 border-b"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                backgroundColor: COLORS.BACKGROUND_DARK,
+              }}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0 pr-2">
-                  <h2 className="text-lg sm:text-xl font-semibold text-white">
+                  <h2
+                    className="text-lg sm:text-xl font-semibold"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
+                  >
                     Choose Your Lesson to Switch
                   </h2>
-                  <p className="text-gray-400 text-xs sm:text-sm mt-0.5">
+                  <p
+                    className="text-xs sm:text-sm mt-0.5"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
                     Select which of your lessons you want to switch with this
                     client
                   </p>
                 </div>
                 <button
-                  onClick={() => {
-                    setSelectedSwitchLesson(null);
-                  }}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#2A3133] transition-colors flex-shrink-0"
+                  type="button"
+                  onClick={() => setSelectedSwitchLesson(null)}
+                  className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation flex-shrink-0"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
+                  aria-label="Close"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1549,10 +1892,19 @@ export default function MobileClientSchedulePage() {
 
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
               <div className="mb-6">
-                <div className="p-4 rounded-lg bg-[#1F2937] border border-[#404545] mb-4">
+                <div
+                  className="p-4 rounded-lg border mb-4"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                  }}
+                >
                   <div className="flex items-center gap-3">
                     <div>
-                      <p className="font-medium text-white">
+                      <p
+                        className="font-medium"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         Target Lesson:{" "}
                         {format(
                           new Date(selectedSwitchLesson.date),
@@ -1561,7 +1913,10 @@ export default function MobileClientSchedulePage() {
                         at{" "}
                         {format(new Date(selectedSwitchLesson.date), "h:mm a")}
                       </p>
-                      <p className="text-sm text-gray-400 mt-0.5">
+                      <p
+                        className="text-sm mt-0.5"
+                        style={{ color: COLORS.TEXT_MUTED }}
+                      >
                         {anonymizeLessonTitle(
                           selectedSwitchLesson.title,
                           selectedSwitchLesson.clientId
@@ -1571,14 +1926,22 @@ export default function MobileClientSchedulePage() {
                   </div>
                 </div>
 
-                <h3 className="text-lg font-semibold text-white mb-4">
+                <h3
+                  className="text-lg font-semibold mb-4"
+                  style={{ color: COLORS.TEXT_PRIMARY }}
+                >
                   Your Available Lessons:
                 </h3>
 
                 {isLoadingSwitchRequests ? (
                   <div className="text-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-400">Loading lesson status...</p>
+                    <Loader2
+                      className="h-8 w-8 animate-spin mx-auto mb-3"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    />
+                    <p style={{ color: COLORS.TEXT_MUTED }}>
+                      Loading lesson status...
+                    </p>
                   </div>
                 ) : upcomingLessons.length > 0 ? (
                   <div className="space-y-3">
@@ -1596,6 +1959,7 @@ export default function MobileClientSchedulePage() {
                       return (
                         <button
                           key={index}
+                          type="button"
                           onClick={() => {
                             if (!isDisabled) {
                               createSwitchRequestMutation.mutate({
@@ -1605,38 +1969,63 @@ export default function MobileClientSchedulePage() {
                             }
                           }}
                           disabled={isDisabled}
-                          className={`w-full p-4 rounded-lg border text-left transition-colors ${
-                            isDisabled
-                              ? "opacity-50 cursor-not-allowed bg-[#1F2937] border-[#404545]"
-                              : "bg-[#2A3133] border-[#404545] hover:border-[#4A5153]"
-                          }`}
+                          className="w-full p-4 rounded-lg border text-left transition-colors min-h-[44px] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_DARK,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                            color: COLORS.TEXT_PRIMARY,
+                          }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <div className="font-medium text-white">
+                              <div className="font-medium">
                                 {format(new Date(myLesson.date), "M/d/yyyy")} at{" "}
                                 {format(new Date(myLesson.date), "h:mm a")}
                                 {hasPendingRequest && (
-                                  <span className="ml-2 text-xs text-gray-400">
+                                  <span
+                                    className="ml-2 text-xs"
+                                    style={{
+                                      color: COLORS.TEXT_MUTED,
+                                    }}
+                                  >
                                     (Switch Request Pending)
                                   </span>
                                 )}
                                 {hasPendingWithTarget && !hasPendingRequest && (
-                                  <span className="ml-2 text-xs text-gray-400">
+                                  <span
+                                    className="ml-2 text-xs"
+                                    style={{
+                                      color: COLORS.TEXT_MUTED,
+                                    }}
+                                  >
                                     (Request Pending with this client)
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-300 mt-1">
+                              <div
+                                className="text-sm mt-1"
+                                style={{
+                                  color: COLORS.TEXT_SECONDARY,
+                                }}
+                              >
                                 {myLesson.title}
                               </div>
                             </div>
                             {createSwitchRequestMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                              <Loader2
+                                className="h-4 w-4 animate-spin"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              />
                             ) : isDisabled ? (
-                              <CheckCircle className="h-4 w-4 text-gray-500" />
+                              <CheckCircle
+                                className="h-4 w-4"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              />
                             ) : (
-                              <ArrowRightLeft className="h-4 w-4 text-gray-400" />
+                              <ArrowRightLeft
+                                className="h-4 w-4"
+                                style={{ color: COLORS.TEXT_SECONDARY }}
+                              />
                             )}
                           </div>
                         </button>
@@ -1645,11 +2034,8 @@ export default function MobileClientSchedulePage() {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <div className="p-4 rounded-full bg-gray-700/30 w-fit mx-auto mb-4">
-                      <Calendar className="h-8 w-8 text-gray-500" />
-                    </div>
-                    <p className="text-gray-400">
-                      You don't have any upcoming lessons to switch.
+                    <p style={{ color: COLORS.TEXT_MUTED }}>
+                      You don&apos;t have any upcoming lessons to switch.
                     </p>
                   </div>
                 )}
@@ -1659,41 +2045,50 @@ export default function MobileClientSchedulePage() {
         </div>
       )}
 
-      {/* Switch Requests Modal */}
+      {/* Switch Requests Modal - fully opaque, no transparency */}
       {showSwitchRequests && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          style={{ pointerEvents: "auto" }}
-          onClick={(e) => {
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_DARK,
+            pointerEvents: "auto",
+          }}
+          onClick={e => {
             if (e.target === e.currentTarget) {
               setShowSwitchRequests(false);
             }
           }}
         >
           <div
-            className="rounded-2xl shadow-xl border w-full max-w-md max-h-[85vh] overflow-y-auto"
+            className="rounded-xl border w-full max-w-md max-h-[85vh] overflow-y-auto"
             style={{
-              backgroundColor: "#353A3A",
-              borderColor: "#606364",
+              backgroundColor: "#1c1f20",
+              borderColor: COLORS.BORDER_SUBTLE,
               pointerEvents: "auto",
               position: "relative",
               zIndex: 51,
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div
               className="sticky top-0 border-b px-4 py-4 flex items-center justify-between z-10"
               style={{
-                backgroundColor: "#353A3A",
-                borderColor: "#606364",
+                backgroundColor: "#1c1f20",
+                borderColor: COLORS.BORDER_SUBTLE,
               }}
             >
-              <h2 className="text-xl font-bold text-white">
+              <h2
+                className="text-xl font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
                 Switch Requests
               </h2>
               <button
+                type="button"
                 onClick={() => setShowSwitchRequests(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+                style={{ color: COLORS.TEXT_SECONDARY }}
+                aria-label="Close"
               >
                 <X className="h-6 w-6" />
               </button>

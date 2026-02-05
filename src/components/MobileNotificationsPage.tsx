@@ -33,6 +33,7 @@ import MobileNavigation from "./MobileNavigation";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface MobileNotificationsPageProps {}
 
@@ -277,9 +278,11 @@ export default function MobileNotificationsPage({}: MobileNotificationsPageProps
     [filteredNotifications]
   );
 
-  // Handle notification click using smart routing
+  // Handle notification click using smart routing (client routes when viewer is client)
   const handleNotificationClickWrapper = (notification: any) => {
-    handleNotificationClick(notification, router, markAsReadMutation);
+    handleNotificationClick(notification, router, markAsReadMutation, {
+      forClient: !isCoach,
+    });
   };
 
   // Handle bulk actions
@@ -336,23 +339,52 @@ export default function MobileNotificationsPage({}: MobileNotificationsPageProps
   const filterCounts = getFilterCounts();
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#2A3133" }}>
-      {/* Mobile Header */}
-      <div 
-        className="sticky top-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 pb-3"
-        style={{ paddingTop: `calc(0.75rem + env(safe-area-inset-top))` }}
+    <div
+      className="min-h-[100dvh] overscroll-none"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_DARK,
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      {/* Mobile Header - safe area for notch/status bar */}
+      <div
+        className="fixed left-0 right-0 z-50 border-b px-4 pb-3"
+        style={{
+          top: 0,
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+          paddingTop:
+            "max(0.75rem, calc(0.75rem + env(safe-area-inset-top, 0px)))",
+        }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
+              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{
+                backgroundColor: getGoldenAccent(0.2),
+                borderWidth: 1,
+                borderColor: COLORS.BORDER_ACCENT,
+                minWidth: 44,
+                minHeight: 44,
+              }}
             >
-              <Bell className="h-4 w-4 text-white" />
+              <Bell
+                className="h-5 w-5"
+                style={{ color: COLORS.GOLDEN_ACCENT }}
+              />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Notifications</h1>
-              <p className="text-xs text-gray-400">
+            <div className="min-w-0">
+              <h1
+                className="text-lg font-bold truncate"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Notifications
+              </h1>
+              <p
+                className="text-sm truncate"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
                 {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
               </p>
             </div>
@@ -365,360 +397,447 @@ export default function MobileNotificationsPage({}: MobileNotificationsPageProps
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="p-4 border-b border-[#606364]">
-        <div className="flex items-center gap-2">
-          {selectedNotifications.length > 0 && (
-            <button
-              onClick={handleBulkMarkAsRead}
-              disabled={markAsReadMutation.isPending}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-              style={{ backgroundColor: "#10B981", color: "#FFFFFF" }}
-            >
-              <Check className="h-4 w-4" />
-              Mark Read
-            </button>
-          )}
-
-          {unreadCount > 0 && (
-            <button
-              onClick={() => markAllAsReadMutation.mutate()}
-              disabled={markAllAsReadMutation.isPending}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-              style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-            >
-              <CheckCheck className="h-4 w-4" />
-              Mark All Read
-            </button>
-          )}
-
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            style={{ backgroundColor: "#4A5A70", color: "#C3BCC2" }}
-          >
-            <Search className="h-4 w-4" />
-            Search
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto pb-20">
-        <div className="p-4 space-y-4">
-          {/* Search */}
-          {showSearch && (
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                style={{ color: "#ABA4AA" }}
-              />
-              <input
-                type="text"
-                placeholder="Search notifications..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#4A5A70]"
-                style={{
-                  backgroundColor: "#1A1D1E",
-                  borderColor: "#606364",
-                  color: "#C3BCC2",
-                }}
-              />
-            </div>
-          )}
-
-          {/* Filter Tabs - Mobile Optimized */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-2">
-            {[
-              { key: "all", label: "All", count: filterCounts.all },
-              { key: "unread", label: "Unread", count: filterCounts.unread },
-              {
-                key: "messages",
-                label: "Messages",
-                count: filterCounts.messages,
-              },
-              { key: "lessons", label: "Lessons", count: filterCounts.lessons },
-              // Only show programs filter for clients
-              ...(isCoach
-                ? []
-                : [
-                    {
-                      key: "programs",
-                      label: "Programs",
-                      count: filterCounts.programs,
-                    },
-                  ]),
-            ].map(({ key, label, count }) => (
+      {/* Main Content - pt clears fixed header */}
+      <div className="flex-1 flex flex-col pt-20 overscroll-none">
+        {/* Quick Actions */}
+        <div
+          className="flex-shrink-0 p-4 border-b"
+          style={{
+            borderColor: COLORS.BORDER_SUBTLE,
+            backgroundColor: COLORS.BACKGROUND_DARK,
+          }}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedNotifications.length > 0 && (
               <button
-                key={key}
-                onClick={() => setFilter(key as any)}
-                className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
-                  filter === key
-                    ? "text-white"
-                    : "text-gray-500 hover:text-white hover:bg-gray-600"
-                }`}
+                onClick={handleBulkMarkAsRead}
+                disabled={markAsReadMutation.isPending}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 min-h-[44px] touch-manipulation"
                 style={{
-                  backgroundColor: filter === key ? "#4A5A70" : "transparent",
-                  color: filter === key ? "#FFFFFF" : "#9CA3AF",
+                  backgroundColor: COLORS.GREEN_PRIMARY,
+                  color: COLORS.TEXT_PRIMARY,
                 }}
               >
-                {label} ({count})
+                <Check className="h-4 w-4" />
+                Mark Read
               </button>
-            ))}
+            )}
+
+            {unreadCount > 0 && (
+              <button
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={markAllAsReadMutation.isPending}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 min-h-[44px] touch-manipulation"
+                style={{
+                  backgroundColor: COLORS.BACKGROUND_CARD,
+                  color: COLORS.TEXT_SECONDARY,
+                  borderWidth: 1,
+                  borderColor: COLORS.BORDER_SUBTLE,
+                }}
+              >
+                <CheckCheck className="h-4 w-4" />
+                Mark All Read
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] touch-manipulation"
+              style={{
+                backgroundColor: COLORS.BACKGROUND_CARD,
+                color: COLORS.TEXT_SECONDARY,
+                borderWidth: 1,
+                borderColor: COLORS.BORDER_SUBTLE,
+              }}
+            >
+              <Search className="h-4 w-4" />
+              Search
+            </button>
           </div>
+        </div>
 
-          {/* Bulk Selection Header */}
-          {selectedNotifications.length > 0 && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedNotifications.length ===
-                      filteredNotifications.length
-                    }
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-2 border-gray-300 text-blue-500 focus:ring-blue-500"
-                  />
-                  <span
-                    className="text-sm font-medium"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {selectedNotifications.length} selected
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleBulkMarkAsRead}
-                    disabled={markAsReadMutation.isPending}
-                    className="text-sm transition-colors hover:bg-blue-500/20 disabled:opacity-50 px-2 py-1 rounded"
-                    style={{ color: "#60A5FA" }}
-                  >
-                    Mark Read
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    disabled={deleteMultipleNotificationsMutation.isPending}
-                    className="text-sm transition-colors hover:bg-red-500/20 disabled:opacity-50 px-2 py-1 rounded"
-                    style={{ color: "#F87171" }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Notifications List - Mobile Optimized */}
-          {filteredNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full px-4 py-8">
-              <div className="text-center">
-                <Bell
-                  className="h-12 w-12 mx-auto mb-3 opacity-30"
-                  style={{ color: "#ABA4AA" }}
+        {/* Scrollable content - bottom padding clears bottom nav + safe area when client */}
+        <div
+          className="flex-1 overflow-y-auto"
+          style={{
+            paddingBottom: isCoach
+              ? "5rem"
+              : "max(5rem, calc(5rem + env(safe-area-inset-bottom, 0px)))",
+          }}
+        >
+          <div className="p-4 space-y-4">
+            {/* Search */}
+            {showSearch && (
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 pointer-events-none"
+                  style={{ color: COLORS.TEXT_MUTED }}
                 />
-                <h3
-                  className="text-base font-medium mb-2"
-                  style={{ color: "#C3BCC2" }}
-                >
-                  {searchQuery
-                    ? "No notifications found"
-                    : filter === "unread"
-                    ? "No unread notifications"
-                    : "No notifications yet"}
-                </h3>
-                <p className="text-sm text-center" style={{ color: "#ABA4AA" }}>
-                  {searchQuery
-                    ? "Try adjusting your search terms"
-                    : filter === "unread"
-                    ? "You're all caught up!"
-                    : "You'll see notifications here when they arrive."}
-                </p>
+                <input
+                  type="text"
+                  placeholder="Search notifications..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-[#E5B232]/40 focus:border-[#E5B232]/60 placeholder:text-[#606364] text-base min-h-[44px] touch-manipulation"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                    fontSize: 16,
+                  }}
+                />
               </div>
+            )}
+
+            {/* Filter Tabs - Mobile Optimized */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-2 -mx-1 px-1">
+              {[
+                { key: "all", label: "All", count: filterCounts.all },
+                { key: "unread", label: "Unread", count: filterCounts.unread },
+                {
+                  key: "messages",
+                  label: "Messages",
+                  count: filterCounts.messages,
+                },
+                {
+                  key: "lessons",
+                  label: "Lessons",
+                  count: filterCounts.lessons,
+                },
+                // Only show programs filter for clients
+                ...(isCoach
+                  ? []
+                  : [
+                      {
+                        key: "programs",
+                        label: "Programs",
+                        count: filterCounts.programs,
+                      },
+                    ]),
+              ].map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key as any)}
+                  className="flex-shrink-0 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors touch-manipulation min-h-[44px]"
+                  style={{
+                    backgroundColor:
+                      filter === key ? getGoldenAccent(0.2) : "transparent",
+                    color:
+                      filter === key
+                        ? COLORS.GOLDEN_ACCENT
+                        : COLORS.TEXT_SECONDARY,
+                    borderWidth: 1,
+                    borderColor:
+                      filter === key ? COLORS.BORDER_ACCENT : "transparent",
+                  }}
+                >
+                  {label} ({count})
+                </button>
+              ))}
             </div>
-          ) : (
-            <div className="px-4 py-3">
-              {Object.entries(groupedNotifications).map(
-                ([dateGroup, groupNotifications]) => (
-                  <div key={dateGroup} className="mb-6">
-                    {/* Date Group Header */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <h2
-                        className="text-xs font-semibold uppercase tracking-wide"
-                        style={{ color: "#ABA4AA" }}
-                      >
-                        {dateGroup}
-                      </h2>
-                      <div
-                        className="flex-1 h-px"
-                        style={{ backgroundColor: "#606364" }}
-                      ></div>
-                      <span
-                        className="text-xs px-2 py-1 rounded-full"
-                        style={{ backgroundColor: "#606364", color: "#ABA4AA" }}
-                      >
-                        {groupNotifications.length}
-                      </span>
-                    </div>
 
-                    {/* Notifications in Group */}
-                    <div className="space-y-2">
-                      {groupNotifications.map((notification: any) => {
-                        const typeInfo = getNotificationTypeInfo(
-                          notification.type
-                        );
-                        const IconComponent = typeInfo.icon;
-                        const isSelected = selectedNotifications.includes(
-                          notification.id
-                        );
+            {/* Bulk Selection Header */}
+            {selectedNotifications.length > 0 && (
+              <div
+                className="rounded-lg p-3 border"
+                style={{
+                  backgroundColor: `${COLORS.BLUE_PRIMARY}18`,
+                  borderColor: `${COLORS.BLUE_PRIMARY}40`,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedNotifications.length ===
+                        filteredNotifications.length
+                      }
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-2 focus:ring-2 focus:ring-offset-0"
+                      style={{
+                        borderColor: COLORS.BORDER_SUBTLE,
+                        accentColor: COLORS.BLUE_PRIMARY,
+                      }}
+                    />
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
+                      {selectedNotifications.length} selected
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleBulkMarkAsRead}
+                      disabled={markAsReadMutation.isPending}
+                      className="text-sm transition-colors disabled:opacity-50 px-2 py-1 rounded min-h-[36px] touch-manipulation"
+                      style={{ color: COLORS.BLUE_PRIMARY }}
+                    >
+                      Mark Read
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={deleteMultipleNotificationsMutation.isPending}
+                      className="text-sm transition-colors disabled:opacity-50 px-2 py-1 rounded min-h-[36px] touch-manipulation"
+                      style={{ color: COLORS.RED_ALERT }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                        return (
-                          <div
-                            key={notification.id}
-                            className={`group relative rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer touch-manipulation ${
-                              !notification.isRead
-                                ? `${typeInfo.bgColor} ${typeInfo.borderColor} border-l-4`
-                                : "border-gray-600/50 hover:border-gray-500"
-                            } ${isSelected ? "ring-2 ring-blue-500" : ""}`}
-                            style={{
-                              backgroundColor: !notification.isRead
-                                ? "#1A1D1E"
-                                : "#2A3133",
-                            }}
-                            onClick={() =>
-                              handleNotificationClickWrapper(notification)
-                            }
-                          >
-                            <div className="p-3">
-                              <div className="flex items-start gap-3">
-                                {/* Selection Checkbox */}
-                                <div className="flex-shrink-0 pt-0.5">
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                    }}
-                                    onChange={e => {
-                                      e.stopPropagation();
-                                      handleSelectNotification(notification.id);
-                                    }}
-                                    className="w-4 h-4 rounded border-2 border-gray-300 text-blue-500 focus:ring-blue-500"
-                                  />
-                                </div>
+            {/* Notifications List - Mobile Optimized */}
+            {filteredNotifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center min-h-[200px] px-4 py-12">
+                <div className="text-center">
+                  <Bell
+                    className="h-12 w-12 mx-auto mb-3 opacity-40"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  />
+                  <h3
+                    className="text-base font-medium mb-2"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
+                    {searchQuery
+                      ? "No notifications found"
+                      : filter === "unread"
+                        ? "No unread notifications"
+                        : "No notifications yet"}
+                  </h3>
+                  <p
+                    className="text-sm text-center"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
+                    {searchQuery
+                      ? "Try adjusting your search terms"
+                      : filter === "unread"
+                        ? "You're all caught up!"
+                        : "You'll see notifications here when they arrive."}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="px-1 py-3">
+                {Object.entries(groupedNotifications).map(
+                  ([dateGroup, groupNotifications]) => (
+                    <div key={dateGroup} className="mb-6">
+                      {/* Date Group Header */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <h2
+                          className="text-xs font-semibold uppercase tracking-wide"
+                          style={{ color: COLORS.TEXT_MUTED }}
+                        >
+                          {dateGroup}
+                        </h2>
+                        <div
+                          className="flex-1 h-px"
+                          style={{ backgroundColor: COLORS.BORDER_SUBTLE }}
+                        />
+                        <span
+                          className="text-xs px-2 py-1 rounded-full"
+                          style={{
+                            backgroundColor: COLORS.BACKGROUND_CARD,
+                            color: COLORS.TEXT_MUTED,
+                            borderWidth: 1,
+                            borderColor: COLORS.BORDER_SUBTLE,
+                          }}
+                        >
+                          {groupNotifications.length}
+                        </span>
+                      </div>
 
-                                {/* Notification Icon */}
-                                <div
-                                  className={`flex-shrink-0 p-2 rounded-lg ${typeInfo.bgColor}`}
-                                >
-                                  <IconComponent
-                                    className={`h-4 w-4 ${typeInfo.color}`}
-                                  />
-                                </div>
+                      {/* Notifications in Group */}
+                      <div className="space-y-2">
+                        {groupNotifications.map((notification: any) => {
+                          const typeInfo = getNotificationTypeInfo(
+                            notification.type
+                          );
+                          const IconComponent = typeInfo.icon;
+                          const isSelected = selectedNotifications.includes(
+                            notification.id
+                          );
 
-                                {/* Notification Content */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <h4
-                                          className={`text-sm font-medium truncate ${
-                                            !notification.isRead
-                                              ? "font-semibold"
-                                              : ""
-                                          }`}
-                                          style={{ color: "#C3BCC2" }}
-                                        >
-                                          {notification.title}
-                                        </h4>
-                                        <span
-                                          className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
-                                          style={{
-                                            backgroundColor: "#606364",
-                                            color: "#ABA4AA",
-                                          }}
-                                        >
-                                          {typeInfo.label}
-                                        </span>
-                                        {!notification.isRead && (
-                                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0"></div>
-                                        )}
-                                      </div>
-                                      <p
-                                        className="text-xs mb-2 line-clamp-2"
-                                        style={{ color: "#ABA4AA" }}
-                                      >
-                                        {notification.message}
-                                      </p>
-                                    </div>
-
-                                    {/* Time and Actions */}
-                                    <div className="flex items-center gap-1">
-                                      <span
-                                        className="text-xs"
-                                        style={{ color: "#ABA4AA" }}
-                                      >
-                                        {formatNotificationTime(
-                                          notification.createdAt
-                                        )}
-                                      </span>
-                                      <button
-                                        onClick={e => {
-                                          e.stopPropagation();
-                                          if (!notification.isRead) {
-                                            markAsReadMutation.mutate({
-                                              notificationId: notification.id,
-                                            });
-                                          }
-                                        }}
-                                        disabled={markAsReadMutation.isPending}
-                                        className={`p-1 rounded transition-colors hover:bg-gray-600 disabled:opacity-50 ${
-                                          !notification.isRead
-                                            ? "opacity-100"
-                                            : "opacity-0 group-hover:opacity-100"
-                                        }`}
-                                        style={{ color: "#ABA4AA" }}
-                                        title="Mark as read"
-                                      >
-                                        {!notification.isRead ? (
-                                          <Eye className="h-3 w-3" />
-                                        ) : (
-                                          <EyeOff className="h-3 w-3" />
-                                        )}
-                                      </button>
-                                    </div>
+                          return (
+                            <div
+                              key={notification.id}
+                              className={`group relative rounded-lg border transition-all duration-200 cursor-pointer touch-manipulation min-h-[52px] ${
+                                !notification.isRead
+                                  ? `${typeInfo.bgColor} ${typeInfo.borderColor} border-l-4`
+                                  : ""
+                              }`}
+                              style={{
+                                backgroundColor: !notification.isRead
+                                  ? COLORS.BACKGROUND_CARD
+                                  : COLORS.BACKGROUND_DARK,
+                                borderColor: !notification.isRead
+                                  ? undefined
+                                  : COLORS.BORDER_SUBTLE,
+                                ...(isSelected
+                                  ? {
+                                      boxShadow: `0 0 0 2px ${COLORS.BLUE_PRIMARY}`,
+                                    }
+                                  : {}),
+                              }}
+                              onClick={() =>
+                                handleNotificationClickWrapper(notification)
+                              }
+                            >
+                              <div className="p-3">
+                                <div className="flex items-start gap-3">
+                                  {/* Selection Checkbox */}
+                                  <div className="flex-shrink-0 pt-0.5">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                      }}
+                                      onChange={e => {
+                                        e.stopPropagation();
+                                        handleSelectNotification(
+                                          notification.id
+                                        );
+                                      }}
+                                      className="w-4 h-4 rounded border-2 focus:ring-2 focus:ring-offset-0"
+                                      style={{
+                                        borderColor: COLORS.BORDER_SUBTLE,
+                                        accentColor: COLORS.BLUE_PRIMARY,
+                                      }}
+                                    />
                                   </div>
 
-                                  {/* Action Buttons for Specific Types */}
-                                  {notification.type ===
-                                    "CLIENT_JOIN_REQUEST" && (
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <button
-                                        onClick={e => {
-                                          e.stopPropagation();
-                                          router.push("/clients");
-                                        }}
-                                        className="px-2 py-1 text-xs rounded transition-colors hover:bg-blue-500/20"
-                                        style={{ color: "#60A5FA" }}
-                                      >
-                                        View Client
-                                      </button>
+                                  {/* Notification Icon */}
+                                  <div
+                                    className={`flex-shrink-0 p-2 rounded-lg ${typeInfo.bgColor}`}
+                                  >
+                                    <IconComponent
+                                      className={`h-4 w-4 ${typeInfo.color}`}
+                                    />
+                                  </div>
+
+                                  {/* Notification Content */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <h4
+                                            className={`text-sm font-medium truncate ${
+                                              !notification.isRead
+                                                ? "font-semibold"
+                                                : ""
+                                            }`}
+                                            style={{
+                                              color: COLORS.TEXT_PRIMARY,
+                                            }}
+                                          >
+                                            {notification.title}
+                                          </h4>
+                                          <span
+                                            className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                            style={{
+                                              backgroundColor:
+                                                COLORS.BACKGROUND_CARD,
+                                              color: COLORS.TEXT_MUTED,
+                                              borderWidth: 1,
+                                              borderColor: COLORS.BORDER_SUBTLE,
+                                            }}
+                                          >
+                                            {typeInfo.label}
+                                          </span>
+                                          {!notification.isRead && (
+                                            <div
+                                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                              style={{
+                                                backgroundColor:
+                                                  COLORS.BLUE_PRIMARY,
+                                              }}
+                                            />
+                                          )}
+                                        </div>
+                                        <p
+                                          className="text-xs mb-2 line-clamp-2"
+                                          style={{ color: COLORS.TEXT_MUTED }}
+                                        >
+                                          {notification.message}
+                                        </p>
+                                      </div>
+
+                                      {/* Time and Actions */}
+                                      <div className="flex items-center gap-1">
+                                        <span
+                                          className="text-xs"
+                                          style={{ color: COLORS.TEXT_MUTED }}
+                                        >
+                                          {formatNotificationTime(
+                                            notification.createdAt
+                                          )}
+                                        </span>
+                                        <button
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            if (!notification.isRead) {
+                                              markAsReadMutation.mutate({
+                                                notificationId: notification.id,
+                                              });
+                                            }
+                                          }}
+                                          disabled={
+                                            markAsReadMutation.isPending
+                                          }
+                                          className={`p-1.5 rounded min-h-[32px] min-w-[32px] flex items-center justify-center transition-colors disabled:opacity-50 touch-manipulation ${
+                                            !notification.isRead
+                                              ? "opacity-100"
+                                              : "opacity-0 group-hover:opacity-100"
+                                          }`}
+                                          style={{
+                                            color: COLORS.TEXT_MUTED,
+                                          }}
+                                          title="Mark as read"
+                                        >
+                                          {!notification.isRead ? (
+                                            <Eye className="h-3 w-3" />
+                                          ) : (
+                                            <EyeOff className="h-3 w-3" />
+                                          )}
+                                        </button>
+                                      </div>
                                     </div>
-                                  )}
+
+                                    {/* Action Buttons for Specific Types */}
+                                    {notification.type ===
+                                      "CLIENT_JOIN_REQUEST" && (
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <button
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            router.push("/clients");
+                                          }}
+                                          className="px-2 py-1.5 text-xs rounded min-h-[32px] touch-manipulation transition-colors"
+                                          style={{
+                                            color: COLORS.BLUE_PRIMARY,
+                                            backgroundColor: `${COLORS.BLUE_PRIMARY}20`,
+                                          }}
+                                        >
+                                          View Client
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
-              )}
-            </div>
-          )}
+                  )
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       {isCoach ? <MobileBottomNavigation /> : <MobileClientBottomNavigation />}

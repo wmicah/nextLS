@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   Music,
 } from "lucide-react";
-import ClientTopNav from "./ClientTopNav";
 import { format } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -25,6 +24,7 @@ import { withMobileDetection } from "@/lib/mobile-detection";
 import MobileClientMessagesPage from "./MobileClientMessagesPage";
 import { useSocket } from "@/hooks/useSocket";
 import { useMessagingService } from "./MessagingServiceProvider";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 interface ClientMessagesPageProps {
   // Add props here if needed in the future
@@ -120,6 +120,12 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
       setSelectedConversation(null);
     }
   }, [searchParams]);
+
+  // Clear compose input when switching conversations so we never send to the wrong thread
+  useEffect(() => {
+    setMessageText("");
+    setSelectedFile(null);
+  }, [selectedConversation]);
 
   // Function to load more conversations
   const loadMoreConversations = () => {
@@ -401,117 +407,115 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
     });
 
   return (
-    <ClientTopNav>
+    <>
       <div
-        className="h-screen flex flex-col px-4 sm:px-6 lg:px-8 pt-2 overflow-hidden"
-        style={{ backgroundColor: "#2A3133" }}
+        className="flex-1 min-h-0 flex flex-col overflow-hidden"
+        style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
       >
-        {/* Hero Header */}
-        <div className="mb-2 flex-shrink-0">
-          <div className="rounded-2xl border relative overflow-hidden group">
-            <div
-              className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
-              style={{
-                background:
-                  "linear-gradient(135deg, #4A5A70 0%, #606364 50%, #353A3A 100%)",
-              }}
-            />
-            <div className="relative p-3 bg-gradient-to-r from-transparent via-black/20 to-black/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <h1
-                      className="text-lg font-bold mb-1"
-                      style={{ color: "#C3BCC2" }}
+        {/* Simple Header - matches coach Messages page */}
+        <div
+          className="px-3 py-0 border-b flex-shrink-0"
+          style={{ borderColor: COLORS.BORDER_SUBTLE }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1
+                className="text-lg font-bold"
+                style={{ color: COLORS.TEXT_PRIMARY }}
+              >
+                Messages
+              </h1>
+              <div
+                className="flex items-center gap-2 text-xs"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
+                <span>
+                  {conversations.length > 0
+                    ? `${conversations.length} ${
+                        conversations.length === 1
+                          ? "conversation"
+                          : "conversations"
+                      }`
+                    : "No conversations yet"}
+                </span>
+                {unreadCount > 0 && (
+                  <>
+                    <span>•</span>
+                    <span
+                      className="font-medium"
+                      style={{ color: COLORS.GOLDEN_ACCENT }}
                     >
-                      Messages
-                    </h1>
-                    <div
-                      className="flex items-center gap-2 text-xs"
-                      style={{ color: "#ABA4AA" }}
-                    >
-                      <div className="h-5 w-5 rounded-full bg-gray-500 flex items-center justify-center">
-                        <File className="h-3 w-3 text-white" />
-                      </div>
-                      <span>
-                        {conversations.length > 0
-                          ? `Stay connected with ${conversations.length} ${
-                              conversations.length === 1
-                                ? "conversation"
-                                : "conversations"
-                            }`
-                          : "Start building relationships with your coach and teammates"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className="text-2xl font-bold"
-                    style={{ color: "#C3BCC2" }}
-                  >
-                    {unreadCount > 0
-                      ? `${unreadCount} unread`
-                      : "All caught up"}
-                  </div>
-                  <div className="text-sm" style={{ color: "#ABA4AA" }}>
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "long",
-                    })}
-                  </div>
-                </div>
+                      {unreadCount} unread
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Messages Interface */}
+        {/* Messages Interface - fixed height; only message thread scrolls */}
         <div
-          className="flex flex-1 rounded-lg border overflow-hidden shadow-lg mb-2"
+          className="flex flex-1 flex-row rounded-lg border overflow-hidden shadow-lg m-2 min-h-0"
           style={{
-            backgroundColor: "#1E1E1E",
-            borderColor: "#374151",
-            boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.2)",
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+            boxShadow: `0 4px 12px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px ${getGoldenAccent(
+              0.1
+            )}`,
           }}
         >
-          {/* Conversations Sidebar */}
+          {/* Conversations Sidebar - fixed width, list scrolls inside */}
           <div
-            className="w-80 border-r flex flex-col min-h-0"
-            style={{ borderColor: "#374151", backgroundColor: "#1A1A1A" }}
+            className="w-80 flex-shrink-0 border-r flex flex-col min-h-0"
+            style={{
+              borderColor: COLORS.BORDER_SUBTLE,
+              backgroundColor: COLORS.BACKGROUND_DARK,
+            }}
           >
-            {/* Header */}
-            <div className="p-3 border-b" style={{ borderColor: "#374151" }}>
-              <div className="flex items-center justify-between mb-3">
+            {/* Compact Header with Search - fixed at top of sidebar */}
+            <div
+              className="flex-shrink-0 p-2 border-b"
+              style={{ borderColor: COLORS.BORDER_SUBTLE }}
+            >
+              <div className="mb-2">
                 <h2
                   className="text-sm font-semibold"
-                  style={{ color: "#ffffff" }}
+                  style={{ color: COLORS.TEXT_PRIMARY }}
                 >
                   Conversations
                 </h2>
               </div>
-
-              {/* Search */}
               <div className="relative">
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
-                  style={{ color: "#ABA4AA" }}
+                  style={{ color: COLORS.TEXT_MUTED }}
                 />
                 <input
                   type="text"
                   placeholder="Search conversations..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 rounded-md border-0 focus:outline-none focus:ring-2 transition-all duration-200 text-xs"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-md text-xs transition-all duration-200"
                   style={{
-                    backgroundColor: "#353A3A",
-                    color: "#C3BCC2",
-                    borderColor: "#606364",
+                    backgroundColor: COLORS.BACKGROUND_DARK,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                    border: "1px solid",
                   }}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = "#4A5A70";
+                    e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_CARD;
+                    e.currentTarget.style.boxShadow = `0 0 0 2px ${getGoldenAccent(
+                      0.2
+                    )}`;
                   }}
                   onBlur={e => {
-                    e.currentTarget.style.borderColor = "#606364";
+                    e.currentTarget.style.borderColor = COLORS.BORDER_SUBTLE;
+                    e.currentTarget.style.backgroundColor =
+                      COLORS.BACKGROUND_DARK;
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 />
               </div>
@@ -524,125 +528,131 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
               onScroll={handleScroll}
             >
               {filteredConversations.length === 0 ? (
-                <div className="p-6 text-center">
-                  <File
-                    className="h-12 w-12 mx-auto mb-4 opacity-50"
-                    style={{ color: "#ABA4AA" }}
-                  />
-                  <p className="text-sm" style={{ color: "#ABA4AA" }}>
+                <div className="p-4 text-center">
+                  <div
+                    className="h-8 w-8 mx-auto mb-2 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: getGoldenAccent(0.1),
+                      color: COLORS.GOLDEN_ACCENT,
+                    }}
+                  >
+                    <File className="h-4 w-4" />
+                  </div>
+                  <p
+                    className="text-xs"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     {searchTerm
                       ? "No conversations found"
                       : "No conversations yet"}
                   </p>
                 </div>
               ) : (
-                filteredConversations.map((conversation: any) => {
-                  const otherParticipant = getOtherUser(
-                    conversation,
-                    currentUser?.id || ""
-                  );
-                  const conversationType =
-                    conversation.type === "CLIENT_CLIENT" ? "Client" : "Coach";
+                <div className="space-y-1">
+                  {filteredConversations.map((conversation: any) => {
+                    const otherParticipant = getOtherUser(
+                      conversation,
+                      currentUser?.id || ""
+                    );
+                    const conversationType =
+                      conversation.type === "CLIENT_CLIENT"
+                        ? "Client"
+                        : "Coach";
+                    const lastMessage = conversation.messages[0];
+                    const convUnread = unreadCountsObj[conversation.id] || 0;
+                    const isSelected = selectedConversation === conversation.id;
 
-                  const lastMessage = conversation.messages[0];
-                  const unreadCount = unreadCountsObj[conversation.id] || 0;
-
-                  return (
-                    <div
-                      key={conversation.id}
-                      className={`p-4 cursor-pointer transition-all duration-200 border-b ${
-                        selectedConversation === conversation.id
-                          ? "bg-gray-800/50 border-gray-600"
-                          : "border-gray-700 hover:bg-gray-800/30"
-                      }`}
-                      onClick={() => handleConversationSelect(conversation.id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <ProfilePictureUploader
-                          currentAvatarUrl={
-                            otherParticipant?.settings?.avatarUrl ||
-                            otherParticipant?.avatar
-                          }
-                          userName={
-                            otherParticipant?.name ||
-                            otherParticipant?.email ||
-                            "User"
-                          }
-                          onAvatarChange={() => {}}
-                          size="md"
-                          readOnly={true}
-                          className="flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p
-                              className="font-medium truncate"
-                              style={{ color: "#C3BCC2" }}
-                            >
-                              {otherParticipant?.name ||
-                                otherParticipant?.email?.split("@")[0] ||
-                                "Unknown"}
-                            </p>
-                            {lastMessage && (
-                              <span
-                                className="text-xs flex-shrink-0 ml-2"
-                                style={{ color: "#ABA4AA" }}
+                    return (
+                      <div
+                        key={conversation.id}
+                        onClick={() =>
+                          handleConversationSelect(conversation.id)
+                        }
+                        className="p-3 cursor-pointer transition-all duration-200"
+                        style={
+                          isSelected
+                            ? {
+                                backgroundColor: getGoldenAccent(0.1),
+                              }
+                            : undefined
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          <ProfilePictureUploader
+                            currentAvatarUrl={
+                              otherParticipant?.settings?.avatarUrl ||
+                              otherParticipant?.avatar
+                            }
+                            userName={
+                              otherParticipant?.name ||
+                              otherParticipant?.email ||
+                              "User"
+                            }
+                            onAvatarChange={() => {}}
+                            size="md"
+                            readOnly={true}
+                            className="flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p
+                                className="font-medium truncate text-sm"
+                                style={{ color: COLORS.TEXT_PRIMARY }}
                               >
-                                {format(
-                                  new Date(lastMessage.createdAt),
-                                  "h:mm a"
-                                )}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                                {otherParticipant?.name ||
+                                  otherParticipant?.email?.split("@")[0] ||
+                                  "Unknown"}
+                              </p>
+                              {lastMessage && (
+                                <span
+                                  className="text-xs flex-shrink-0 ml-2"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
+                                  {format(
+                                    new Date(lastMessage.createdAt),
+                                    "h:mm a"
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between gap-1 mt-0.5">
                               <span
-                                className="text-xs px-2 py-1 rounded-full"
+                                className="text-xs px-2 py-0.5 rounded-full"
                                 style={{
-                                  backgroundColor:
-                                    conversation.type === "CLIENT_CLIENT"
-                                      ? "#4A5A70"
-                                      : "#E0E0E0",
-                                  color:
-                                    conversation.type === "CLIENT_CLIENT"
-                                      ? "#C3BCC2"
-                                      : "#000000",
+                                  backgroundColor: getGoldenAccent(0.15),
+                                  color: COLORS.TEXT_SECONDARY,
                                 }}
                               >
                                 {conversationType}
                               </span>
                               {lastMessage && (
-                                <div
-                                  className="text-sm truncate"
-                                  style={{ color: "#ABA4AA" }}
+                                <span
+                                  className="text-xs truncate flex-1 min-w-0 mx-1"
+                                  style={{ color: COLORS.TEXT_MUTED }}
                                 >
-                                  {lastMessage.content.length > 40 ? (
-                                    <FormattedMessage
-                                      content={`${lastMessage.content.substring(
-                                        0,
-                                        40
-                                      )}...`}
-                                    />
-                                  ) : (
-                                    <FormattedMessage
-                                      content={lastMessage.content}
-                                    />
-                                  )}
-                                </div>
+                                  {lastMessage.content.length > 35
+                                    ? `${lastMessage.content.substring(0, 35)}...`
+                                    : lastMessage.content}
+                                </span>
+                              )}
+                              {convUnread > 0 && (
+                                <span
+                                  className="text-xs rounded-full px-2 py-0.5 font-bold flex-shrink-0"
+                                  style={{
+                                    backgroundColor: COLORS.RED_ALERT,
+                                    color: "#fff",
+                                  }}
+                                >
+                                  {convUnread > 9 ? "9+" : convUnread}
+                                </span>
                               )}
                             </div>
-                            {unreadCount > 0 && (
-                              <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                                {unreadCount}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
               {hasMoreConversations && (
                 <div className="p-3 text-center">
@@ -650,15 +660,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                     onClick={loadMoreConversations}
                     disabled={isLoadingMore}
                     className="text-xs hover:underline transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ color: "#6b7280" }}
-                    onMouseEnter={e => {
-                      if (!isLoadingMore) {
-                        e.currentTarget.style.color = "#9ca3af";
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = "#6b7280";
-                    }}
+                    style={{ color: COLORS.TEXT_MUTED }}
                   >
                     {isLoadingMore ? "Loading..." : "Load more conversations"}
                   </button>
@@ -670,19 +672,56 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
           {/* Chat Area */}
           <div
             className="flex-1 flex flex-col overflow-hidden"
-            style={{ backgroundColor: "#1E1E1E" }}
+            style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
           >
             {selectedConversation ? (
               <>
-                {/* Chat Header */}
+                {/* Chat Header - matches coach */}
                 <div
-                  className="p-6 border-b"
-                  style={{ borderColor: "#2a2a2a" }}
+                  className="p-6 border-b flex items-center justify-between"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <ProfilePictureUploader
-                        currentAvatarUrl={(() => {
+                  <div className="flex items-center gap-4">
+                    <ProfilePictureUploader
+                      currentAvatarUrl={(() => {
+                        const conversation = conversations.find(
+                          (c: any) => c.id === selectedConversation
+                        );
+                        if (conversation) {
+                          const otherUser = getOtherUser(
+                            conversation,
+                            currentUser?.id || ""
+                          );
+                          return (
+                            otherUser?.settings?.avatarUrl || otherUser?.avatar
+                          );
+                        }
+                        return undefined;
+                      })()}
+                      userName={(() => {
+                        const conversation = conversations.find(
+                          (c: any) => c.id === selectedConversation
+                        );
+                        if (conversation) {
+                          const otherUser = getOtherUser(
+                            conversation,
+                            currentUser?.id || ""
+                          );
+                          return otherUser?.name || otherUser?.email || "User";
+                        }
+                        return "User";
+                      })()}
+                      onAvatarChange={() => {}}
+                      size="md"
+                      readOnly={true}
+                      className="flex-shrink-0"
+                    />
+                    <div>
+                      <p
+                        className="font-bold text-lg tracking-tight"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
+                        {(() => {
                           const conversation = conversations.find(
                             (c: any) => c.id === selectedConversation
                           );
@@ -692,74 +731,34 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                               currentUser?.id || ""
                             );
                             return (
-                              otherUser?.settings?.avatarUrl ||
-                              otherUser?.avatar
+                              otherUser?.name ||
+                              otherUser?.email?.split("@")[0] ||
+                              "Unknown"
                             );
                           }
-                          return undefined;
+                          return "Unknown";
                         })()}
-                        userName={(() => {
+                      </p>
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        {(() => {
                           const conversation = conversations.find(
-                            (c: any) => c.id === selectedConversation
+                            (c: { id: string; type: string }) =>
+                              c.id === selectedConversation
                           );
-                          if (conversation) {
-                            const otherUser = getOtherUser(
-                              conversation,
-                              currentUser?.id || ""
-                            );
-                            return (
-                              otherUser?.name || otherUser?.email || "User"
-                            );
-                          }
-                          return "User";
+                          return conversation?.type === "CLIENT_CLIENT"
+                            ? "Client"
+                            : "Coach";
                         })()}
-                        onAvatarChange={() => {}}
-                        size="md"
-                        readOnly={true}
-                        className="flex-shrink-0"
-                      />
-                      <div>
-                        <h3
-                          className="font-semibold"
-                          style={{ color: "#C3BCC2" }}
-                        >
-                          {(() => {
-                            const conversation = conversations.find(
-                              (c: any) => c.id === selectedConversation
-                            );
-                            if (conversation) {
-                              const otherUser = getOtherUser(
-                                conversation,
-                                currentUser?.id || ""
-                              );
-                              return (
-                                otherUser?.name ||
-                                otherUser?.email?.split("@")[0] ||
-                                "Unknown"
-                              );
-                            }
-                            return "Unknown";
-                          })()}
-                        </h3>
-                        <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                          {(() => {
-                            const conversation = conversations.find(
-                              (c: { id: string; type: string }) =>
-                                c.id === selectedConversation
-                            );
-                            return conversation?.type === "CLIENT_CLIENT"
-                              ? "Client"
-                              : "Coach";
-                          })()}
-                        </p>
-                      </div>
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2"></div>
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 p-4 space-y-3">
+                {/* Messages - only this area scrolls */}
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4">
                   {messages.map((message: any) => {
                     const isCurrentUser = message.sender.id === currentUser?.id;
 
@@ -771,21 +770,20 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                         }`}
                       >
                         <div
-                          className={`${
-                            isCurrentUser
-                              ? "max-w-md lg:max-w-2xl xl:max-w-3xl"
-                              : "max-w-xs lg:max-w-lg xl:max-w-xl"
-                          } px-4 py-3 rounded-2xl ${
+                          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                             isCurrentUser ? "rounded-br-sm" : "rounded-bl-sm"
                           }`}
                           style={{
                             backgroundColor: isCurrentUser
-                              ? "#3B82F6"
-                              : "#374151",
-                            color: "#ffffff",
+                              ? COLORS.GOLDEN_ACCENT
+                              : COLORS.BACKGROUND_CARD,
+                            color: isCurrentUser
+                              ? "#000000"
+                              : COLORS.TEXT_PRIMARY,
                             border: "1px solid",
-                            borderColor: isCurrentUser ? "#2563EB" : "#4B5563",
-                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                            borderColor: isCurrentUser
+                              ? COLORS.GOLDEN_BORDER
+                              : COLORS.BORDER_SUBTLE,
                           }}
                         >
                           {message.content && (
@@ -899,13 +897,15 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                                   className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
                                   style={{
                                     backgroundColor: isCurrentUser
-                                      ? "#1E40AF"
-                                      : "#2A3133",
-                                    color: "#ffffff",
+                                      ? COLORS.GOLDEN_DARK
+                                      : COLORS.BACKGROUND_CARD_HOVER,
+                                    color: isCurrentUser
+                                      ? "#fff"
+                                      : COLORS.TEXT_PRIMARY,
                                     border: "1px solid",
                                     borderColor: isCurrentUser
-                                      ? "#1D4ED8"
-                                      : "#606364",
+                                      ? COLORS.GOLDEN_BORDER
+                                      : COLORS.BORDER_SUBTLE,
                                   }}
                                 >
                                   {message.attachmentType?.startsWith(
@@ -931,23 +931,21 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                               )}
                             </div>
                           )}
-                          <div className="flex items-center justify-end gap-1 mt-2">
+                          <div className="flex items-center justify-end gap-1 mt-1">
                             <span
-                              className={`text-xs ${
-                                isCurrentUser
-                                  ? "text-blue-100"
-                                  : "text-gray-400"
-                              }`}
+                              className="text-xs"
+                              style={{
+                                color: isCurrentUser
+                                  ? "rgba(0,0,0,0.6)"
+                                  : COLORS.TEXT_MUTED,
+                              }}
                             >
                               {format(new Date(message.createdAt), "h:mm a")}
                             </span>
                             {isCurrentUser && (
                               <CheckCheck
-                                className={`h-3 w-3 ${
-                                  message.isRead
-                                    ? "text-blue-300"
-                                    : "text-gray-400"
-                                }`}
+                                className="h-3 w-3"
+                                style={{ color: COLORS.TEXT_MUTED }}
                               />
                             )}
                           </div>
@@ -960,13 +958,13 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                   {pendingMessages.map(pendingMessage => (
                     <div key={pendingMessage.id} className="flex justify-end">
                       <div
-                        className={`max-w-[70%] px-4 py-3 rounded-2xl text-white ${
+                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl rounded-br-sm ${
                           pendingMessage.status === "failed" ? "opacity-60" : ""
                         }`}
                         style={{
-                          backgroundColor: "#2A3133",
-                          borderColor: "#4A5A70",
-                          border: "1px solid",
+                          backgroundColor: COLORS.GOLDEN_ACCENT,
+                          color: "#000000",
+                          border: `1px solid ${COLORS.GOLDEN_BORDER}`,
                         }}
                       >
                         <div className="text-sm">
@@ -990,26 +988,32 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                             )}
                           </div>
                         )}
-                        <div className="flex items-center justify-end gap-1 mt-2">
-                          <span className="text-xs text-blue-100">
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          <span
+                            className="text-xs"
+                            style={{ color: "rgba(0,0,0,0.6)" }}
+                          >
                             {format(pendingMessage.timestamp, "h:mm a")}
                           </span>
                           <div className="flex items-center">
                             {pendingMessage.status === "sending" && (
                               <div className="flex items-center gap-1">
-                                <div className="w-1 h-1 bg-blue-200 rounded-full animate-pulse" />
+                                <div className="w-1 h-1 bg-black/40 rounded-full animate-pulse" />
                                 <div
-                                  className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
+                                  className="w-1 h-1 bg-black/40 rounded-full animate-pulse"
                                   style={{ animationDelay: "0.2s" }}
                                 />
                                 <div
-                                  className="w-1 h-1 bg-blue-200 rounded-full animate-pulse"
+                                  className="w-1 h-1 bg-black/40 rounded-full animate-pulse"
                                   style={{ animationDelay: "0.4s" }}
                                 />
                               </div>
                             )}
                             {pendingMessage.status === "sent" && (
-                              <CheckCheck className="h-3 w-3 text-blue-200" />
+                              <CheckCheck
+                                className="h-3 w-3"
+                                style={{ color: COLORS.TEXT_MUTED }}
+                              />
                             )}
                             {pendingMessage.status === "failed" && (
                               <div className="w-3 h-3 bg-red-400 rounded-full flex items-center justify-center">
@@ -1026,22 +1030,27 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
 
                   {messages.length === 0 && (
                     <div className="text-center py-8">
-                      <File
-                        className="h-12 w-12 mx-auto mb-4 opacity-50"
-                        style={{ color: "#ABA4AA" }}
-                      />
-                      <p className="text-sm" style={{ color: "#ABA4AA" }}>
-                        No messages yet
+                      <div
+                        className="h-8 w-8 mx-auto mb-3 opacity-50"
+                        style={{ color: COLORS.GOLDEN_ACCENT }}
+                      >
+                        <File className="h-8 w-8" />
+                      </div>
+                      <p
+                        className="text-sm"
+                        style={{ color: COLORS.TEXT_SECONDARY }}
+                      >
+                        No messages yet. Start the conversation!
                       </p>
                     </div>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input - Restricted for client-to-client conversations */}
+                {/* Message Input - matches coach */}
                 <div
-                  className="p-4 border-t"
-                  style={{ borderColor: "#2a2a2a" }}
+                  className="p-6 border-t flex-shrink-0"
+                  style={{ borderColor: COLORS.BORDER_SUBTLE }}
                 >
                   {(() => {
                     const conversation = conversations.find(
@@ -1070,7 +1079,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
                     return (
                       <RichMessageInput
                         value={messageText}
-                        onChange={setMessageText}
+                        onChange={v => setMessageText(v.slice(0, 10000))}
                         onSend={() => handleSendMessage()}
                         onFileUpload={() => setShowFileUpload(true)}
                         placeholder="Type a message..."
@@ -1086,17 +1095,25 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
-                  <File
-                    className="h-16 w-16 mx-auto mb-4 opacity-50"
-                    style={{ color: "#ABA4AA" }}
-                  />
+                  <div
+                    className="h-12 w-12 mx-auto mb-4 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: getGoldenAccent(0.1),
+                      color: COLORS.GOLDEN_ACCENT,
+                    }}
+                  >
+                    <File className="h-6 w-6" />
+                  </div>
                   <h3
-                    className="text-xl font-medium mb-2"
-                    style={{ color: "#C3BCC2" }}
+                    className="text-lg font-semibold mb-2"
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     Select a conversation
                   </h3>
-                  <p style={{ color: "#ABA4AA" }}>
+                  <p
+                    className="text-sm"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     Choose a conversation from the sidebar to start messaging
                   </p>
                 </div>
@@ -1113,7 +1130,7 @@ function ClientMessagesPage({}: ClientMessagesPageProps) {
           />
         )}
       </div>
-    </ClientTopNav>
+    </>
   );
 }
 

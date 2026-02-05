@@ -3,17 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
-import {
-  Search,
-  MoreVertical,
-  Send,
-  Paperclip,
-  File,
-  CheckCheck,
-  ArrowLeft,
-  MessageCircle,
-  Home,
-} from "lucide-react";
+import { Send, Paperclip, CheckCheck } from "lucide-react";
 import { format } from "date-fns";
 import MessageFileUpload from "./MessageFileUpload";
 import ProfilePictureUploader from "./ProfilePictureUploader";
@@ -24,6 +14,7 @@ import SwitchRequestMessage from "./SwapRequestMessage";
 import MobileClientNavigation from "./MobileClientNavigation";
 import MobileClientBottomNavigation from "./MobileClientBottomNavigation";
 import { useMessagingService } from "./MessagingServiceProvider";
+import { COLORS, getGoldenAccent } from "@/lib/colors";
 
 export default function MobileClientMessagesPage() {
   const searchParams = useSearchParams();
@@ -136,7 +127,7 @@ export default function MobileClientMessagesPage() {
       utils.messaging.getConversations.invalidate();
       utils.messaging.getUnreadCount.invalidate();
       utils.messaging.getConversationUnreadCounts.invalidate();
-      
+
       // Force immediate refetch
       utils.messaging.getConversationUnreadCounts.refetch();
       utils.messaging.getUnreadCount.refetch();
@@ -256,44 +247,62 @@ export default function MobileClientMessagesPage() {
 
   return (
     <div
-      className="min-h-screen overscroll-none"
-      style={{ backgroundColor: "#2A3133" }}
+      className="min-h-[100dvh] overscroll-none"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_DARK,
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
     >
-      {/* Mobile Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#2A3133] border-b border-[#606364] px-4 py-3">
+      {/* Mobile Header - safe area for notch/status bar */}
+      <div
+        className="fixed left-0 right-0 z-50 border-b px-4 py-3"
+        style={{
+          top: 0,
+          backgroundColor: COLORS.BACKGROUND_DARK,
+          borderColor: COLORS.BORDER_SUBTLE,
+          paddingTop:
+            "max(0.75rem, calc(0.75rem + env(safe-area-inset-top, 0px)))",
+        }}
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: "#4A5A70" }}
+          <div className="min-w-0">
+            <h1
+              className="text-lg font-bold truncate"
+              style={{ color: COLORS.TEXT_PRIMARY }}
             >
-              <MessageCircle className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Messages</h1>
-              <p className="text-xs text-gray-400">Chat with coach</p>
-            </div>
+              Messages
+            </h1>
+            <p
+              className="text-sm truncate"
+              style={{ color: COLORS.TEXT_MUTED }}
+            >
+              Chat with coach
+            </p>
           </div>
           <MobileClientNavigation currentPage="messages" />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overscroll-none pt-16">
+      {/* Main Content - pt clears fixed header (including safe area on notched devices) */}
+      <div className="flex-1 flex flex-col overscroll-none pt-20">
         {/* Conversations List */}
         {!selectedConversation && (
           <div className="flex flex-col overscroll-none">
             {/* Search */}
             <div className="flex-shrink-0 px-4 py-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search conversations..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  style={{ backgroundColor: "#353A3A", borderColor: "#606364" }}
+                  className="w-full pl-4 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#E5B232]/40 focus:border-[#E5B232]/60 placeholder:text-[#606364] text-base min-h-[44px] touch-manipulation"
+                  style={{
+                    backgroundColor: COLORS.BACKGROUND_CARD,
+                    borderColor: COLORS.BORDER_SUBTLE,
+                    color: COLORS.TEXT_PRIMARY,
+                    fontSize: 16,
+                  }}
                 />
               </div>
             </div>
@@ -303,28 +312,34 @@ export default function MobileClientMessagesPage() {
               <div className="space-y-1">
                 {conversationsLoading ? (
                   <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4" />
-                    <p className="text-gray-400">Loading conversations...</p>
+                    <div
+                      className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"
+                      style={{ borderColor: COLORS.GOLDEN_ACCENT }}
+                    />
+                    <p style={{ color: COLORS.TEXT_MUTED }}>
+                      Loading conversations...
+                    </p>
                   </div>
                 ) : conversationsError ? (
                   <div className="text-center py-12">
-                    <MessageCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                    <p className="text-red-400 mb-2">
+                    <p className="mb-2" style={{ color: COLORS.RED_ALERT }}>
                       Error loading conversations
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
                       {conversationsError.message}
                     </p>
                   </div>
                 ) : filteredConversations.length === 0 ? (
                   <div className="text-center py-12">
-                    <MessageCircle className="h-12 w-12 text-gray-500 mx-auto mb-4" />
-                    <p className="text-gray-400 mb-2">
+                    <p
+                      className="mb-2"
+                      style={{ color: COLORS.TEXT_SECONDARY }}
+                    >
                       {searchTerm
                         ? "No conversations found"
                         : "No conversations yet"}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
                       {searchTerm
                         ? "Try a different search term"
                         : "Start a conversation with your coach"}
@@ -345,13 +360,22 @@ export default function MobileClientMessagesPage() {
                         onClick={() => {
                           setSelectedConversation(conversation.id);
                           // Mark messages as read when conversation is opened
-                          markAsReadMutation.mutate({ conversationId: conversation.id });
+                          markAsReadMutation.mutate({
+                            conversationId: conversation.id,
+                          });
                         }}
-                        className={`p-4 rounded-lg cursor-pointer transition-colors ${
-                          isActive
-                            ? "bg-[#4A5A70] text-white"
-                            : "bg-[#353A3A] text-[#C3BCC2] hover:bg-[#4A5A70] hover:text-white"
-                        }`}
+                        className="p-4 rounded-lg cursor-pointer transition-colors touch-manipulation min-h-[52px]"
+                        style={{
+                          backgroundColor: isActive
+                            ? getGoldenAccent(0.15)
+                            : "transparent",
+                          color: isActive
+                            ? COLORS.GOLDEN_ACCENT
+                            : COLORS.TEXT_SECONDARY,
+                          borderLeft: isActive
+                            ? `3px solid ${COLORS.GOLDEN_ACCENT}`
+                            : "3px solid transparent",
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <ProfilePictureUploader
@@ -375,7 +399,10 @@ export default function MobileClientMessagesPage() {
                                   "Unknown"}
                               </h3>
                               {conversation.messages?.[0] && (
-                                <span className="text-xs opacity-75">
+                                <span
+                                  className="text-xs"
+                                  style={{ color: COLORS.TEXT_MUTED }}
+                                >
                                   {format(
                                     new Date(
                                       conversation.messages[0].createdAt
@@ -385,14 +412,23 @@ export default function MobileClientMessagesPage() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm opacity-75 truncate mt-1">
+                            <p
+                              className="text-sm truncate mt-1"
+                              style={{ color: COLORS.TEXT_MUTED }}
+                            >
                               {conversation.messages?.[0]?.content ||
                                 "No messages yet"}
                             </p>
                           </div>
                           {unreadCount > 0 && (
                             <div className="flex-shrink-0">
-                              <div className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                              <div
+                                className="w-5 h-5 text-xs rounded-full flex items-center justify-center font-medium"
+                                style={{
+                                  backgroundColor: COLORS.RED_ALERT,
+                                  color: COLORS.TEXT_PRIMARY,
+                                }}
+                              >
                                 {unreadCount > 99 ? "99+" : unreadCount}
                               </div>
                             </div>
@@ -410,17 +446,23 @@ export default function MobileClientMessagesPage() {
         {/* Chat Area */}
         {selectedConversation && (
           <div className="flex-1 flex flex-col">
-            {/* Chat Header - Fixed */}
+            {/* Chat Header - Fixed, directly under main header (5rem) */}
             <div
-              className="fixed top-16 left-0 right-0 z-40 px-4 py-2 border-b flex items-center justify-between"
-              style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
+              className="fixed left-0 right-0 z-40 px-4 py-2.5 border-b flex items-center justify-between"
+              style={{
+                top: "5rem",
+                borderColor: COLORS.BORDER_SUBTLE,
+                backgroundColor: COLORS.BACKGROUND_DARK,
+              }}
             >
               <div className="flex items-center gap-2.5 flex-1 min-h-0">
                 <button
+                  type="button"
                   onClick={() => setSelectedConversation(null)}
-                  className="p-1 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95 flex-shrink-0"
+                  className="p-2 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation active:scale-95 flex-shrink-0 text-sm font-medium"
+                  style={{ color: COLORS.TEXT_SECONDARY }}
                 >
-                  <ArrowLeft className="h-5 w-5" style={{ color: "#C3BCC2" }} />
+                  Back
                 </button>
                 <ProfilePictureUploader
                   currentAvatarUrl={(() => {
@@ -445,7 +487,7 @@ export default function MobileClientMessagesPage() {
                 <div className="flex flex-col justify-center min-w-0 flex-1 -space-y-0.5">
                   <h3
                     className="font-semibold text-sm truncate"
-                    style={{ color: "#C3BCC2" }}
+                    style={{ color: COLORS.TEXT_PRIMARY }}
                   >
                     {(() => {
                       const otherUser = getOtherUser(
@@ -459,26 +501,27 @@ export default function MobileClientMessagesPage() {
                       );
                     })()}
                   </h3>
-                  <p className="text-xs" style={{ color: "#ABA4AA" }}>
+                  <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
                     Coach
                   </p>
                 </div>
               </div>
-              <button className="p-1 rounded-full hover:bg-gray-800 transition-colors touch-manipulation active:scale-95 flex-shrink-0">
-                <MoreVertical
-                  className="h-5 w-5"
-                  style={{ color: "#ABA4AA" }}
-                />
+              <button
+                type="button"
+                className="p-2 rounded-full min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation active:scale-95 flex-shrink-0 text-xs font-medium"
+                style={{ color: COLORS.TEXT_MUTED }}
+              >
+                More
               </button>
             </div>
 
-            {/* Messages */}
+            {/* Messages - clear both headers (5rem + ~3rem), leave room for input bar */}
             <div
               className="overflow-y-auto px-4 space-y-3"
               style={{
-                height: "calc(100vh - 8rem)",
-                paddingTop: "5rem",
-                paddingBottom: "0.rem",
+                height: "calc(100vh - 12.5rem)",
+                paddingTop: "8rem",
+                paddingBottom: "1.5rem",
               }}
             >
               {messages.map((message: any) => {
@@ -493,11 +536,23 @@ export default function MobileClientMessagesPage() {
                     {/* Workout Note Header for client messages */}
                     {isWorkoutNote && isFromClient && (
                       <div className="w-full">
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-400/20">
-                          <span className="text-blue-400 font-medium text-sm">
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+                          style={{
+                            backgroundColor: `${COLORS.BLUE_PRIMARY}20`,
+                            borderColor: `${COLORS.BLUE_PRIMARY}40`,
+                          }}
+                        >
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: COLORS.BLUE_PRIMARY }}
+                          >
                             📝 Workout Note
                           </span>
-                          <span className="text-gray-400 text-xs">
+                          <span
+                            className="text-xs"
+                            style={{ color: COLORS.TEXT_MUTED }}
+                          >
                             from coach
                           </span>
                         </div>
@@ -511,12 +566,24 @@ export default function MobileClientMessagesPage() {
                     >
                       <div
                         className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                          isCurrentUser
-                            ? "bg-blue-500 text-white rounded-br-md"
-                            : isWorkoutNote && isFromClient
-                            ? "bg-gray-700 text-gray-100 rounded-bl-md border border-blue-400"
-                            : "bg-gray-700 text-gray-100 rounded-bl-md"
+                          isCurrentUser ? "rounded-br-md" : "rounded-bl-md"
                         }`}
+                        style={
+                          isCurrentUser
+                            ? {
+                                backgroundColor: COLORS.BLUE_PRIMARY,
+                                color: COLORS.TEXT_PRIMARY,
+                              }
+                            : {
+                                backgroundColor: COLORS.BACKGROUND_CARD,
+                                color: COLORS.TEXT_PRIMARY,
+                                borderWidth: 1,
+                                borderColor:
+                                  isWorkoutNote && isFromClient
+                                    ? COLORS.BLUE_PRIMARY
+                                    : COLORS.BORDER_SUBTLE,
+                              }
+                        }
                       >
                         <div className="text-sm">
                           <FormattedMessage content={message.content} />
@@ -535,7 +602,11 @@ export default function MobileClientMessagesPage() {
                               : null
                           }
                           isOwnMessage={isCurrentUser}
-                          messageData={message.data as { type?: string; swapRequestId?: string } | undefined}
+                          messageData={
+                            message.data as
+                              | { type?: string; swapRequestId?: string }
+                              | undefined
+                          }
                         />
 
                         {message.attachmentUrl && (
@@ -544,45 +615,71 @@ export default function MobileClientMessagesPage() {
                               <img
                                 src={message.attachmentUrl}
                                 alt="Attachment"
-                                className="max-w-full rounded-lg"
+                                className="max-w-full rounded-lg border"
+                                style={{ borderColor: COLORS.BORDER_SUBTLE }}
                               />
                             ) : message.attachmentType?.startsWith("video/") ? (
                               <div className="space-y-2">
                                 <video
                                   src={message.attachmentUrl}
                                   controls
-                                  className="max-w-full rounded-lg"
-                                  style={{ maxHeight: "200px" }}
+                                  className="max-w-full rounded-lg border"
+                                  style={{
+                                    maxHeight: "200px",
+                                    borderColor: COLORS.BORDER_SUBTLE,
+                                  }}
                                   preload="metadata"
                                 >
                                   Your browser does not support the video tag.
                                 </video>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 p-2 bg-gray-600 rounded-lg">
-                                <File className="h-4 w-4" />
-                                <span className="text-sm">
-                                  {message.attachmentName || "Attachment"}
-                                </span>
+                              <div
+                                className="flex items-center gap-2 p-2 rounded-lg"
+                                style={{
+                                  backgroundColor: COLORS.BACKGROUND_DARK,
+                                  color: COLORS.TEXT_SECONDARY,
+                                  fontSize: "0.875rem",
+                                }}
+                              >
+                                {message.attachmentName || "Attachment"}
                               </div>
                             )}
                           </div>
                         )}
 
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs opacity-75">
+                          <span
+                            className="text-xs"
+                            style={{ color: COLORS.TEXT_MUTED }}
+                          >
                             {format(new Date(message.createdAt), "h:mm a")}
                           </span>
                           {isCurrentUser && (
                             <div className="flex items-center gap-1">
                               {message.status === "sent" && (
-                                <CheckCheck className="h-3 w-3 text-blue-300" />
+                                <CheckCheck
+                                  className="h-3 w-3"
+                                  style={{
+                                    color: COLORS.BLUE_PRIMARY,
+                                  }}
+                                />
                               )}
                               {message.status === "delivered" && (
-                                <CheckCheck className="h-3 w-3 text-green-300" />
+                                <CheckCheck
+                                  className="h-3 w-3"
+                                  style={{
+                                    color: COLORS.GREEN_PRIMARY,
+                                  }}
+                                />
                               )}
                               {message.status === "failed" && (
-                                <span className="text-red-400 text-xs">
+                                <span
+                                  className="text-xs"
+                                  style={{
+                                    color: COLORS.RED_ALERT,
+                                  }}
+                                >
                                   Failed
                                 </span>
                               )}
@@ -599,18 +696,37 @@ export default function MobileClientMessagesPage() {
               {pendingMessages.map(message => (
                 <div key={message.id} className="space-y-2">
                   <div className="flex justify-end">
-                    <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-blue-500 text-white rounded-br-md opacity-75">
+                    <div
+                      className="max-w-[80%] px-4 py-3 rounded-2xl rounded-br-md opacity-95"
+                      style={{
+                        backgroundColor: COLORS.BLUE_PRIMARY,
+                        color: COLORS.TEXT_PRIMARY,
+                      }}
+                    >
                       <div className="text-sm">{message.content}</div>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs opacity-75">
+                        <span
+                          className="text-xs"
+                          style={{ color: "rgba(255,255,255,0.85)" }}
+                        >
                           {format(new Date(message.createdAt), "h:mm a")}
                         </span>
                         <div className="flex items-center gap-1">
                           {message.status === "sending" && (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                            <div
+                              className="animate-spin rounded-full h-3 w-3 border-b-2"
+                              style={{
+                                borderColor: COLORS.TEXT_PRIMARY,
+                              }}
+                            />
                           )}
                           {message.status === "failed" && (
-                            <span className="text-red-400 text-xs">Failed</span>
+                            <span
+                              className="text-xs"
+                              style={{ color: COLORS.RED_ALERT }}
+                            >
+                              Failed
+                            </span>
                           )}
                         </div>
                       </div>
@@ -622,10 +738,16 @@ export default function MobileClientMessagesPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input - Fixed */}
+            {/* Message Input - Fixed above bottom nav */}
             <div
-              className="fixed bottom-20 left-0 right-0 z-40 px-4 py-3 border-t"
-              style={{ borderColor: "#606364", backgroundColor: "#353A3A" }}
+              className="fixed left-0 right-0 z-40 px-4 py-3 border-t"
+              style={{
+                borderColor: COLORS.BORDER_SUBTLE,
+                backgroundColor: COLORS.BACKGROUND_DARK,
+                paddingBottom: "0.75rem",
+                bottom:
+                  "calc(1.25rem + 44px + env(safe-area-inset-bottom, 0px))",
+              }}
             >
               <RichMessageInput
                 value={messageText}
@@ -655,7 +777,7 @@ export default function MobileClientMessagesPage() {
       )}
 
       {/* Bottom Navigation */}
-      <MobileClientBottomNavigation />
+      <MobileClientBottomNavigation bugReportOnLeft />
     </div>
   );
 }

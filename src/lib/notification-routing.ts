@@ -28,89 +28,111 @@ export interface Notification {
   createdAt: string;
 }
 
+export type NotificationRouteOptions = { forClient?: boolean };
+
 /**
- * Smart notification routing based on notification type and data
+ * Smart notification routing based on notification type and data.
+ * Pass { forClient: true } when the viewer is a client so routes go to client pages.
  */
-export const getNotificationRoute = (notification: Notification): string => {
+export const getNotificationRoute = (
+  notification: Notification,
+  options?: NotificationRouteOptions
+): string => {
   const { type, data } = notification;
+  const forClient = options?.forClient ?? false;
 
-  switch (type) {
-    case "MESSAGE":
-      // If we have a conversationId, go to that specific conversation
-      if (data?.conversationId) {
-        return `/messages?conversation=${data.conversationId}`;
-      }
-      // If we have a messageId, try to find the conversation
-      if (data?.messageId) {
-        return `/messages?message=${data.messageId}`;
-      }
-      return "/messages";
+  const baseRoute = ((): string => {
+    switch (type) {
+      case "MESSAGE":
+        if (data?.conversationId) {
+          return `/messages?conversation=${data.conversationId}`;
+        }
+        if (data?.messageId) {
+          return `/messages?message=${data.messageId}`;
+        }
+        return "/messages";
 
-    case "CLIENT_JOIN_REQUEST":
-      // If we have a specific client, go to that client's page
-      if (data?.clientId) {
-        return `/clients?client=${data.clientId}`;
-      }
-      if (data?.clientUserId) {
-        return `/clients?user=${data.clientUserId}`;
-      }
-      return "/clients";
+      case "CLIENT_JOIN_REQUEST":
+        if (data?.clientId) {
+          return `/clients?client=${data.clientId}`;
+        }
+        if (data?.clientUserId) {
+          return `/clients?user=${data.clientUserId}`;
+        }
+        return "/clients";
 
-    case "LESSON_SCHEDULED":
-    case "LESSON_CANCELLED":
-    case "SCHEDULE_REQUEST":
-      // If we have a specific event, go to that event's details
-      if (data?.eventId) {
-        return `/schedule?event=${data.eventId}`;
-      }
-      return "/schedule";
+      case "LESSON_SCHEDULED":
+      case "LESSON_CANCELLED":
+      case "SCHEDULE_REQUEST":
+        if (data?.eventId) {
+          return `/schedule?event=${data.eventId}`;
+        }
+        return "/schedule";
 
-    case "WORKOUT_ASSIGNED":
-    case "WORKOUT_COMPLETED":
-    case "PROGRAM_ASSIGNED":
-      // If we have a specific program, go to that program
-      if (data?.programId) {
-        return `/programs?program=${data.programId}`;
-      }
-      // If we have a specific drill, go to that drill
-      if (data?.drillId) {
-        return `/programs?drill=${data.drillId}`;
-      }
-      return "/programs";
+      case "WORKOUT_ASSIGNED":
+      case "WORKOUT_COMPLETED":
+      case "PROGRAM_ASSIGNED":
+        if (data?.programId) {
+          return `/programs?program=${data.programId}`;
+        }
+        if (data?.drillId) {
+          return `/programs?drill=${data.drillId}`;
+        }
+        return "/programs";
 
-    case "PROGRESS_UPDATE":
-      // If we have a specific program, go to that program's progress
-      if (data?.programId) {
-        return `/programs?program=${data.programId}&tab=progress`;
-      }
-      return "/programs";
+      case "PROGRESS_UPDATE":
+        if (data?.programId) {
+          return `/programs?program=${data.programId}&tab=progress`;
+        }
+        return "/programs";
 
-    case "VIDEO_SUBMISSION":
-      // If we have a specific video submission, go to that video
-      if (data?.videoSubmissionId) {
-        return `/videos?submission=${data.videoSubmissionId}`;
-      }
-      return "/videos";
+      case "VIDEO_SUBMISSION":
+        if (data?.videoSubmissionId) {
+          return `/videos?submission=${data.videoSubmissionId}`;
+        }
+        return "/videos";
 
-    case "TIME_SWAP_REQUEST":
-      // If we have a swap request, go to the time swap page
-      if (data?.swapRequestId) {
-        return `/time-swap?request=${data.swapRequestId}`;
-      }
-      return "/time-swap";
+      case "TIME_SWAP_REQUEST":
+        if (data?.swapRequestId) {
+          return `/time-swap?request=${data.swapRequestId}`;
+        }
+        return "/time-swap";
 
-    default:
-      return "/dashboard";
+      default:
+        return "/dashboard";
+    }
+  })();
+
+  if (!forClient) return baseRoute;
+
+  // Map coach routes to client routes
+  if (baseRoute.startsWith("/messages")) {
+    return baseRoute.replace("/messages", "/client-messages");
   }
+  if (baseRoute.startsWith("/schedule")) {
+    return baseRoute.replace("/schedule", "/client-schedule");
+  }
+  if (baseRoute.startsWith("/programs")) {
+    return baseRoute.replace("/programs", "/client-dashboard");
+  }
+  if (baseRoute.startsWith("/time-swap")) {
+    return "/client-schedule";
+  }
+  if (baseRoute === "/dashboard" || baseRoute.startsWith("/videos")) {
+    return "/client-dashboard";
+  }
+  return baseRoute;
 };
 
 /**
- * Enhanced notification click handler that uses smart routing
+ * Enhanced notification click handler that uses smart routing.
+ * Pass { forClient: true } when the viewer is a client.
  */
 export const handleNotificationClick = (
   notification: Notification,
   router: { push: (route: string) => void },
-  markAsReadMutation?: { mutate: (params: { notificationId: string }) => void }
+  markAsReadMutation?: { mutate: (params: { notificationId: string }) => void },
+  options?: NotificationRouteOptions
 ) => {
   // Mark as read if unread
   if (!notification.isRead && markAsReadMutation) {
@@ -119,10 +141,7 @@ export const handleNotificationClick = (
     });
   }
 
-  // Get the smart route
-  const route = getNotificationRoute(notification);
-
-  // Navigate to the route
+  const route = getNotificationRoute(notification, options);
   router.push(route);
 };
 
