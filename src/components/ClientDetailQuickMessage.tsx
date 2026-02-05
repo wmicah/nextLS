@@ -171,8 +171,8 @@ export default function QuickMessagePopup({
           isAnimating && !isOpen
             ? "animate-[fadeOut_0.2s_ease-in-out_forwards]"
             : isAnimating
-            ? "animate-[slideInDown_0.3s_ease-out_forwards]"
-            : "transform scale-100 opacity-100"
+              ? "animate-[slideInDown_0.3s_ease-out_forwards]"
+              : "transform scale-100 opacity-100"
         }`}
         style={{
           top: buttonPosition.top,
@@ -305,12 +305,17 @@ export default function QuickMessagePopup({
                             {/* File Attachment */}
                             {message.attachmentUrl && (
                               <div className="mt-1">
-                                {message.attachmentType?.startsWith("image/") ? (
+                                {message.attachmentType?.startsWith(
+                                  "image/"
+                                ) ? (
                                   <img
                                     src={message.attachmentUrl}
                                     alt={message.attachmentName || "Image"}
-                                    className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105"
-                                    style={{ maxHeight: "150px" }}
+                                    className="max-w-full rounded-lg cursor-pointer transition-transform hover:scale-105 object-contain"
+                                    style={{
+                                      maxHeight: "150px",
+                                      aspectRatio: "16/10",
+                                    }}
                                     onClick={() =>
                                       message.attachmentUrl &&
                                       window.open(
@@ -479,4 +484,3 @@ export default function QuickMessagePopup({
     </>
   );
 }
-

@@ -473,8 +473,11 @@ export default function ConversationPage({
                             <img
                               src={message.attachmentUrl}
                               alt={message.attachmentName || "Image"}
-                              className="max-w-full rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02]"
-                              style={{ maxHeight: "300px" }}
+                              className="max-w-full rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02] object-contain"
+                              style={{
+                                maxHeight: "300px",
+                                aspectRatio: "16/10",
+                              }}
                               onClick={() =>
                                 message.attachmentUrl &&
                                 window.open(message.attachmentUrl, "_blank")

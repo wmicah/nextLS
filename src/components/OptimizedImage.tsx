@@ -56,10 +56,10 @@ export const OptimizedImage = memo(function OptimizedImage({
   // If no src or error, show fallback
   if (!src || hasError) {
     return (
-      <div className={`flex items-center justify-center bg-[#1a1f1f] ${className}`}>
-        {fallback || (
-          <div className="text-gray-500 text-sm">No image</div>
-        )}
+      <div
+        className={`flex items-center justify-center bg-[#1a1f1f] ${className}`}
+      >
+        {fallback || <div className="text-gray-500 text-sm">No image</div>}
       </div>
     );
   }
@@ -71,7 +71,12 @@ export const OptimizedImage = memo(function OptimizedImage({
   // Using regular img for external URLs from unknown domains
   if (isExternal && !isAllowedDomain(src)) {
     return (
-      <div className={`relative ${className}`}>
+      <div
+        className={`relative overflow-hidden ${className}`}
+        style={{
+          aspectRatio: width && height ? `${width}/${height}` : "16/10",
+        }}
+      >
         {isLoading && (
           <div className="absolute inset-0 bg-[#1a1f1f] animate-pulse" />
         )}
@@ -79,7 +84,7 @@ export const OptimizedImage = memo(function OptimizedImage({
         <img
           src={src}
           alt={alt}
-          className={`${className} ${isLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-200`}
+          className={`w-full h-full object-cover ${isLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-200`}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
           onLoad={handleLoad}
@@ -224,19 +229,18 @@ export const VideoThumbnailImage = memo(function VideoThumbnailImage({
 
   return (
     <div
-      className={`relative bg-[#1a1f1f] overflow-hidden group ${onClick ? "cursor-pointer" : ""} ${className}`}
+      className={`relative bg-[#1a1f1f] overflow-hidden group aspect-video ${onClick ? "cursor-pointer" : ""} ${className}`}
       onClick={onClick}
     >
       {isLoading && (
         <div className="absolute inset-0 animate-pulse bg-[#2a2f2f]" />
       )}
-      
       {src && !hasError ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={src}
           alt={alt}
-          className={`w-full h-full object-cover transition-all duration-300 ${
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-300 ${
             isLoading ? "opacity-0" : "opacity-100"
           } ${onClick ? "group-hover:scale-105" : ""}`}
           loading="lazy"
@@ -282,4 +286,3 @@ export const VideoThumbnailImage = memo(function VideoThumbnailImage({
     </div>
   );
 });
-

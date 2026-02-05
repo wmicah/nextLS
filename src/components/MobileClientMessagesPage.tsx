@@ -615,8 +615,12 @@ export default function MobileClientMessagesPage() {
                               <img
                                 src={message.attachmentUrl}
                                 alt="Attachment"
-                                className="max-w-full rounded-lg border"
-                                style={{ borderColor: COLORS.BORDER_SUBTLE }}
+                                className="max-w-full rounded-lg border object-contain"
+                                style={{
+                                  borderColor: COLORS.BORDER_SUBTLE,
+                                  aspectRatio: "16/10",
+                                  maxHeight: "200px",
+                                }}
                               />
                             ) : message.attachmentType?.startsWith("video/") ? (
                               <div className="space-y-2">
