@@ -823,18 +823,20 @@ export default function MobileClientsPage() {
     data: clients = [],
     isLoading,
     error,
-  } = trpc.clients.list.useQuery({
-    archived: activeTab === "archived",
-  });
+  } = trpc.clients.list.useQuery(
+    { archived: activeTab === "archived" },
+    { staleTime: 2 * 60 * 1000, refetchOnWindowFocus: false }
+  );
 
-  // Get counts for both tabs
-  const { data: activeClientsData = [] } = trpc.clients.list.useQuery({
-    archived: false,
-  });
+  const { data: activeClientsData = [] } = trpc.clients.list.useQuery(
+    { archived: false },
+    { staleTime: 2 * 60 * 1000, refetchOnWindowFocus: false }
+  );
 
-  const { data: archivedClientsData = [] } = trpc.clients.list.useQuery({
-    archived: true,
-  });
+  const { data: archivedClientsData = [] } = trpc.clients.list.useQuery(
+    { archived: true },
+    { staleTime: 2 * 60 * 1000, refetchOnWindowFocus: false }
+  );
   const utils = trpc.useUtils();
 
   const openNotes = (client: Client) => {

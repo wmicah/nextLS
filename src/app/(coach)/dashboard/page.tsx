@@ -5,6 +5,7 @@ import { useMobileDetection } from "@/lib/mobile-detection";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ComponentErrorFallback } from "@/components/ErrorFallback";
 import { Suspense } from "react";
+import CoachPageSkeleton from "@/components/CoachPageSkeleton";
 
 const Dashboard = dynamic(() => import("@/components/Dashboard"), {
   loading: () => null,
@@ -17,7 +18,7 @@ const MobileDashboard = dynamic(() => import("@/components/MobileDashboard"), {
 
 export default function DashboardPage() {
   const { isMobile, isClient } = useMobileDetection();
-  if (!isClient) return null;
+  if (!isClient) return <CoachPageSkeleton />;
   const Component = isMobile ? MobileDashboard : Dashboard;
   return (
     <ErrorBoundary fallback={<ComponentErrorFallback />}>

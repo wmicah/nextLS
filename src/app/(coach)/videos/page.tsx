@@ -5,6 +5,7 @@ import { useMobileDetection } from "@/lib/mobile-detection";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ComponentErrorFallback } from "@/components/ErrorFallback";
 import { Suspense } from "react";
+import CoachPageSkeleton from "@/components/CoachPageSkeleton";
 
 const VideosPage = dynamic(() => import("@/components/VideosPage"), {
   loading: () => null,
@@ -13,7 +14,7 @@ const VideosPage = dynamic(() => import("@/components/VideosPage"), {
 
 export default function VideosRoutePage() {
   const { isClient } = useMobileDetection();
-  if (!isClient) return null;
+  if (!isClient) return <CoachPageSkeleton />;
   return (
     <ErrorBoundary fallback={<ComponentErrorFallback />}>
       <Suspense fallback={null}>

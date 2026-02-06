@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/app/_trpc/client";
@@ -16,17 +17,48 @@ import {
   Home,
   MessageCircle,
 } from "lucide-react";
-import WeekAtAGlance from "@/components/WeekAtAGlance";
 import MobileNavigation from "@/components/MobileNavigation";
 import MobileBottomNavigation from "@/components/MobileBottomNavigation";
 import PushNotificationPrompt from "./PushNotificationPrompt";
 import { COLORS, getGoldenAccent, getRedAlert } from "@/lib/colors";
 
+// Lazy load heavy Week-at-a-Glance (large component + multiple queries) for faster mobile LCP
+const WeekAtAGlance = dynamic(() => import("@/components/WeekAtAGlance"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="min-h-[120px] flex items-center justify-center rounded border"
+      style={{ borderColor: COLORS.BORDER_SUBTLE }}
+    >
+      <div
+        className="animate-pulse h-6 w-6 rounded-full border-2 border-t-transparent"
+        style={{ borderColor: COLORS.GOLDEN_ACCENT }}
+      />
+    </div>
+  ),
+});
+
+/** Renders children after first paint to keep LCP/INP fast on mobile */
+function DeferContent({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
+  if (!mounted) return null;
+  return <>{children}</>;
+}
+
+const DASHBOARD_STALE = 3 * 60 * 1000;
+
 export default function MobileDashboard() {
   const router = useRouter();
 
-  // Get user profile to check role
-  const { data: userProfile } = trpc.user.getProfile.useQuery();
+  // Get user profile to check role (cached to avoid extra round-trips on mobile)
+  const { data: userProfile } = trpc.user.getProfile.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   // Redirect to client dashboard if user is a client
   useEffect(() => {
@@ -48,20 +80,27 @@ export default function MobileDashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.BACKGROUND_DARK }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: COLORS.BACKGROUND_DARK }}
+    >
       {/* Mobile Header */}
-      <div 
+      <div
         className="sticky top-0 z-50 border-b px-4 pb-3"
-        style={{ 
+        style={{
           paddingTop: `calc(0.75rem + env(safe-area-inset-top))`,
           backgroundColor: COLORS.BACKGROUND_DARK,
-          borderColor: COLORS.BORDER_SUBTLE
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
-              Welcome back{userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
+            <h1
+              className="text-lg font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              Welcome back
+              {userProfile?.name ? `, ${userProfile.name.split(" ")[0]}` : ""}
             </h1>
             <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
               {new Date().toLocaleDateString("en-US", {
@@ -77,18 +116,34 @@ export default function MobileDashboard() {
 
       {/* Main Content */}
       <div className="p-4 pb-20 space-y-4">
-        <div className="pt-4">
-          <PushNotificationPrompt />
-        </div>
+        {/* Defer push prompt so it doesn't block first paint / data */}
+        <DeferContent>
+          <div className="pt-4">
+            <PushNotificationPrompt />
+          </div>
+        </DeferContent>
 
         {/* Week at a Glance - Mobile Optimized */}
-        <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+        <div
+          className="rounded-lg border p-4"
+          style={{
+            backgroundColor: COLORS.BACKGROUND_CARD,
+            borderColor: COLORS.BORDER_SUBTLE,
+          }}
+        >
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+            <h2
+              className="text-lg font-semibold"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
               Week at a Glance
             </h2>
             <span className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
-              Week of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              Week of{" "}
+              {new Date().toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
             </span>
           </div>
           <WeekAtAGlance className="compact" />
@@ -97,14 +152,17 @@ export default function MobileDashboard() {
         {/* Today's Schedule */}
         <TodaysScheduleSection />
 
-        {/* Needs Attention - Mobile version */}
-        <NeedsAttentionSectionMobile />
+        {/* Below-the-fold: defer to improve LCP/INP on mobile */}
+        <DeferContent>
+          {/* Needs Attention - Mobile version */}
+          <NeedsAttentionSectionMobile />
 
-        {/* Recent Activity */}
-        <RecentClientActivitySection />
+          {/* Recent Activity */}
+          <RecentClientActivitySection />
 
-        {/* Quick Stats */}
-        <QuickStatsSection />
+          {/* Quick Stats */}
+          <QuickStatsSection />
+        </DeferContent>
       </div>
 
       {/* Bottom Navigation */}
@@ -113,28 +171,35 @@ export default function MobileDashboard() {
   );
 }
 
-// Quick Stats Section Component
+// Quick Stats Section Component (cached to reduce mobile round-trips)
 function QuickStatsSection() {
   const { data: clients = [], isLoading: clientsLoading } =
-    trpc.clients.list.useQuery({
-      archived: false,
-    });
+    trpc.clients.list.useQuery(
+      { archived: false },
+      { staleTime: DASHBOARD_STALE, refetchOnWindowFocus: false }
+    );
 
   const today = new Date();
   const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
-    trpc.scheduling.getCoachSchedule.useQuery({
-      month: today.getMonth(),
-      year: today.getFullYear(),
-    });
+    trpc.scheduling.getCoachSchedule.useQuery(
+      { month: today.getMonth(), year: today.getFullYear() },
+      { staleTime: DASHBOARD_STALE, refetchOnWindowFocus: false }
+    );
 
-  // Fetch events and programs for analytics
-  const { data: events = [] } = trpc.events.getUpcoming.useQuery();
+  const { data: events = [] } = trpc.events.getUpcoming.useQuery(undefined, {
+    staleTime: DASHBOARD_STALE,
+    refetchOnWindowFocus: false,
+  });
   const { data: programs = [], isLoading: programsLoading } =
-    trpc.programs.list.useQuery();
-  const { data: analyticsData, isLoading: analyticsLoading } =
-    trpc.analytics.getDashboardData.useQuery({
-      timeRange: "4w",
+    trpc.programs.list.useQuery(undefined, {
+      staleTime: DASHBOARD_STALE,
+      refetchOnWindowFocus: false,
     });
+  const { data: analyticsData, isLoading: analyticsLoading } =
+    trpc.analytics.getDashboardData.useQuery(
+      { timeRange: "4w" },
+      { staleTime: DASHBOARD_STALE, refetchOnWindowFocus: false }
+    );
 
   // Calculate total upcoming lessons (this month)
   const totalUpcomingLessons = thisMonthLessons.length;
@@ -197,12 +262,25 @@ function QuickStatsSection() {
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <div
+        className="rounded-lg border p-4"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <div className="animate-pulse">
-          <div className="h-5 w-32 rounded mb-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+          <div
+            className="h-5 w-32 rounded mb-4"
+            style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+          ></div>
           <div className="grid grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-20 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+            {[1, 2, 3, 4].map(i => (
+              <div
+                key={i}
+                className="h-20 rounded"
+                style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+              ></div>
             ))}
           </div>
         </div>
@@ -211,8 +289,17 @@ function QuickStatsSection() {
   }
 
   return (
-    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
-      <h2 className="text-lg font-semibold mb-4" style={{ color: COLORS.TEXT_PRIMARY }}>
+    <div
+      className="rounded-lg border p-4"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
+    >
+      <h2
+        className="text-lg font-semibold mb-4"
+        style={{ color: COLORS.TEXT_PRIMARY }}
+      >
         Quick stats
       </h2>
 
@@ -221,16 +308,26 @@ function QuickStatsSection() {
           <div
             key={index}
             className="p-3 rounded-lg border"
-            style={{ 
+            style={{
               backgroundColor: COLORS.BACKGROUND_CARD,
               borderColor: COLORS.BORDER_SUBTLE,
-              borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`
+              borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`,
             }}
           >
-            <p className="text-xl font-bold mb-1" style={{ color: COLORS.TEXT_PRIMARY }}>{stat.value}</p>
-            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>{stat.label}</p>
+            <p
+              className="text-xl font-bold mb-1"
+              style={{ color: COLORS.TEXT_PRIMARY }}
+            >
+              {stat.value}
+            </p>
+            <p className="text-xs" style={{ color: COLORS.TEXT_MUTED }}>
+              {stat.label}
+            </p>
             {stat.progress !== undefined && (
-              <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}>
+              <div
+                className="mt-2 h-1 rounded-full overflow-hidden"
+                style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+              >
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -292,14 +389,16 @@ function TodaysScheduleSection() {
   );
 
   const { data: thisMonthLessons = [], isLoading: lessonsLoading } =
-    trpc.scheduling.getCoachSchedule.useQuery({
-      month: today.getMonth(),
-      year: today.getFullYear(),
-    });
+    trpc.scheduling.getCoachSchedule.useQuery(
+      { month: today.getMonth(), year: today.getFullYear() },
+      { staleTime: 2 * 60 * 1000, refetchOnWindowFocus: false }
+    );
 
-  // Fetch events (which includes reminders)
   const { data: events = [], isLoading: eventsLoading } =
-    trpc.events.getUpcoming.useQuery();
+    trpc.events.getUpcoming.useQuery(undefined, {
+      staleTime: 2 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    });
 
   // Filter lessons for today (including all of today, not just future)
   const todaysLessonsFiltered = thisMonthLessons.filter((lesson: any) => {
@@ -336,33 +435,47 @@ function TodaysScheduleSection() {
 
   if (isLoading) {
     return (
-      <div 
+      <div
         className="rounded-lg border p-4"
-        style={{ 
-          backgroundColor: COLORS.BACKGROUND_CARD, 
-          borderColor: COLORS.BORDER_SUBTLE 
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
         }}
       >
         <div className="flex items-center gap-3 mb-4">
-          <h3 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+          <h3
+            className="text-lg font-semibold"
+            style={{ color: COLORS.TEXT_PRIMARY }}
+          >
             Today's Schedule
           </h3>
         </div>
         <div className="text-center py-6">
-          <div 
+          <div
             className="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2"
             style={{ borderColor: COLORS.GOLDEN_ACCENT }}
           />
-          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>Loading schedule...</p>
+          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
+            Loading schedule...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+    <div
+      className="rounded-lg border p-4"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
+    >
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold" style={{ color: COLORS.TEXT_PRIMARY }}>
+        <h2
+          className="text-lg font-semibold"
+          style={{ color: COLORS.TEXT_PRIMARY }}
+        >
           Today's schedule
         </h2>
       </div>
@@ -386,12 +499,14 @@ function TodaysScheduleSection() {
                   borderColor: COLORS.GOLDEN_BORDER,
                   backgroundColor: COLORS.BACKGROUND_CARD,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD_HOVER;
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD_HOVER;
                   e.currentTarget.style.borderColor = COLORS.GOLDEN_ACCENT;
                 }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.BACKGROUND_CARD;
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor =
+                    COLORS.BACKGROUND_CARD;
                   e.currentTarget.style.borderColor = COLORS.GOLDEN_BORDER;
                 }}
               >
@@ -442,10 +557,10 @@ function TodaysScheduleSection() {
               backgroundColor: COLORS.GOLDEN_DARK,
               color: "#FFFFFF",
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = COLORS.GOLDEN_ACCENT;
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.backgroundColor = COLORS.GOLDEN_DARK;
             }}
           >
@@ -457,30 +572,53 @@ function TodaysScheduleSection() {
   );
 }
 
-// Needs Attention Section - Mobile version
+// Needs Attention Section - Mobile version (cached for faster repeat loads)
 function NeedsAttentionSectionMobile() {
   const router = useRouter();
   const { data: attentionItemsData = [], isLoading: attentionLoading } =
-    trpc.sidebar.getAttentionItems.useQuery();
+    trpc.sidebar.getAttentionItems.useQuery(undefined, {
+      staleTime: DASHBOARD_STALE,
+      refetchOnWindowFocus: false,
+    });
 
   const { data: conversationsData, isLoading: conversationsLoading } =
-    trpc.messaging.getConversations.useQuery();
+    trpc.messaging.getConversations.useQuery(undefined, {
+      staleTime: DASHBOARD_STALE,
+      refetchOnWindowFocus: false,
+    });
 
   if (attentionLoading || conversationsLoading) {
     return (
-      <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <div
+        className="rounded-lg border p-4"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <div className="animate-pulse">
-          <div className="h-5 w-40 rounded mb-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+          <div
+            className="h-5 w-40 rounded mb-4"
+            style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+          ></div>
           <div className="space-y-3">
-            <div className="h-16 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
-            <div className="h-16 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+            <div
+              className="h-16 rounded"
+              style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+            ></div>
+            <div
+              className="h-16 rounded"
+              style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+            ></div>
           </div>
         </div>
       </div>
     );
   }
 
-  const conversations = Array.isArray(conversationsData) ? conversationsData : [];
+  const conversations = Array.isArray(conversationsData)
+    ? conversationsData
+    : [];
   const attentionItems: any[] = [...attentionItemsData];
 
   if (Array.isArray(conversations)) {
@@ -526,7 +664,8 @@ function NeedsAttentionSectionMobile() {
 
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
     return date.toLocaleDateString();
   };
@@ -549,13 +688,19 @@ function NeedsAttentionSectionMobile() {
   };
 
   return (
-    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+    <div
+      className="rounded-lg border p-4"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
+    >
       <div className="flex items-center justify-between mb-4">
-        <h2 
+        <h2
           className="text-lg font-semibold pl-3"
-          style={{ 
+          style={{
             color: COLORS.TEXT_PRIMARY,
-            borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`
+            borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`,
           }}
         >
           Needs your attention
@@ -573,7 +718,7 @@ function NeedsAttentionSectionMobile() {
 
       {attentionItems.length > 0 ? (
         <div className="space-y-2">
-          {attentionItems.map((item) => {
+          {attentionItems.map(item => {
             const handleItemClick = () => {
               if (item.actionButton) {
                 return;
@@ -603,13 +748,18 @@ function NeedsAttentionSectionMobile() {
                   backgroundColor: COLORS.BACKGROUND_CARD,
                 }}
                 className={`flex items-start gap-2 p-2 rounded-lg border transition-colors ${
-                  (item.clientId || item.href) && !item.actionButton ? "cursor-pointer" : ""
+                  (item.clientId || item.href) && !item.actionButton
+                    ? "cursor-pointer"
+                    : ""
                 }`}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                     {item.clientName && (
-                      <span className="text-xs font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>
+                      <span
+                        className="text-xs font-medium"
+                        style={{ color: COLORS.TEXT_PRIMARY }}
+                      >
                         {item.clientName}
                       </span>
                     )}
@@ -636,15 +786,24 @@ function NeedsAttentionSectionMobile() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs font-medium mb-0.5" style={{ color: COLORS.TEXT_SECONDARY }}>
+                  <p
+                    className="text-xs font-medium mb-0.5"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
                     {item.title}
                   </p>
                   {item.description && (
-                    <p className="text-[10px] line-clamp-1" style={{ color: COLORS.TEXT_MUTED }}>
+                    <p
+                      className="text-[10px] line-clamp-1"
+                      style={{ color: COLORS.TEXT_MUTED }}
+                    >
                       {item.description}
                     </p>
                   )}
-                  <p className="text-[10px] mt-0.5" style={{ color: COLORS.TEXT_MUTED }}>
+                  <p
+                    className="text-[10px] mt-0.5"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
                     {formatTimestamp(item.timestamp)}
                   </p>
                 </div>
@@ -666,20 +825,22 @@ function NeedsAttentionSectionMobile() {
         </div>
       ) : (
         <div className="text-center py-8">
-          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>All caught up! No items need your attention.</p>
+          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
+            All caught up! No items need your attention.
+          </p>
         </div>
       )}
     </div>
   );
 }
 
-// Recent Client Activity Section Component
+// Recent Client Activity Section Component (cached)
 function RecentClientActivitySection() {
-  const { data: clients = [] } = trpc.clients.list.useQuery({
-    archived: false,
-  });
+  const { data: clients = [] } = trpc.clients.list.useQuery(
+    { archived: false },
+    { staleTime: DASHBOARD_STALE, refetchOnWindowFocus: false }
+  );
 
-  // For now, show recent client updates based on lastActivity field
   const recentActivity = clients
     .filter((client: any) => client.lastActivity)
     .sort(
@@ -694,11 +855,14 @@ function RecentClientActivitySection() {
     }));
 
   if (recentActivity.length === 0) {
-    return null; // Don't show section if no activity
+    return null;
   }
 
   const { data: recentCompletions = [], isLoading } =
-    trpc.sidebar.getRecentCompletions.useQuery();
+    trpc.sidebar.getRecentCompletions.useQuery(undefined, {
+      staleTime: DASHBOARD_STALE,
+      refetchOnWindowFocus: false,
+    });
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -710,19 +874,35 @@ function RecentClientActivitySection() {
 
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
     return date.toLocaleDateString();
   };
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
+      <div
+        className="rounded-lg border p-4"
+        style={{
+          backgroundColor: COLORS.BACKGROUND_CARD,
+          borderColor: COLORS.BORDER_SUBTLE,
+        }}
+      >
         <div className="animate-pulse">
-          <div className="h-5 w-40 rounded mb-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+          <div
+            className="h-5 w-40 rounded mb-4"
+            style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+          ></div>
           <div className="space-y-3">
-            <div className="h-12 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
-            <div className="h-12 rounded" style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}></div>
+            <div
+              className="h-12 rounded"
+              style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+            ></div>
+            <div
+              className="h-12 rounded"
+              style={{ backgroundColor: COLORS.BACKGROUND_CARD_HOVER }}
+            ></div>
           </div>
         </div>
       </div>
@@ -734,12 +914,18 @@ function RecentClientActivitySection() {
   }
 
   return (
-    <div className="rounded-lg border p-4" style={{ backgroundColor: COLORS.BACKGROUND_CARD, borderColor: COLORS.BORDER_SUBTLE }}>
-      <h2 
+    <div
+      className="rounded-lg border p-4"
+      style={{
+        backgroundColor: COLORS.BACKGROUND_CARD,
+        borderColor: COLORS.BORDER_SUBTLE,
+      }}
+    >
+      <h2
         className="text-lg font-semibold mb-4 pl-3"
-        style={{ 
+        style={{
           color: COLORS.TEXT_PRIMARY,
-          borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`
+          borderLeft: `3px solid ${COLORS.GOLDEN_HOVER}`,
         }}
       >
         Recent client activity
@@ -752,14 +938,14 @@ function RecentClientActivitySection() {
               const count = completion.count || 1;
               const latest = completion.latestCompletion;
               const completionType = completion.completionType || latest?.type;
-              
+
               if (completionType === "program") {
                 if (latest?.title) {
-                  return count > 1 
+                  return count > 1
                     ? `completed ${count} drills including "${latest.title}"`
                     : `completed drill "${latest.title}"`;
                 }
-                return count > 1 
+                return count > 1
                   ? `completed ${count} drills`
                   : `completed a drill`;
               } else if (completionType === "routine") {
@@ -786,20 +972,33 @@ function RecentClientActivitySection() {
             return (
               <div key={completion.id} className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm" style={{ color: COLORS.TEXT_SECONDARY }}>
-                    <span className="font-medium" style={{ color: COLORS.TEXT_PRIMARY }}>{completion.clientName}</span>{" "}
+                  <p
+                    className="text-sm"
+                    style={{ color: COLORS.TEXT_SECONDARY }}
+                  >
+                    <span
+                      className="font-medium"
+                      style={{ color: COLORS.TEXT_PRIMARY }}
+                    >
+                      {completion.clientName}
+                    </span>{" "}
                     {getActivityText()}
                     {getWorkoutName() && (
                       <>
                         {" "}
-                        <span style={{ color: COLORS.TEXT_SECONDARY }}>in </span>
+                        <span style={{ color: COLORS.TEXT_SECONDARY }}>
+                          in{" "}
+                        </span>
                         <span className="font-medium text-green-400">
                           {getWorkoutName()}
                         </span>
                       </>
                     )}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: COLORS.TEXT_MUTED }}>
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: COLORS.TEXT_MUTED }}
+                  >
                     {formatTimestamp(completion.completedAt)}
                   </p>
                 </div>
@@ -809,7 +1008,9 @@ function RecentClientActivitySection() {
         </div>
       ) : (
         <div className="text-center py-6">
-          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>No recent completions</p>
+          <p className="text-sm" style={{ color: COLORS.TEXT_MUTED }}>
+            No recent completions
+          </p>
         </div>
       )}
     </div>
